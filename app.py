@@ -139,16 +139,34 @@ if "uploaded_image" not in st.session_state:
 # ── Render Message Timeline using Airtight Inline Boxes ──────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(
-            f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                    {msg["content"]}
+        # Check if user message has an image object attached inside it to render cleanly
+        if isinstance(msg["content"], list):
+            text_part = next((part["text"] for part in msg["content"] if part["type"] == "text"), "")
+            img_part = next((part["image_url"]["url"] for part in msg["content"] if part["type"] == "image_url"), None)
+            
+            st.markdown(
+                f'''
+                <div style="display: flex; flex-direction: column; align-items: flex-end; width: 100%; margin: 16px 0; clear: both;">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 8px;">
+                        {text_part}
+                    </div>
                 </div>
-            </div>
-            ''', 
-            unsafe_allow_html=True
-        )
+                ''', 
+                unsafe_allow_html=True
+            )
+            if img_part:
+                st.image(img_part, max_width=400)
+        else:
+            st.markdown(
+                f'''
+                <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                        {msg["content"]}
+                    </div>
+                </div>
+                ''', 
+                unsafe_allow_html=True
+            )
     else:
         st.markdown(
             f'''
@@ -186,7 +204,21 @@ if prompt:
         st.session_state.show_uploader = True
         st.rerun()
 
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # LOCKED PIPELINE FIX: Intercept media buffer data arrays safely *before* resetting uploader memory states
+    active_image = st.session_state.uploaded_image
+
+    if active_image is not None:
+        image = Image.open(active_image)
+        b64_image = image_to_base64(image)
+        user_content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
+        ]
+        st.session_state.uploaded_image = None # Safely reset now that structural memory is locked into scope
+    else:
+        user_content = prompt
+
+    st.session_state.messages.append({"role": "user", "content": user_content})
     st.rerun()
 
 # Processing bot response generation blocks
@@ -198,18 +230,27 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
             }
             
-            api_messages = [system_instruction] + [
-                {"role": m["role"], "content": m["content"]} 
-                for m in st.session_state.messages
-            ]
+            api_messages = [system_instruction]
+            is_multimodal = False
+            
+            for m in st.session_state.messages:
+                if isinstance(m["content"], list):
+                    is_multimodal = True
+                api_messages.append({"role": m["role"], "content": m["content"]})
+            
+            # Hybrid framework dispatcher rules
+            if is_multimodal:
+                target_model = "llama-3.2-11b-vision-preview" # Switches dynamically to active vision processing node
+            else:
+                target_model = "openai/gpt-oss-20b"
             
             completion = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
+                model=target_model,
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=400,
             )
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
@@ -217,5 +258,3 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
         st.rerun()
 
 # ── AUTO-SCROLL + RELIABLE INSIDE CLICK TRIGGER INTERFACE ──
-scroll_js = "<script>const parentDoc = window.parent.document; const mainContent = parentDoc.querySelector('.main'); if (mainContent) { setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 50); } setTimeout(() => { const inputContainer = parentDoc.querySelector('div[data-testid=\"stChatInput\"]'); if (inputContainer) { inputContainer.addEventListener('click', function(e) { const rect = inputContainer.getBoundingClientRect(); const clickX = e.clientX - rect.left; if (clickX >= 0 && clickX <= 45) { const targetCheckbox = parentDoc.querySelector('input[type=\"checkbox\"]'); if (targetCheckbox) { targetCheckbox.click(); } } }); } }, 400); </script>"
-components.html(scroll_js, height=0)
