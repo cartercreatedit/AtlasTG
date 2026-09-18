@@ -176,7 +176,6 @@ for msg in st.session_state.messages:
                 unsafe_allow_html=True
             )
             if img_part:
-                # FIXED RENDERING: Replaced broken max_width parameter with standardized layout configuration
                 st.image(img_part, use_container_width=True)
         else:
             st.markdown(
@@ -260,9 +259,12 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
             if is_multimodal:
                 target_model = "llama-3.2-11b-vision-preview" 
             else:
-                target_model = "openai/gpt-oss-20b"
+                target_model = "llama3-8b-8192"
             
             completion = client.chat.completions.create(
                 model=target_model,
                 messages=api_messages,
                 temperature=0.7,
+                max_tokens=400
+            )
+            reply = completion.choices[0].message.content
