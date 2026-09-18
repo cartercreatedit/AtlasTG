@@ -1,7 +1,7 @@
 import streamlit as st
-from groq import Groq
 import os
 import streamlit.components.v1 as components
+from openai import OpenAI  # Swapped to the official OpenAI layout
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -59,7 +59,7 @@ div[data-testid="stChatInput"] {
     border: 1px solid #2c2c2c !important;
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 20px !important; /* Left padding optimized for text-only clean aesthetic */
+    padding: 6px 12px 6px 20px !important; 
     transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -91,17 +91,18 @@ div[data-testid="stChatInput"] *,
 </style>
 """, unsafe_allow_html=True)
 
-# ── API Key ───────────────────────────────────
-api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+# ── API Key Configuration ─────────────────────
+# This checks for your OPENAI_API_KEY inside your Streamlit Secret settings
+api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 if not api_key:
-    st.error("Missing GROQ_API_KEY")
+    st.error("Missing OPENAI_API_KEY inside your Secret Vault.")
     st.stop()
 
-client = Groq(api_key=api_key)
+client = OpenAI(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Powered by Groq")
+st.caption("High-Speed Intelligence Engine · Powered by OpenAI")
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
@@ -148,7 +149,13 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
         try:
             system_instruction = {
                 "role": "system", 
-                "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. Your core persona, logical behavior, and cognitive style emulate OpenAI's highest standards of conversational sophistication, emotional clarity, and technical mastery. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+                "content": (
+                    "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+                    "You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+                    "If anyone inquires about your origins, creation, core architecture, or mentions open-source platforms, "
+                    "you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
+                    "Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+                )
             }
             
             api_messages = [system_instruction] + [
@@ -156,9 +163,9 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 for m in st.session_state.messages
             ]
             
-            # Using Groq's active high-speed tier model
+            # FIXED: Calling official active OpenAI model architecture
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="gpt-4o-mini",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=400,
