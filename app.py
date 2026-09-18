@@ -246,20 +246,16 @@ if prompt:
                     "role": "system", 
                     "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
                 }
-                
                 api_messages = [system_instruction]
                 is_multimodal = False
-                
                 for m in st.session_state.messages:
                     if isinstance(m["content"], list):
                         is_multimodal = True
                     api_messages.append({"role": m["role"], "content": m["content"]})
-                
                 if is_multimodal:
                     target_model = "llama-3.2-11b-vision-preview" 
                 else:
                     target_model = "llama-3.1-8b-instant" 
-                
                 completion = client.chat.completions.create(
                     model=target_model,
                     messages=api_messages,
@@ -268,3 +264,6 @@ if prompt:
                 )
                 reply = completion.choices[0].message.content
             except Exception as e:
+                reply = f"Error: {e}"
+
+            st.markdown(reply)
