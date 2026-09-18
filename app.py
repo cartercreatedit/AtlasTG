@@ -38,54 +38,56 @@ h1 {
     color: #8b8b8b !important;
 }
 
-/* Hide avatars */
+/* Hide default avatars completely */
 div[data-testid="stChatMessageAvatarUser"],
 div[data-testid="stChatMessageAvatarAssistant"] {
     display: none !important;
 }
 
-/* ── PREVIOUS MESSAGE STYLE RE-ENGINEERING ── */
+/* Clean message rows background clearing */
 .stChatMessage {
-    padding: 0px !important;
-    margin: 16px 0px !important;
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    padding: 0px !important;
+    margin: 16px 0px !important;
+    width: 100% !important;
 }
 
-/* 👤 User Message Bubble: Crisp Pointed Top-Right Layout */
+/* 👤 USER PROMPTS: Aligned Right inside an Exact Rectangular Bubble Shape */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
     display: flex !important;
     justify-content: flex-end !important;
 }
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) div[data-testid="stMarkdownContainer"] {
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
     background-color: #1a1a1a !important;
     border: 1px solid #2d2d2d !important;
     padding: 12px 18px !important;
     border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Sharp pointed top-right tail */
-    max-width: 85% !important;
+    border-top-right-radius: 2px !important; /* Pointed sharp tail top right */
+    max-width: 80% !important;
+    display: inline-block !important;
 }
 
-/* 🐆 Assistant Response: Clean plain text with NO bubble container background */
+/* 🐆 ASSISTANT RESPONSES: Aligned Left as Clean Plain Text with NO Bubble Shapes */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: block !important;
-    background-color: transparent !important;
-    border: none !important;
-    padding: 4px 0px !important;
-    max-width: 100% !important;
+    display: flex !important;
+    justify-content: flex-start !important;
 }
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) div[data-testid="stMarkdownContainer"] {
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
     background-color: transparent !important;
     border: none !important;
     padding: 0px !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
 }
 
-/* Clean text layout inside message structures */
+/* Text alignment typography configuration */
 div[data-testid="stMarkdownContainer"] p {
     color: #e3e3e3 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
+    margin: 0px !important;
 }
 
 /* ── EXACT GOOGLE AI INPUT BOX MATCH WITH INTEGRATED INTERNAL PADDING ── */
@@ -160,7 +162,7 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("Text + Image Understanding · Powered by Groq")
+st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
 # ── Helper ────────────────────────────────────
 def image_to_base64(image: Image.Image) -> str:
@@ -249,7 +251,8 @@ if prompt:
                     temperature=0.7,
                     max_tokens=400,
                 )
-                reply = completion.choices.message.content
+                # FIXED LAYER: Added the exact list index array target back into position cleanly
+                reply = completion.choices[0].message.content
             except Exception as e:
                 reply = f"Error: {e}"
 
