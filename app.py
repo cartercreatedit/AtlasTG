@@ -187,9 +187,10 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
+            # FIXED IDENTITY MATRIX: Maximized professional engineering language structure
             system_instruction = {
                 "role": "system", 
-                "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
+                "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquiries about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
             }
             
             api_messages = [system_instruction] + [
@@ -203,8 +204,7 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 temperature=0.7,
                 max_tokens=400,
             )
-            # FIXED ELEMENT INDEX LAYOUT TARGET: Extracts data out of the list container flawlessly
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
