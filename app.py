@@ -42,10 +42,52 @@ div[data-testid="stChatMessageAvatarUser"],
 div[data-testid="stChatMessageAvatarAssistant"] {
     display: none !important;
 }
-.stChatMessage {
+
+/* Clear default Streamlit chat rows background baggage */
+div[data-testid="stChatMessage"] {
     background-color: transparent !important;
     border: none !important;
-    padding-left: 0 !important;
+    box-shadow: none !important;
+    padding: 0px !important;
+    margin: 16px 0px !important;
+    width: 100% !important;
+}
+
+/* 👤 USER PROMPTS: Aligned right inside a rectangular bubble with a pointed top-right tail */
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
+    display: flex !important;
+    justify-content: flex-end !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
+    background-color: #1a1a1a !important;
+    border: 1px solid #2d2d2d !important;
+    padding: 12px 18px !important;
+    border-radius: 18px !important;
+    border-top-right-radius: 2px !important; /* Pointed sharp tail top right */
+    max-width: 80% !important;
+    display: inline-block !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+}
+
+/* 🐆 AI RESPONSES: Aligned left as clean plain text with NO bubble container graphics */
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
+    display: flex !important;
+    justify-content: flex-start !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0px !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+}
+
+/* Text alignment layout fixes inside elements */
+div[data-testid="stMarkdownContainer"] p {
+    color: #e3e3e3 !important;
+    font-size: 15.5px !important;
+    line-height: 1.6 !important;
+    margin: 0px !important;
 }
 
 /* Sticky input */
