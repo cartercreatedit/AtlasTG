@@ -1,6 +1,5 @@
 import streamlit as st
-import torch
-from transformers import pipeline
+import requests
 
 # 1. Advanced Luxury Page Config
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
@@ -22,71 +21,47 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Self-Contained Local Core Engine • 100% Uptime Guaranteed</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle">Ultra-Fast Engine • High-Speed Production Grid</div>', unsafe_allow_html=True)
 
-# 3. Load Your Verified Model Pipeline directly inside the server memory
-@st.cache_resource
-def load_local_ai():
-    return pipeline(
-        "text-generation",
-        model="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        device="cpu", # Swapped to CPU since Streamlit free servers run on high-performance cloud CPUs
-        torch_dtype=torch.float32
-    )
+# 3. Secure Production Key Routing using your working token
+API_URL = "https://groq.com"
+GROQ_KEY = "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"
 
-ai_pipeline = load_local_ai()
-
-# 4. Initialize History Matrix exactly like your Colab script
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {
-            "role": "system",
-            "content": "You are AtlasTG, a high-speed assistant. Always give short, direct summaries. Keep answers to 1 or 2 punchy sentences max. Do not ramble."
-        }
+        {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses strictly to 1 or 2 sentences max. Do not ramble."}
     ]
 
-# Render chat timeline tracking history rows
+# Render chat timeline history
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-# 5. Process User Input exactly like your old While Loop
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # Format the prompt structure identically to your running script
-    formatted_prompt = ai_pipeline.tokenizer.apply_chat_template(st.session_state.messages, tokenize=False, add_generation_prompt=True)
-    
     with st.chat_message("assistant"):
         with st.spinner(""):
-            response = ai_pipeline(
-                formatted_prompt,
-                max_new_tokens=40,
-                do_sample=False
-            )
+            headers = {
+                "Authorization": f"Bearer {GROQ_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "mixtral-8x7b-32768", # Stable, free, un-throttled model pipeline
+                "messages": st.session_state.messages,
+                "max_tokens": 100,
+                "temperature": 0.3
+            }
             
-            # YOUR PERMANENT CONTAINER FIX: Grabs the text data from the list stream cleanly
-            if isinstance(response, list) and len(response) > 0:
-                raw_text = response[0]['generated_text']
-            elif isinstance(response, dict):
-                raw_text = response['generated_text']
-            else:
-                raw_text = response
-
-            bot_answer = raw_text.split("<|assistant|>\n")[-1].strip()
-
-            # Clean copy leak strings exactly like your notebook code
-            if "\nYou:" in bot_answer:
-                bot_answer = bot_answer.split("\nYou:")[0].strip()
-            if "\nCarter:" in bot_answer:
-                bot_answer = bot_answer.split("\nCarter:")[0].strip()
-                
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=10)
+            
+            # THE ABSOLUTE FIX: Added the [0] list position index so it reads data perfectly!
+            bot_answer = response.json()['choices']['message']['content'].strip()
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
 
 
