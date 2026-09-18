@@ -44,33 +44,44 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     display: none !important;
 }
 
-/* ── MODERN GOOGLE AI RECTANGULAR CHAT BUBBLES ── */
+/* ── PREVIOUS MESSAGE STYLE RE-ENGINEERING ── */
 .stChatMessage {
-    padding: 14px 20px !important;
-    margin: 14px 0px !important;
-    border-radius: 20px !important;
-    border: 1px solid #1f1f1f !important;
-    max-width: 85% !important;
-    transition: transform 0.2s ease !important;
+    padding: 0px !important;
+    margin: 16px 0px !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
-/* User Bubble Styles (Aligned Right) */
+/* 👤 User Message Bubble: Crisp Pointed Top-Right Layout */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
+    display: flex !important;
+    justify-content: flex-end !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) div[data-testid="stMarkdownContainer"] {
     background-color: #1a1a1a !important;
     border: 1px solid #2d2d2d !important;
-    margin-left: auto !important;
-    border-bottom-right-radius: 4px !important; /* Elegant modern chat tuck edge */
+    padding: 12px 18px !important;
+    border-radius: 18px !important;
+    border-top-right-radius: 2px !important; /* Sharp pointed top-right tail */
+    max-width: 85% !important;
 }
 
-/* Assistant Bubble Styles (Aligned Left) */
+/* 🐆 Assistant Response: Clean plain text with NO bubble container background */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    background-color: #111111 !important;
-    border: 1px solid #1c1c1f !important;
-    margin-right: auto !important;
-    border-bottom-left-radius: 4px !important;
+    display: block !important;
+    background-color: transparent !important;
+    border: none !important;
+    padding: 4px 0px !important;
+    max-width: 100% !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) div[data-testid="stMarkdownContainer"] {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0px !important;
 }
 
-/* Clean text layout inside bubbles */
+/* Clean text layout inside message structures */
 div[data-testid="stMarkdownContainer"] p {
     color: #e3e3e3 !important;
     font-size: 15.5px !important;
@@ -194,7 +205,6 @@ prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
-    # Trigger image uploader tray toggle if user types '/upload'
     if prompt.strip().lower() == "/upload":
         st.session_state.show_uploader = True
         st.rerun()
