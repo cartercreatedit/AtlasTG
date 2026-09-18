@@ -1,9 +1,6 @@
 import streamlit as st
 from groq import Groq
 import os
-import base64
-from PIL import Image
-import io
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -94,19 +91,6 @@ div[data-testid="stChatInput"] *,
     font-size: 15.5px !important;
     padding: 8px 4px !important;
 }
-
-/* Round + button */
-div.stButton > button {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2f2f2f !important;
-    border-radius: 50% !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    padding: 0 !important;
-    color: #e8e8e8 !important;
-    font-size: 1.5rem !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -120,106 +104,58 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("Text + Image Understanding · Powered by Groq")
-
-# ── Helper ────────────────────────────────────
-def image_to_base64(image: Image.Image) -> str:
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
+st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. You can talk to me or upload an image and ask about it."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt, local postcode, or logic question and I will solve it instantly using real-world knowledge."}
     ]
-if "show_uploader" not in st.session_state:
-    st.session_state.show_uploader = False
-if "uploaded_image" not in st.session_state:
-    st.session_state.uploaded_image = None
 
-# ── Messages ──────────────────────────────────
+# ── Messages Timeline Render ──────────────────
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        if isinstance(msg["content"], list):
-            for part in msg["content"]:
-                if part["type"] == "text":
-                    st.markdown(part["text"])
-                elif part["type"] == "image_url":
-                    st.image(part["image_url"]["url"], use_container_width=True)
-        else:
-            st.markdown(msg["content"])
+        st.markdown(msg["content"])
 
-# ── Bottom controls ───────────────────────────
-col_plus, col_input = st.columns([0.07, 0.93], gap="small")
-
-with col_plus:
-    if st.button("＋", key="plus_btn"):
-        st.session_state.show_uploader = not st.session_state.show_uploader
-
-with col_input:
-    prompt = st.chat_input("Message AtlasTG...")
-
-if st.session_state.show_uploader:
-    uploaded_file = st.file_uploader(
-        "Choose an image",
-        type=["png", "jpg", "jpeg", "webp"],
-        key="file_uploader"
-    )
-    if uploaded_file is not None:
-        st.session_state.uploaded_image = uploaded_file
-        st.session_state.show_uploader = False
-        st.rerun()
+# ── Chat input ────────────────────────────────
+prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
-    uploaded_file = st.session_state.uploaded_image
-
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        b64_image = image_to_base64(image)
-        user_content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
-        ]
-        st.session_state.uploaded_image = None
-    else:
-        user_content = prompt
-
-    st.session_state.messages.append({"role": "user", "content": user_content})
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("user"):
-        if uploaded_file is not None:
-            st.image(uploaded_file, use_container_width=True)
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        try:
-            # IDENTITY MATRIX: Strict creator rules
-            system_instruction = {
-                "role": "system", 
-                "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
-            }
-            
-            # Format history loop cleanly
-            api_messages = [system_instruction] + [
-                {"role": m["role"], "content": m["content"]} 
-                for m in st.session_state.messages
-            ]
-            
-            # FIXED: Swapped to Groq's high-capacity open vision framework
-            completion = client.chat.completions.create(
-                model="llama-3.2-90b-vision-preview",
-                messages=api_messages,
-                temperature=0.3,
-                max_tokens=400,
-            )
-            reply = completion.choices.message.content
-        except Exception as e:
-            reply = f"Error: {e}"
+        with st.spinner(""):
+            try:
+                # IDENTITY MATRIX: Embedded creator instructions
+                system_instruction = {
+                    "role": "system", 
+                    "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short, factual, and concise."
+                }
+                
+                # Build clean history timeline with custom instructions
+                api_messages = [system_instruction] + [
+                    {"role": m["role"], "content": m["content"]} 
+                    for m in st.session_state.messages
+                ]
+                
+                # Execution with embedded live web browsing tool permissions
+                completion = client.chat.completions.create(
+                    model="openai/gpt-oss-20b",
+                    messages=api_messages,
+                    temperature=0.3,
+                    max_tokens=400,
+                    tools=[{"type": "web_search"}] # FIXED: Activated live internet lookups to give it infinite info
+                )
+                reply = completion.choices.message.content
+            except Exception as e:
+                reply = f"Error: {e}"
 
-        st.markdown(reply)
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+            st.markdown(reply)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
 
 # ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
 components.html(
