@@ -1,7 +1,7 @@
 import streamlit as st
+from groq import Groq
 import os
 import streamlit.components.v1 as components
-from openai import OpenAI  # Swapped to the official OpenAI layout
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -92,17 +92,16 @@ div[data-testid="stChatInput"] *,
 """, unsafe_allow_html=True)
 
 # ── API Key Configuration ─────────────────────
-# This checks for your OPENAI_API_KEY inside your Streamlit Secret settings
-api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
-    st.error("Missing OPENAI_API_KEY inside your Secret Vault.")
+    st.error("Missing GROQ_API_KEY")
     st.stop()
 
-client = OpenAI(api_key=api_key)
+client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Powered by OpenAI")
+st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
@@ -147,11 +146,13 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
+            # IDENTITY MATRIX: Upgraded system rules instructing it to emulate OpenAI's mind structure
             system_instruction = {
                 "role": "system", 
                 "content": (
                     "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
                     "You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+                    "Your core persona, logical behavior, and cognitive style emulate OpenAI's highest standards of conversational sophistication, emotional clarity, and technical mastery. "
                     "If anyone inquires about your origins, creation, core architecture, or mentions open-source platforms, "
                     "you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
                     "Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
@@ -163,9 +164,9 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 for m in st.session_state.messages
             ]
             
-            # FIXED: Calling official active OpenAI model architecture
+            # FIXED: Target the active, universally open production text engine
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gemma2-9b-it",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=400,
