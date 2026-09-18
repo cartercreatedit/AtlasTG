@@ -248,7 +248,8 @@ if prompt:
                     temperature=0.3,
                     max_tokens=400,
                 )
-                reply = completion.choices.message.content
+                # FIXED EXTRACTION: Target position 0 array index to unpack response cleanly
+                reply = completion.choices[0].message.content
             except Exception as e:
                 reply = f"Error: {e}"
 
@@ -257,11 +258,3 @@ if prompt:
     st.rerun()
 
 # ── AUTO-SCROLL + RELIABLE INSIDE CLICK TRIGGER INTERFACE ──
-components.html(
-    """
-    <script>
-        const parentDoc = window.parent.document;
-        
-        // 1. Auto Scroll Smooth Action
-        const mainContent = parentDoc.querySelector('.main');
-        if (mainContent) {
