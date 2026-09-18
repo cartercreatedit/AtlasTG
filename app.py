@@ -46,7 +46,7 @@ div[data-testid="stChatMessage"] {
     padding: 0px !important;
 }
 
-/* ── EXACT STEALTH INPUT BOX MATCH (NO HIGHLIGHT OUTLINE) ── */
+/* ── EXACT GOOGLE AI INPUT BOX MATCH (NO HIGHLIGHT OUTLINE) ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -93,18 +93,28 @@ div[data-testid="stChatInput"] *,
     padding: 8px 4px !important;
 }
 
-/* ── INJECTED PLUS ICON INSIDE THE ACTUAL PROMPT CONTAINER ── */
-div[data-testid="stChatInput"]::before {
-    content: "＋" !important;
-    position: absolute !important;
-    left: 20px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    color: #8b8b8b !important;
-    font-size: 1.3rem !important;
-    font-weight: bold !important;
+/* ── NATIVE INNER PLUS BUTTON ALIGNMENT OVERRIDE ── */
+div.element-container:has(button[key="plus_btn"]) {
+    position: fixed !important;
+    bottom: 40px !important; 
+    margin-left: max(calc(50vw - 366px), 22px) !important; 
     z-index: 1001 !important;
-    cursor: pointer !important; /* Forces pointer hand interaction */
+    width: auto !important;
+}
+div.stButton > button[key="plus_btn"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
+    color: #8b8b8b !important;
+    font-size: 1.4rem !important;
+    font-weight: bold !important;
+}
+div.stButton > button[key="plus_btn"]:hover {
+    color: #ffffff !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -119,7 +129,7 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Powered by Groq")
+st.caption("High-Speed Vision Intelligence Engine · Powered by Groq")
 
 # ── Helper ────────────────────────────────────
 def image_to_base64(image: Image.Image) -> str:
@@ -140,16 +150,30 @@ if "uploaded_image" not in st.session_state:
 # ── Render Message Timeline using Airtight Inline Boxes ──────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(
-            f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                    {msg["content"]}
+        if isinstance(msg["content"], list):
+            # Safe parsing for multimodal content logs
+            text_part = next((part["text"] for part in msg["content"] if part["type"] == "text"), "")
+            st.markdown(
+                f'''
+                <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                        {text_part}
+                    </div>
                 </div>
-            </div>
-            ''', 
-            unsafe_allow_html=True
-        )
+                ''', 
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                f'''
+                <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                        {msg["content"]}
+                    </div>
+                </div>
+                ''', 
+                unsafe_allow_html=True
+            )
     else:
         st.markdown(
             f'''
@@ -161,11 +185,6 @@ for msg in st.session_state.messages:
             ''', 
             unsafe_allow_html=True
         )
-
-# ── Hidden Trigger Receiver ───────────────────
-# If the JavaScript detects a click on the plus sign, it changes this state variable
-if st.checkbox("toggle_uploader_hidden", value=st.session_state.show_uploader, label_visibility="collapsed"):
-    st.session_state.show_uploader = True
 
 # ── File Upload Drawer ────────────────────────
 if st.session_state.show_uploader:
@@ -179,78 +198,70 @@ if st.session_state.show_uploader:
         st.session_state.show_uploader = False
         st.rerun()
 
+# ── Render Native Embedded Button ─────────────
+if st.button("＋", key="plus_btn"):
+    st.session_state.show_uploader = not st.session_state.show_uploader
+    st.rerun()
+
 # ── Chat input ────────────────────────────────
 prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
-    # Backup text command listener
-    if prompt.strip().lower() == "/upload":
-        st.session_state.show_uploader = True
-        st.rerun()
+    uploaded_file = st.session_state.uploaded_image
 
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        b64_image = image_to_base64(image)
+        user_content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
+        ]
+        st.session_state.uploaded_image = None
+    else:
+        user_content = prompt
+
+    st.session_state.messages.append({"role": "user", "content": user_content})
+
+    with st.chat_message("user"):
+        if uploaded_file is not None:
+            st.image(uploaded_file, use_container_width=True)
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner(""):
+            try:
+                system_instruction = (
+                    "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+                    "If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
+                    "Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+                )
+                
+                # Format multi-modal architecture array safely for Groq's structure
+                api_messages = [{"role": "system", "content": system_instruction}]
+                for m in st.session_state.messages:
+                    api_messages.append({"role": m["role"], "content": m["content"]})
+                
+                # FIXED VISION MODEL: Swapped to active flagship multi-modal engine
+                completion = client.chat.completions.create(
+                    model="llama-3.2-11b-vision-preview",
+                    messages=api_messages,
+                    temperature=0.3,
+                    max_tokens=400,
+                )
+                reply = completion.choices[0].message.content
+            except Exception as e:
+                reply = f"Error: {e}"
+
+            st.markdown(reply)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
     st.rerun()
 
-# Processing bot response generation blocks
-if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
-    with st.spinner(""):
-        try:
-            system_instruction = {
-                "role": "system", 
-                "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
-            }
-            
-            api_messages = [system_instruction] + [
-                {"role": m["role"], "content": m["content"]} 
-                for m in st.session_state.messages
-            ]
-            
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
-                messages=api_messages,
-                temperature=0.7,
-                max_tokens=400,
-            )
-            reply = completion.choices.message.content
-        except Exception as e:
-            reply = f"Error: {e}"
-
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-        st.rerun()
-
-# ── INTERFACE JAVASCRIPT ANCHOR (SCROLL + CLICK CAPTURE) ──
+# ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
 components.html(
     """
     <script>
-        const parentDoc = window.parent.document;
-        
-        // 1. Auto-Scroll Execution
-        const mainContent = parentDoc.querySelector('.main');
-        if (mainContent) {
-            setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 50);
-            setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 250);
-        }
-        
-        // 2. Click Handler for Nested Plus Sign
-        setTimeout(() => {
-            const chatInputContainer = parentDoc.querySelector('div[data-testid="stChatInput"]');
-            if (chatInputContainer) {
-                chatInputContainer.addEventListener('click', function(e) {
-                    // Check if click coordinates are near the left edge where the plus sign is positioned
-                    const rect = chatInputContainer.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    if (clickX >= 0 && clickX <= 45) {
-                        // Find and toggle the hidden checkbox to fire the Streamlit file uploader tray
-                        const checkbox = parentDoc.querySelector('input[type="checkbox"]');
-                        if (checkbox) {
-                            checkbox.click();
-                        }
-                    }
-                });
-            }
-        }, 500);
-    </script>
-    """,
-    height=0,
-)
+        const parentWindow = window.parent;
+        if (parentWindow) {
+            const mainContent = parentWindow.document.querySelector('.main');
+            if (mainContent) {
