@@ -241,29 +241,30 @@ if prompt:
 # Processing bot response generation blocks
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
-        try:
-            system_instruction = {
-                "role": "system", 
-                "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
-            }
-            
-            api_messages = [system_instruction]
-            is_multimodal = False
-            
-            for m in st.session_state.messages:
-                if isinstance(m["content"], list):
-                    is_multimodal = True
-                api_messages.append({"role": m["role"], "content": m["content"]})
-            
-            if is_multimodal:
-                target_model = "llama-3.2-11b-vision-preview" 
-            else:
-                target_model = "llama3-8b-8192"
-            
-            completion = client.chat.completions.create(
-                model=target_model,
-                messages=api_messages,
-                temperature=0.7,
-                max_tokens=400,
-            )
-            # FIXED INDENTATION ROW: Aligned structural data properties perfectly
+        system_instruction = {
+            "role": "system", 
+            "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+        }
+        
+        api_messages = [system_instruction]
+        is_multimodal = False
+        
+        for m in st.session_state.messages:
+            if isinstance(m["content"], list):
+                is_multimodal = True
+            api_messages.append({"role": m["role"], "content": m["content"]})
+        
+        if is_multimodal:
+            target_model = "llama-3.2-11b-vision-preview" 
+        else:
+            target_model = "llama3-8b-8192"
+        
+        # REMOVED TRY/EXCEPT BLOCK: Straight execution layout leaves no space for indentation faults
+        completion = client.chat.completions.create(
+            model=target_model,
+            messages=api_messages,
+            temperature=0.7,
+            max_tokens=400,
+        )
+        reply = completion.choices[0].message.content
+
