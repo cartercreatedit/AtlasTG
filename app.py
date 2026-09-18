@@ -11,8 +11,8 @@ GROQ_API_KEY = "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"
 # Page + Dark Theme
 # ────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AtlasTG AI",
-    page_icon="🐆",
+    page_title="Groq Chat",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -74,51 +74,45 @@ st.markdown(
 # ────────────────────────────────────────────────
 # Header
 # ────────────────────────────────────────────────
-st.title("🐆 AtlasTG AI")
-st.caption("Commercial Engine · High-Speed Summary Engine")
+st.title("⚡ Groq Chat")
+st.caption("Powered by llama-3.1-8b-instant · Official Groq SDK")
 
 # ────────────────────────────────────────────────
 # Session state for chat history
 # ────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! I am AtlasTG, your premium high-speed summary intelligence system. What can I analyze for you today?"}
+        {"role": "assistant", "content": "Hello! How can I help you today?"}
     ]
 
-# Display previous messages with custom avatars
+# Display previous messages
 for msg in st.session_state.messages:
-    avatar_icon = "🐆" if msg["role"] == "assistant" else "👤"
-    with st.chat_message(msg["role"], avatar=avatar_icon):
+    with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 # ────────────────────────────────────────────────
 # Chat input + Groq call
 # ────────────────────────────────────────────────
-user_input = st.chat_input("Message AtlasTG…")
+user_input = st.chat_input("Type your message…")
 
 if user_input:
     # Add user message
     st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user", avatar="👤"):
+    with st.chat_message("user"):
         st.markdown(user_input)
 
     # Call Groq with the official client
     try:
         client = Groq(api_key=GROQ_API_KEY)
 
-        # Injecting system context to keep responses to a 1-2 sentence maximum summary
-        system_instruction = {"role": "system", "content": "You are AtlasTG, a helpful commercial AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses strictly to 1 or 2 sentences max. Do not ramble."}
-        
-        full_messages = [system_instruction] + [
-            {"role": m["role"], "content": m["content"]}
-            for m in st.session_state.messages
-        ]
-
         completion = client.chat.completions.create(
             model="openai/gpt-oss-20b",
-            messages=full_messages,
-            temperature=0.3,
-            max_tokens=150,
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ],
+            temperature=0.7,
+            max_tokens=1024,
         )
 
         # Extract text the official way (no .json(), no dict indexing)
@@ -127,7 +121,7 @@ if user_input:
     except Exception as e:
         reply = f"⚠️ Error talking to Groq: {e}"
 
-    # Show and store assistant reply with custom leopard avatar
+    # Show and store assistant reply
     st.session_state.messages.append({"role": "assistant", "content": reply})
-    with st.chat_message("assistant", avatar="🐆"):
+    with st.chat_message("assistant"):
         st.markdown(reply)
