@@ -43,10 +43,38 @@ div[data-testid="stChatMessageAvatarUser"],
 div[data-testid="stChatMessageAvatarAssistant"] {
     display: none !important;
 }
+
+/* ── MODERN GOOGLE AI RECTANGULAR CHAT BUBBLES ── */
 .stChatMessage {
-    background-color: transparent !important;
-    border: none !important;
-    padding-left: 0 !important;
+    padding: 14px 20px !important;
+    margin: 14px 0px !important;
+    border-radius: 20px !important;
+    border: 1px solid #1f1f1f !important;
+    max-width: 85% !important;
+    transition: transform 0.2s ease !important;
+}
+
+/* User Bubble Styles (Aligned Right) */
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
+    background-color: #1a1a1a !important;
+    border: 1px solid #2d2d2d !important;
+    margin-left: auto !important;
+    border-bottom-right-radius: 4px !important; /* Elegant modern chat tuck edge */
+}
+
+/* Assistant Bubble Styles (Aligned Left) */
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
+    background-color: #111111 !important;
+    border: 1px solid #1c1c1f !important;
+    margin-right: auto !important;
+    border-bottom-left-radius: 4px !important;
+}
+
+/* Clean text layout inside bubbles */
+div[data-testid="stMarkdownContainer"] p {
+    color: #e3e3e3 !important;
+    font-size: 15.5px !important;
+    line-height: 1.6 !important;
 }
 
 /* ── EXACT GOOGLE AI INPUT BOX MATCH WITH INTEGRATED INTERNAL PADDING ── */
@@ -211,7 +239,7 @@ if prompt:
                     temperature=0.7,
                     max_tokens=400,
                 )
-                reply = completion.choices[0].message.content
+                reply = completion.choices.message.content
             except Exception as e:
                 reply = f"Error: {e}"
 
