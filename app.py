@@ -168,7 +168,7 @@ for msg in st.session_state.messages:
             st.markdown(
                 f'''
                 <div style="display: flex; flex-direction: column; align-items: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 8px;">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15 rgba(0,0,0,0.2); margin-bottom: 8px;">
                         {text_part}
                     </div>
                 </div>
@@ -181,7 +181,7 @@ for msg in st.session_state.messages:
             st.markdown(
                 f'''
                 <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                         {msg["content"]}
                     </div>
                 </div>
@@ -247,21 +247,17 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
         }
         
         api_messages = [system_instruction]
-        is_multimodal = False
-        
         for m in st.session_state.messages:
+            # Enforce OpenAI translation text compatibility
             if isinstance(m["content"], list):
-                is_multimodal = True
-            api_messages.append({"role": m["role"], "content": m["content"]})
+                text_part = next((part["text"] for part in m["content"] if part["type"] == "text"), "")
+                api_messages.append({"role": m["role"], "content": text_part})
+            else:
+                api_messages.append({"role": m["role"], "content": m["content"]})
         
-        if is_multimodal:
-            target_model = "llama-3.2-11b-vision-preview" 
-        else:
-            target_model = "llama3-8b-8192"
-        
-        # REMOVED TRY/EXCEPT BLOCK: Straight execution layout leaves no space for indentation faults
+        # LOCKED TO THE WORKING OPENAI MODEL NO MATTER WHAT
         completion = client.chat.completions.create(
-            model=target_model,
+            model="openai/gpt-oss-20b",
             messages=api_messages,
             temperature=0.7,
             max_tokens=400,
