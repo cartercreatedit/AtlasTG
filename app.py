@@ -4,6 +4,7 @@ import os
 import base64
 from PIL import Image
 import io
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -12,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── CSS + Auto-Scroll ─────────────────────────
+# ── CSS Configuration ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -48,53 +49,78 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     padding-left: 0 !important;
 }
 
-/* Sticky input */
+/* ── EXACT GOOGLE AI INPUT BOX MATCH ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
-    bottom: 20px !important;
+    bottom: 32px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
 }
+
+/* Outer frame matches Gemini sizing and scale */
 .stChatInput {
-    background-color: #141414 !important;
-    border: 1px solid #2a2a2a !important;
-    border-radius: 24px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
-}
-.stChatInput textarea {
-    color: #e8e8e8 !important;
+    background-color: #161616 !important;
+    border: 1px solid #2c2c2c !important;
+    border-radius: 32px !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
+    padding: 6px 12px 6px 54px !important; /* FIXED: Added 54px left padding to make room for the inner button */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-/* Round + button */
-div.stButton > button {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2f2f2f !important;
-    border-radius: 50% !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
+/* Sleek white active glow */
+.stChatInput:focus-within {
+    border-color: #ffffff !important;
+    box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
+}
+
+/* OBLITERATE EVERY SINGLE HIDDEN INTERNAL BORDER AND BACKGROUND SHADOW */
+div[data-testid="stChatInput"] *,
+.stChatInput div[data-baseweb="textarea"],
+.stChatInput div[data-baseweb="base-input"],
+.stChatInput textarea {
+    border: none !important;
+    border-color: transparent !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Sizing text inside the container perfectly */
+.stChatInput textarea {
+    color: #f4f4f4 !important;
+    font-size: 15.5px !important;
+    padding: 8px 4px !important;
+}
+
+/* ── INSIDE BUTTON ALIGNMENT OVERRIDE ── */
+div.element-container:has(button[key="plus_btn"]) {
+    position: fixed !important;
+    bottom: 40px !important; /* Aligns perfectly vertical inside the 32px baseline */
+    margin-left: max(calc(50vw - 368px), 24px) !important; /* Pins it right to the left edge of the prompt box */
+    z-index: 1000 !important;
+    width: auto !important;
+}
+
+/* Minimalist borderless inner plus button */
+div.stButton > button[key="plus_btn"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
     padding: 0 !important;
-    color: #e8e8e8 !important;
-    font-size: 1.5rem !important;
+    color: #8b8b8b !important;
+    font-size: 1.4rem !important;
+    transition: color 0.2s ease !important;
+}
+div.stButton > button[key="plus_btn"]:hover {
+    color: #ffffff !important;
 }
 </style>
-
-<script>
-function scrollToBottom() {
-    window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth"
-    });
-}
-window.addEventListener("load", scrollToBottom);
-const observer = new MutationObserver(scrollToBottom);
-observer.observe(document.body, { childList: true, subtree: true });
-setTimeout(scrollToBottom, 100);
-setTimeout(scrollToBottom, 300);
-setTimeout(scrollToBottom, 600);
-</script>
 """, unsafe_allow_html=True)
 
 # ── API Key ───────────────────────────────────
@@ -137,15 +163,12 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# ── Bottom controls ───────────────────────────
-col_plus, col_input = st.columns([0.07, 0.93], gap="small")
+# ── Render Inside Controls ────────────────────
+# Render the button row first so the absolute position script can lock it into the prompt container layout
+if st.button("＋", key="plus_btn"):
+    st.session_state.show_uploader = not st.session_state.show_uploader
 
-with col_plus:
-    if st.button("＋", key="plus_btn"):
-        st.session_state.show_uploader = not st.session_state.show_uploader
-
-with col_input:
-    prompt = st.chat_input("Message AtlasTG...")
+prompt = st.chat_input("Message AtlasTG...")
 
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
@@ -182,28 +205,43 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            system_instruction = {
+                "role": "system", 
+                "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
+            }
+            
+            api_messages = [system_instruction] + [
+                {"role": m["role"], "content": m["content"]} 
+                for m in st.session_state.messages
+            ]
+            
+            # Using the active, un-throttled text core model
             completion = client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
+                model="openai/gpt-oss-20b",
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=1024,
+                max_tokens=400,
             )
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
         st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
 
-    # Force scroll
-    st.markdown(
-        """
-        <script>
-            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 50);
-            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 200);
-            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 500);
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+# ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+components.html(
+    """
+    <script>
+        const parentWindow = window.parent;
+        if (parentWindow) {
+            const mainContent = parentWindow.document.querySelector('.main');
+            if (mainContent) {
+                setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 50);
+                setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 250);
+            }
+        }
+    </script>
+    """,
+    height=0,
+)
