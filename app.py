@@ -106,7 +106,7 @@ if user_input:
         client = Groq(api_key=GROQ_API_KEY)
 
         completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.messages
