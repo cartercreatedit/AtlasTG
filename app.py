@@ -254,11 +254,11 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 is_multimodal = True
             api_messages.append({"role": m["role"], "content": m["content"]})
         
-        # LINKED TO STABLE, ACTIVE GROQ PRODUCTION IDS:
+        # FIXED: Core active production text model name updated to match server layout perfectly
         if is_multimodal:
             target_model = "llama-3.2-11b-vision-preview" 
         else:
-            target_model = "llama-3.3-70b-specdec"
+            target_model = "llama-3.3-70b-versatile"
         
         completion = client.chat.completions.create(
             model=target_model,
@@ -267,7 +267,4 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
             max_tokens=400,
         )
         reply = completion.choices[0].message.content
-
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-        st.rerun()
 
