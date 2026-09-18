@@ -1,7 +1,7 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Advanced Luxury Page Config
+# 1. Premium Visual Interface Configuration
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
 
 # 2. Hyper-Modern Obsidian CSS Injector
@@ -18,21 +18,26 @@ st.markdown("""
 
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 
-# 3. Initialize the Official Native Groq Tool with your working key
-client = Groq(api_key="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")
+# 3. Secure Production Key Validation Link
+GROQ_KEY = "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"
+client = Groq(api_key=GROQ_KEY)
 
-# Initialize Chat Memory tracking array with strict summary instructions
+# 4. Initialize History Matrix exactly like your Colab script
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses strictly to 1 or 2 sentences max. Do not ramble."}
+        {
+            "role": "system", 
+            "content": "You are AtlasTG, a high-speed assistant. Always give short, direct summaries. Keep answers to 1 or 2 punchy sentences max. Do not ramble."
+        }
     ]
 
-# Render past chat timeline history
+# Render chat timeline tracking history rows
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
+# 5. Process User Input exactly like your old While Loop
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
@@ -40,16 +45,23 @@ if user_input := st.chat_input("Message AtlasTG..."):
     
     with st.chat_message("assistant"):
         with st.spinner(""):
-            
-            # FIXED: Swapped to Groq's active high-speed Llama 3.1 instant model layout
+            # FIXED: Swapped to Groq's active high-accuracy model endpoint
             completion = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 messages=st.session_state.messages,
-                max_tokens=100,
+                max_tokens=60,
                 temperature=0.3
             )
             
             bot_answer = completion.choices[0].message.content.strip()
+            
+            # Trim any leftover copy leaks exactly like your notebook code
+            if "\nYou:" in bot_answer:
+                bot_answer = bot_answer.split("\nYou:")[0].strip()
+            if "\nCarter:" in bot_answer:
+                bot_answer = bot_answer.split("\nCarter:")[0].strip()
+                
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
+
