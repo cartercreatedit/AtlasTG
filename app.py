@@ -111,7 +111,7 @@ div.stButton > button[key="plus_btn"] {
     padding: 0 !important;
     color: #8b8b8b !important;
     font-size: 1.4rem !important;
-    font-weight: bold !important;
+    font-weight: bold import;
 }
 div.stButton > button[key="plus_btn"]:hover {
     color: #ffffff !important;
@@ -245,9 +245,9 @@ if prompt:
                 
                 # ── CRITICAL: SWITCH CORE ROUTING PATH DYNAMICALLY ──
                 if is_multimodal:
-                    target_model = "llama-3.2-90b-vision-preview" # Uses smart Meta vision for loaded images
+                    target_model = "llama-3.2-11b-vision-preview" # Active free-tier multi-modal backup
                 else:
-                    target_model = "openai/gpt-oss-20b" # Uses preferred OpenAI proxy for straight text speed
+                    target_model = "openai/gpt-oss-20b" # Preferred OpenAI proxy for straight text speed
                 
                 completion = client.chat.completions.create(
                     model=target_model,
@@ -255,7 +255,7 @@ if prompt:
                     temperature=0.3,
                     max_tokens=400,
                 )
-                reply = completion.choices.message.content
+                reply = completion.choices[0].message.content
             except Exception as e:
                 reply = f"Error: {e}"
 
