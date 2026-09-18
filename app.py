@@ -44,13 +44,13 @@ if user_input := st.chat_input("Message AtlasTG..."):
     
     with st.chat_message("assistant"):
         with st.spinner(""):
+            # FIXED: Swapped to an active, universally supported free Groq model ID
             completion = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
+                model="gemma2-9b-it",
                 messages=st.session_state.messages,
                 max_tokens=100,
                 temperature=0.3
             )
-            # Reverted to exact documentation layout matching for the open model schema
             bot_answer = completion.choices[0].message.content.strip()
             st.write(bot_answer)
             
