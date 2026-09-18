@@ -82,7 +82,7 @@ st.markdown("""
 st.markdown('<div class="app-header">FlintLynx AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Optimized Core Model • High-Speed Summary Engine</div>', unsafe_allow_html=True)
 
-API_URL = "https://huggingface.co"
+API_URL = "https://api-inference.huggingface.co/models/TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -100,7 +100,6 @@ if user_input := st.chat_input("Message FlintLynx..."):
     
     with st.chat_message("assistant"):
         with st.spinner("FlintLynx is processing..."):
-            # FIX: Included wait_for_model=True to force immediate background loading
             payload = {
                 "inputs": formatted_prompt,
                 "options": {"wait_for_model": True}
@@ -108,18 +107,18 @@ if user_input := st.chat_input("Message FlintLynx..."):
             response = requests.post(API_URL, json=payload)
             
             try:
-                raw_text = response.json()
-                # Handle unexpected list outputs from serverless inference
-                if isinstance(raw_text, list):
-                    raw_text = raw_text[0]
+                raw_data = response.json()
                 
-                bot_answer = raw_text['generated_text'].split("<|assistant|>\n")[-1].strip()
+                # BULLETPROOF DATA FIX: Unwraps list vs dictionary safely
+                if isinstance(raw_data, list):
+                    text_block = raw_data[0]['generated_text']
+                else:
+                    text_block = raw_data['generated_text']
+                
+                bot_answer = text_block.split("<|assistant|>\n")[-1].strip()
             except Exception:
-                bot_answer = "Sorry, I had trouble parsing that message. Could you try sending it once more?"
+                bot_answer = "Sorry, I had trouble parsing the data frame. Could you try typing that one more time?"
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
-                
-
