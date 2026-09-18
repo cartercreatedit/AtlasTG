@@ -252,10 +252,13 @@ if prompt:
                     if isinstance(m["content"], list):
                         is_multimodal = True
                     api_messages.append({"role": m["role"], "content": m["content"]})
+                
+                # FIXED ROUTING PATHS: Active production model tags
                 if is_multimodal:
                     target_model = "llama-3.2-11b-vision-preview" 
                 else:
-                    target_model = "llama-3.1-8b-instant" 
+                    target_model = "llama3-8b-8192" 
+                
                 completion = client.chat.completions.create(
                     model=target_model,
                     messages=api_messages,
@@ -263,7 +266,3 @@ if prompt:
                     max_tokens=400,
                 )
                 reply = completion.choices[0].message.content
-            except Exception as e:
-                reply = f"Error: {e}"
-
-            st.markdown(reply)
