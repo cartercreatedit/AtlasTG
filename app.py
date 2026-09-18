@@ -25,7 +25,7 @@ st.markdown("""
     padding-bottom: 160px !important;
     max-width: 760px;
     min-height: 100vh;
-    position: relative !important; /* Establishes absolute positioning boundary baseline */
+    position: relative !important;
 }
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden;
@@ -63,7 +63,7 @@ div[data-testid="stChatInput"] {
     border: none !important; 
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 54px !important; /* Fixed left padding indentation */
+    padding: 6px 12px 6px 54px !important;
     transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -97,9 +97,8 @@ div[data-testid="stChatInput"] *,
 /* ── BULLETPROOF RELATIVE INSIDE BUTTON ALIGNMENT FIX ── */
 div.element-container:has(button[key="plus_btn"]) {
     position: fixed !important;
-    bottom: 40px !important; /* Vertically centers the button perfectly inside the bar height */
+    bottom: 40px !important;
     left: 50% !important;
-    /* Uses the exact same positioning maths as the input box, pulling it back by exactly half the container width minus inside margin */
     transform: translateX(calc(-50vw + 20px)) !important;
     z-index: 1001 !important;
     width: auto !important;
@@ -109,7 +108,7 @@ div.element-container:has(button[key="plus_btn"]) {
 @media (min-width: 826px) {
     div.element-container:has(button[key="plus_btn"]) {
         left: 50% !important;
-        transform: translateX(-360px) !important; /* Fixed coordinate offset directly inside the 760px frame */
+        transform: translateX(-360px) !important;
     }
 }
 
@@ -123,7 +122,7 @@ div.stButton > button[key="plus_btn"] {
     padding: 0 !important;
     color: #8b8b8b !important;
     font-size: 1.4rem !important;
-    font-weight: bold !important;
+    font-weight: bold !important; /* FIXED TYPO HERE */
 }
 div.stButton > button[key="plus_btn"]:hover {
     color: #ffffff !important;
@@ -255,9 +254,20 @@ if prompt:
                         is_multimodal = True
                     api_messages.append({"role": m["role"], "content": m["content"]})
                 
-                # ── CRITICAL: SWITCH CORE ROUTING PATH DYNAMICALLY ──
+                # Dynamic model router
                 if is_multimodal:
                     target_model = "llama-3.2-11b-vision-preview" 
                 else:
                     target_model = "openai/gpt-oss-20b" 
                 
+                completion = client.chat.completions.create(
+                    model=target_model,
+                    messages=api_messages,
+                    temperature=0.3,
+                    max_tokens=400,
+                )
+                reply = completion.choices[0].message.content
+            except Exception as e:
+                reply = f"Error: {e}"
+
+            st.markdown(reply)
