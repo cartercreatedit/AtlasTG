@@ -4,8 +4,8 @@ from groq import Groq
 # ────────────────────────────────────────────────
 # PASTE YOUR GROQ API KEY HERE (starts with gsk_)
 # ────────────────────────────────────────────────
-GROQ_API_KEY = "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
-"
+GROQ_API_KEY = "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"
+
 
 # ────────────────────────────────────────────────
 # Page + Dark Theme
