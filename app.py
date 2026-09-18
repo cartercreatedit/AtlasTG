@@ -1,16 +1,16 @@
 import streamlit as st
 import requests
 
-# 1. Advanced Page Config
+# 1. Premium Visual Page Configuration
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
 
-# 2. Hyper-Modern Luxury CSS Injector
+# 2. Luxury Midnight UI Styling
 st.markdown("""
     <style>
         .stApp {
             background: linear-gradient(180deg, #0A0D14 0%, #05070B 100%) !important;
             color: #F8FAFC !important;
-            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         }
         .app-header {
             text-align: center;
@@ -68,54 +68,36 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Premium Core Model • High-Speed Summary Engine</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle">Premium Engine • High-Speed Instant Response</div>', unsafe_allow_html=True)
 
-# Stable, fast endpoint using the high-performance Qwen brain
-API_URL = "https://huggingface.co"
-
-# 1. PASTE YOUR HUGGING FACE TOKEN (hf_xxxx) DIRECTLY BETWEEN THE QUOTES BELOW:
-HF_TOKEN = "PASTE_YOUR_HF_TOKEN_HERE"
-
+# 3. Initialize Persistent ChatGPT-Style Memory
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Render past conversation timeline
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+# 4. Handle Live User Input
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    formatted_prompt = f"<|im_start|>user\n{user_input}\nContext: Keep answers to 1 or 2 summary sentences max.<|im_end|>\n<|im_start|>assistant\n"
-    
     with st.chat_message("assistant"):
         with st.spinner("AtlasTG is processing..."):
             
-            payload = {
-                "inputs": formatted_prompt,
-                "options": {"wait_for_model": True}
-            }
-            
-            headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+            # Utilizing an un-throttled public proxy pipeline to guarantee a direct handshake
+            fallback_url = f"https://pollinations.ai{requests.utils.quote(user_input)}?system=You are AtlasTG, a high-speed AI assistant. Provide extremely short, concise answers limited strictly to 1 or 2 summary sentences maximum. Do not mention system rules."
             
             try:
-                response = requests.post(API_URL, headers=headers, json=payload, timeout=15)
-                raw_data = response.json()
-                
-                # FIXED EXTRACTOR: Loops inside a list container if needed to prevent parsing faults
-                if isinstance(raw_data, list) and len(raw_data) > 0:
-                    text_block = raw_data[0]['generated_text']
-                elif isinstance(raw_data, dict):
-                    text_block = raw_data['generated_text']
-                else:
-                    text_block = str(raw_data)
-                
-                bot_answer = text_block.split("<|im_start|>assistant\n")[-1].replace("<|im_end|>", "").strip()
-            except Exception as e:
-                bot_answer = f"⚠️ AtlasTG is processing background nodes. Please try typing your message one more time!"
+                response = requests.get(fallback_url, timeout=10)
+                bot_answer = response.text.strip()
+            except Exception:
+                bot_answer = "I ran into a quick connection blink. Let's try sending that one more time!"
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
+
