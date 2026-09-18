@@ -168,7 +168,7 @@ for msg in st.session_state.messages:
             st.markdown(
                 f'''
                 <div style="display: flex; flex-direction: column; align-items: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15 rgba(0,0,0,0.2); margin-bottom: 8px;">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin-bottom: 8px;">
                         {text_part}
                     </div>
                 </div>
@@ -248,19 +248,21 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
         
         api_messages = [system_instruction]
         for m in st.session_state.messages:
-            # Enforce OpenAI translation text compatibility
             if isinstance(m["content"], list):
                 text_part = next((part["text"] for part in m["content"] if part["type"] == "text"), "")
                 api_messages.append({"role": m["role"], "content": text_part})
             else:
                 api_messages.append({"role": m["role"], "content": m["content"]})
         
-        # LOCKED TO THE WORKING OPENAI MODEL NO MATTER WHAT
+        # CHANGED TO THE ACTIVE UN-THROTTLED TEXT ENGINE:
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model="llama-3.3-70b-versatile",
             messages=api_messages,
             temperature=0.7,
             max_tokens=400,
         )
-        reply = completion.choices[0].message.content
+        reply = completion.choices.message.content
+
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.rerun()
 
