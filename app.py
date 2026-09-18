@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+from huggingface_hub import InferenceClient
 
 # 1. Advanced Luxury Page Config
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
@@ -73,42 +73,46 @@ st.markdown("""
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Premium Engine • High-Speed Instant Response</div>', unsafe_allow_html=True)
 
-# Unrestricted, highly scalable model pipe
-API_URL = "https://huggingface.co"
+# 3. PASTE YOUR HUGGING FACE TOKEN (hf_xxxx) BETWEEN THE QUOTES BELOW:
+HF_TOKEN = "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"
+
+# Initialize native Hugging Face client framework
+@st.cache_resource
+def get_client(token):
+    return InferenceClient(api_key=token)
+
+client = get_client(HF_TOKEN)
 
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [
+        {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses to 1 or 2 sentences max."}
+    ]
 
-# Display current chat timeline
+# Render chat bubbles cleanly
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # Packaged instruction prompts inside the template string cleanly
-    formatted_prompt = f"<|system|>\nYou are AtlasTG, a helpful AI assistant. Provide extremely short, concise answers limited strictly to 1 or 2 summary sentences maximum. Do not ramble.</s>\n<|user|>\n{user_input}</s>\n<|assistant|>\n"
-    
     with st.chat_message("assistant"):
-        with st.spinner(""):
+        with st.spinner("AtlasTG is processing..."):
             try:
-                # Direct, authentication-free public handshake payload
-                response = requests.post(API_URL, json={"inputs": formatted_prompt}, timeout=10)
-                raw_data = response.json()
-                
-                if isinstance(raw_data, list):
-                    text_block = raw_data[0]['generated_text']
-                else:
-                    text_block = raw_data['generated_text']
-                    
-                bot_answer = text_block.split("<|assistant|>\n")[-1].strip()
+                # Native structural completion handles all list/dict packaging perfectly
+                completion = client.chat.completions.create(
+                    model="Qwen/Qwen2.5-0.5B-Instruct",
+                    messages=st.session_state.messages,
+                    max_tokens=80,
+                    temperature=0.3
+                )
+                bot_answer = completion.choices[0].message.content.strip()
             except Exception:
-                bot_answer = "AtlasTG is synchronizing channels. Please press Enter to send that one more time!"
+                bot_answer = "⚠️ AtlasTG node synchronization timeout. Please press Enter to send that one more time!"
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
