@@ -12,26 +12,22 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── Strong sticky bottom bar CSS ──────────────
+# ── CSS + Strong Auto-Scroll ──────────────────
 st.markdown("""
 <style>
 .stApp {
     background-color: #0a0a0a;
     color: #e8e8e8;
 }
-
-/* Make main content take full height and leave space for bottom bar */
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 140px !important;   /* space for sticky input */
+    padding-bottom: 140px !important;
     max-width: 760px;
     min-height: 100vh;
 }
-
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden;
 }
-
 h1 {
     color: #ffffff !important;
     font-weight: 500 !important;
@@ -52,7 +48,7 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     padding-left: 0 !important;
 }
 
-/* ========== STICKY BOTTOM INPUT (Grok style) ========== */
+/* Sticky input */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 20px !important;
@@ -60,9 +56,7 @@ div[data-testid="stChatInput"] {
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
-    background: transparent !important;
 }
-
 .stChatInput {
     background-color: #141414 !important;
     border: 1px solid #2a2a2a !important;
@@ -73,7 +67,7 @@ div[data-testid="stChatInput"] {
     color: #e8e8e8 !important;
 }
 
-/* Round + button also sticky */
+/* Round + button */
 div.stButton > button {
     background-color: #1a1a1a !important;
     border: 1px solid #2f2f2f !important;
@@ -84,12 +78,31 @@ div.stButton > button {
     padding: 0 !important;
     color: #e8e8e8 !important;
     font-size: 1.5rem !important;
-    font-weight: 300 !important;
-}
-div.stButton > button:hover {
-    background-color: #252525 !important;
 }
 </style>
+
+<script>
+function scrollToBottom() {
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth"
+    });
+}
+
+// Run on load
+window.addEventListener("load", scrollToBottom);
+
+// Keep watching for new messages
+const observer = new MutationObserver(() => {
+    scrollToBottom();
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+// Also force it a few times after Streamlit updates
+setTimeout(scrollToBottom, 100);
+setTimeout(scrollToBottom, 300);
+setTimeout(scrollToBottom, 600);
+</script>
 """, unsafe_allow_html=True)
 
 # ── API Key ───────────────────────────────────
@@ -190,3 +203,9 @@ if prompt:
 
         st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
+
+    # Extra force scroll
+    st.markdown("""
+    <script>
+        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50);
+        setTimeout(() 
