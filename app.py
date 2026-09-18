@@ -1,9 +1,6 @@
 import streamlit as st
 from groq import Groq
 import os
-import base64
-from PIL import Image
-import io
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -62,7 +59,7 @@ div[data-testid="stChatInput"] {
     border: 1px solid #2c2c2c !important;
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 54px !important; /* Locks room for native inner plus button */
+    padding: 6px 12px 6px 20px !important; /* Left padding optimized for text-only clean aesthetic */
     transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -91,42 +88,6 @@ div[data-testid="stChatInput"] *,
     font-size: 15.5px !important;
     padding: 8px 4px !important;
 }
-
-/* ── PERMANENT NATIVE PLUS BUTTON POSITION LOCK ── */
-div.element-container:has(button[key="plus_btn"]) {
-    position: fixed !important;
-    bottom: 40px !important; /* Vertically centers button inside bar frame */
-    left: 50% !important;
-    transform: translateX(calc(-50vw + 20px)) !important;
-    z-index: 1001 !important;
-    width: auto !important;
-}
-
-/* Responsive anchor for larger monitor displays */
-@media (min-width: 826px) {
-    div.element-container:has(button[key="plus_btn"]) {
-        left: 50% !important;
-        transform: translateX(-360px) !important;
-    }
-}
-
-div.stButton > button[key="plus_btn"] {
-    background-color: transparent !important;
-    background: transparent !important;
-    border: none !important;
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    padding: 0 !important;
-    color: #8b8b8b !important;
-    font-size: 1.4rem !important;
-    font-weight: bold !important;
-    box-shadow: none !important;
-}
-div.stButton > button[key="plus_btn"]:hover {
-    color: #ffffff !important;
-    background-color: transparent !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -142,52 +103,25 @@ client = Groq(api_key=api_key)
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
-# ── Helper ────────────────────────────────────
-def image_to_base64(image: Image.Image) -> str:
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
-
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. You can talk to me or upload an image and ask about it."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly."}
     ]
-if "show_uploader" not in st.session_state:
-    st.session_state.show_uploader = False
-if "uploaded_image" not in st.session_state:
-    st.session_state.uploaded_image = None
 
 # ── Render Message Timeline using Airtight Inline Boxes ──────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        if isinstance(msg["content"], list):
-            text_part = next((part["text"] for part in msg["content"] if part["type"] == "text"), "")
-            img_part = next((part["image_url"]["url"] for part in msg["content"] if part["type"] == "image_url"), None)
-            
-            st.markdown(
-                f'''
-                <div style="display: flex; flex-direction: column; align-items: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.2); margin-bottom: 8px;">
-                        {text_part}
-                    </div>
+        st.markdown(
+            f'''
+            <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
+                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    {msg["content"]}
                 </div>
-                ''', 
-                unsafe_allow_html=True
-            )
-            if img_part:
-                st.image(img_part, use_container_width=True)
-        else:
-            st.markdown(
-                f'''
-                <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                        {msg["content"]}
-                    </div>
-                </div>
-                ''', 
-                unsafe_allow_html=True
-            )
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
     else:
         st.markdown(
             f'''
@@ -200,71 +134,42 @@ for msg in st.session_state.messages:
             unsafe_allow_html=True
         )
 
-# ── File Upload Drawer ────────────────────────
-if st.session_state.show_uploader:
-    uploaded_file = st.file_uploader(
-        "Choose an image",
-        type=["png", "jpg", "jpeg", "webp"],
-        key="file_uploader"
-    )
-    if uploaded_file is not None:
-        st.session_state.uploaded_image = uploaded_file
-        st.session_state.show_uploader = False
-        st.rerun()
-
-# ── Official Native Plus Button ───────────────
-if st.button("＋", key="plus_btn"):
-    st.session_state.show_uploader = not st.session_state.show_uploader
-    st.rerun()
-
 # ── Chat input ────────────────────────────────
 prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
-    active_image = st.session_state.uploaded_image
-
-    if active_image is not None:
-        image = Image.open(active_image)
-        b64_image = image_to_base64(image)
-        user_content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
-        ]
-        st.session_state.uploaded_image = None
-    else:
-        user_content = prompt
-
-    st.session_state.messages.append({"role": "user", "content": user_content})
+    st.session_state.messages.append({"role": "user", "content": prompt})
     st.rerun()
 
 # Processing bot response generation blocks
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
-        system_instruction = {
-            "role": "system", 
-            "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
-        }
-        
-        api_messages = [system_instruction]
-        is_multimodal = False
-        
-        for m in st.session_state.messages:
-            if isinstance(m["content"], list):
-                is_multimodal = True
-            api_messages.append({"role": m["role"], "content": m["content"]})
-        
-        # FIXED: Core active production text model name updated to match server layout perfectly
-        if is_multimodal:
-            target_model = "llama-3.2-11b-vision-preview" 
-        else:
-            target_model = "llama-3.3-70b-versatile"
-        
-        completion = client.chat.completions.create(
-            model=target_model,
-            messages=api_messages,
-            temperature=0.7,
-            max_tokens=400,
-        )
-        reply = completion.choices[0].message.content
+        try:
+            system_instruction = {
+                "role": "system", 
+                "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. Your core persona, logical behavior, and cognitive style emulate OpenAI's highest standards of conversational sophistication, emotional clarity, and technical mastery. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+            }
+            
+            api_messages = [system_instruction] + [
+                {"role": m["role"], "content": m["content"]} 
+                for m in st.session_state.messages
+            ]
+            
+            # Using Groq's active high-speed tier model
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=api_messages,
+                temperature=0.7,
+                max_tokens=400,
+            )
+            reply = completion.choices[0].message.content
+        except Exception as e:
+            reply = f"Error: {e}"
 
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
