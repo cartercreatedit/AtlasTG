@@ -1,6 +1,9 @@
 import streamlit as st
 from groq import Groq
 import os
+import base64
+from PIL import Image
+import io
 
 # ── Page config ───────────────────────────────
 st.set_page_config(
@@ -10,27 +13,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── AtlasTG / Grok-style CSS ──────────────────
+# ── AtlasTG Dark Theme CSS ────────────────────
 st.markdown("""
 <style>
-/* Pure dark background */
 .stApp {
     background-color: #0a0a0a;
     color: #e8e8e8;
 }
-
 .main .block-container {
     padding-top: 2.5rem;
     padding-bottom: 6rem;
     max-width: 760px;
 }
-
-/* Hide Streamlit chrome */
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden;
 }
-
-/* Title */
 h1 {
     color: #ffffff !important;
     font-weight: 500 !important;
@@ -38,64 +35,38 @@ h1 {
     letter-spacing: -0.02em;
     margin-bottom: 0.15rem !important;
 }
-
 .stCaption {
     color: #8b8b8b !important;
-    font-size: 0.9rem !important;
 }
-
-/* ========== HIDE AVATARS ========== */
+/* Hide avatars */
 div[data-testid="stChatMessageAvatarUser"],
-div[data-testid="stChatMessageAvatarAssistant"],
-.stChatMessage [data-testid="stImage"] {
+div[data-testid="stChatMessageAvatarAssistant"] {
     display: none !important;
 }
-
-/* Remove left padding that was reserved for avatars */
 .stChatMessage {
     background-color: transparent !important;
     border: none !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
-    padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important;
 }
-
-/* Make messages full width like this site */
-.stChatMessage > div {
-    max-width: 100% !important;
-}
-
-/* User message styling */
-div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-    background: transparent !important;
-}
-
-/* Text styling */
 div[data-testid="stMarkdownContainer"] p {
     color: #e8e8e8 !important;
     line-height: 1.65 !important;
     font-size: 1.05rem !important;
-    margin-bottom: 0.3rem !important;
 }
-
-/* Chat input */
 .stChatInput {
     background-color: #141414 !important;
     border: 1px solid #2a2a2a !important;
     border-radius: 18px !important;
 }
-
 .stChatInput textarea {
     color: #e8e8e8 !important;
-    background-color: transparent !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ── API Key ───────────────────────────────────
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
-
 if not api_key:
     st.error("Missing GROQ_API_KEY — add it in Streamlit Secrets")
     st.stop()
@@ -104,29 +75,83 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("Powered by Groq")
+st.caption("Text + Image Understanding · Powered by Groq")
+
+# ── Helper: convert image to base64 ───────────
+def image_to_base64(image: Image.Image) -> str:
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
 
 # ── Chat history ──────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. What do you want to talk about?"}
+        {"role": "assistant", "content": "Hey. You can talk to me or upload an image and ask about it."}
     ]
 
+# Display previous messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        if isinstance(msg["content"], list):
+            # Vision message (has image + text)
+            for part in msg["content"]:
+                if part["type"] == "text":
+                    st.markdown(part["text"])
+                elif part["type"] == "image_url":
+                    st.image(part["image_url"]["url"], use_container_width=True)
+        else:
+            st.markdown(msg["content"])
+
+# ── Image uploader ────────────────────────────
+uploaded_file = st.file_uploader(
+    "Upload an image (optional)",
+    type=["png", "jpg", "jpeg", "webp"],
+    label_visibility="collapsed"
+)
 
 # ── Chat input ────────────────────────────────
 if prompt := st.chat_input("Message AtlasTG..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # Build user message
+    if uploaded_file is not None:
+        # Image + text
+        image = Image.open(uploaded_file)
+        b64_image = image_to_base64(image)
+
+        user_content = [
+            {"type": "text", "text": prompt},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/png;base64,{b64_image}"
+                }
+            }
+        ]
+    else:
+        # Text only
+        user_content = prompt
+
+    # Add to history & show
+    st.session_state.messages.append({"role": "user", "content": user_content})
     with st.chat_message("user"):
+        if uploaded_file is not None:
+            st.image(uploaded_file, use_container_width=True)
         st.markdown(prompt)
 
+    # Call Groq (vision model)
     with st.chat_message("assistant"):
         try:
+            # Convert history for the API
+            api_messages = []
+            for m in st.session_state.messages:
+                api_messages.append({
+                    "role": m["role"],
+                    "content": m["content"]
+                })
+
             completion = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
-                messages=st.session_state.messages,
+                model="qwen/qwen3.6-27b",          # Vision-capable model
+                messages=api_messages,
                 temperature=0.7,
                 max_tokens=1024,
             )
