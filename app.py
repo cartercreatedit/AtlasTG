@@ -62,7 +62,7 @@ div[data-testid="stChatInput"] {
     border: 1px solid #2c2c2c !important;
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 48px !important; 
+    padding: 6px 12px 6px 54px !important; /* Locks room for native inner plus button */
     transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -92,18 +92,40 @@ div[data-testid="stChatInput"] *,
     padding: 8px 4px !important;
 }
 
-/* ── INJECTED PLUS ICON INSIDE THE ACTUAL PROMPT CONTAINER ── */
-div[data-testid="stChatInput"]::before {
-    content: "＋" !important;
-    position: absolute !important;
-    left: 20px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    color: #6b7280 !important;
-    font-size: 1.3rem !important;
-    font-weight: bold !important;
+/* ── PERMANENT NATIVE PLUS BUTTON POSITION LOCK ── */
+div.element-container:has(button[key="plus_btn"]) {
+    position: fixed !important;
+    bottom: 40px !important; /* Vertically centers button inside bar frame */
+    left: 50% !important;
+    transform: translateX(calc(-50vw + 20px)) !important;
     z-index: 1001 !important;
-    pointer-events: none !important;
+    width: auto !important;
+}
+
+/* Responsive anchor for larger monitor displays */
+@media (min-width: 826px) {
+    div.element-container:has(button[key="plus_btn"]) {
+        left: 50% !important;
+        transform: translateX(-360px) !important;
+    }
+}
+
+div.stButton > button[key="plus_btn"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
+    color: #8b8b8b !important;
+    font-size: 1.4rem !important;
+    font-weight: bold !important;
+    box-shadow: none !important;
+}
+div.stButton > button[key="plus_btn"]:hover {
+    color: #ffffff !important;
+    background-color: transparent !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -139,7 +161,6 @@ if "uploaded_image" not in st.session_state:
 # ── Render Message Timeline using Airtight Inline Boxes ──────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        # Check if user message has an image object attached inside it to render cleanly
         if isinstance(msg["content"], list):
             text_part = next((part["text"] for part in msg["content"] if part["type"] == "text"), "")
             img_part = next((part["image_url"]["url"] for part in msg["content"] if part["type"] == "image_url"), None)
@@ -155,7 +176,8 @@ for msg in st.session_state.messages:
                 unsafe_allow_html=True
             )
             if img_part:
-                st.image(img_part, max_width=400)
+                # FIXED RENDERING: Replaced broken max_width parameter with standardized layout configuration
+                st.image(img_part, use_container_width=True)
         else:
             st.markdown(
                 f'''
@@ -179,10 +201,6 @@ for msg in st.session_state.messages:
             unsafe_allow_html=True
         )
 
-# ── Invisible Interceptor Variable ────────────
-if st.checkbox("toggle_drawer_state", value=st.session_state.show_uploader, label_visibility="collapsed"):
-    st.session_state.show_uploader = True
-
 # ── File Upload Drawer ────────────────────────
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
@@ -195,16 +213,16 @@ if st.session_state.show_uploader:
         st.session_state.show_uploader = False
         st.rerun()
 
+# ── Official Native Plus Button ───────────────
+if st.button("＋", key="plus_btn"):
+    st.session_state.show_uploader = not st.session_state.show_uploader
+    st.rerun()
+
 # ── Chat input ────────────────────────────────
 prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
-    if prompt.strip().lower() == "/upload":
-        st.session_state.show_uploader = True
-        st.rerun()
-
-    # LOCKED PIPELINE FIX: Intercept media buffer data arrays safely *before* resetting uploader memory states
     active_image = st.session_state.uploaded_image
 
     if active_image is not None:
@@ -214,7 +232,7 @@ if prompt:
             {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
         ]
-        st.session_state.uploaded_image = None # Safely reset now that structural memory is locked into scope
+        st.session_state.uploaded_image = None
     else:
         user_content = prompt
 
@@ -240,7 +258,7 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
             
             # Hybrid framework dispatcher rules
             if is_multimodal:
-                target_model = "llama-3.2-11b-vision-preview" # Switches dynamically to active vision processing node
+                target_model = "llama-3.2-11b-vision-preview" 
             else:
                 target_model = "openai/gpt-oss-20b"
             
@@ -248,13 +266,3 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 model=target_model,
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=400,
-            )
-            reply = completion.choices.message.content
-        except Exception as e:
-            reply = f"Error: {e}"
-
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-        st.rerun()
-
-# ── AUTO-SCROLL + RELIABLE INSIDE CLICK TRIGGER INTERFACE ──
