@@ -1,10 +1,10 @@
 import streamlit as st
 import requests
 
-# 1. Advanced Luxury Page Config
+# 1. Advanced Luxury Layout Configuration
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
 
-# 2. Hyper-Modern Obsidian CSS Injector
+# 2. Premium Obsidian UI Aesthetic Styling
 st.markdown("""
     <style>
         .stApp { background: linear-gradient(180deg, #0A0D14 0%, #05070B 100%) !important; color: #F8FAFC !important; font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
@@ -21,23 +21,24 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Ultra-Fast Engine • High-Speed Production Grid</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle">Commercial Engine • Premium Production Pipeline</div>', unsafe_allow_html=True)
 
-# 3. Secure Production Key Routing using your working token
+# 3. Connection Parameters Mapping to Groq Cloud Platform
 API_URL = "https://groq.com"
 GROQ_KEY = "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"
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses strictly to 1 or 2 sentences max. Do not ramble."}
+        {"role": "system", "content": "You are AtlasTG, a helpful commercial AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses strictly to 1 or 2 sentences max. Do not ramble."}
     ]
 
-# Render chat timeline history
+# Render timeline history
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
+# 4. Live Message Stream Exchange Execution Loop
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
@@ -50,18 +51,19 @@ if user_input := st.chat_input("Message AtlasTG..."):
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "mixtral-8x7b-32768", # Stable, free, un-throttled model pipeline
+                "model": "mixtral-8x7b-32768",
                 "messages": st.session_state.messages,
-                "max_tokens": 100,
+                "max_tokens": 120,
                 "temperature": 0.3
             }
             
             response = requests.post(API_URL, headers=headers, json=payload, timeout=10)
             
-            # THE ABSOLUTE FIX: Added the [0] list position index so it reads data perfectly!
-            bot_answer = response.json()['choices']['message']['content'].strip()
+            # FIXED POSITION ELEMENT LAYER: Target list location index 0 to ensure flawless text unpacking
+            bot_answer = response.json()['choices'][0]['message']['content'].strip()
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
+
 
 
