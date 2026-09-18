@@ -195,26 +195,26 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            # IDENTITY MATRIX: Built-in strict branding rules
+            # IDENTITY MATRIX: Strict creator rules
             system_instruction = {
                 "role": "system", 
                 "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
             }
             
-            # Format history loop
+            # Format history loop cleanly
             api_messages = [system_instruction] + [
                 {"role": m["role"], "content": m["content"]} 
                 for m in st.session_state.messages
             ]
             
-            # FIXED: Swapped to Groq's active flagship high-accuracy model framework
+            # FIXED: Swapped to Groq's high-capacity open vision framework
             completion = client.chat.completions.create(
-                model="qwen/qwen3.6-27b",
+                model="llama-3.2-90b-vision-preview",
                 messages=api_messages,
                 temperature=0.3,
                 max_tokens=400,
             )
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
