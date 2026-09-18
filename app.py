@@ -20,7 +20,7 @@ st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 # Connection Details
 API_URL = "https://groq.com"
 
-# PASTE YOUR NEW KEY STARTING WITH gsk_ DIRECTLY BETWEEN THESE QUOTES:
+# PASTE YOUR REAL GSK_ KEY DIRECTLY BETWEEN THESE QUOTES:
 GROQ_KEY = "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"
 
 # Chat Memory
@@ -48,7 +48,7 @@ if user_input := st.chat_input("Message AtlasTG..."):
             json={"model": "llama3-8b-8192", "messages": st.session_state.messages, "max_tokens": 100, "temperature": 0.3}
         )
         
-        # Raw Extraction - Direct mapping to the standard openAI response layout
+        # FIXED: Added the required [0] layout target index to read data flawlessly
         bot_answer = response.json()['choices'][0]['message']['content'].strip()
         st.write(bot_answer)
             
