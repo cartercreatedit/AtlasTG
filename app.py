@@ -5,7 +5,6 @@ import base64
 from PIL import Image
 import io
 
-# ── Page config ───────────────────────────────
 st.set_page_config(
     page_title="AtlasTG",
     page_icon="✦",
@@ -13,21 +12,26 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── CSS + Auto-scroll ─────────────────────────
+# ── Strong sticky bottom bar CSS ──────────────
 st.markdown("""
 <style>
 .stApp {
     background-color: #0a0a0a;
     color: #e8e8e8;
 }
+
+/* Make main content take full height and leave space for bottom bar */
 .main .block-container {
-    padding-top: 2.5rem;
-    padding-bottom: 8rem;
+    padding-top: 2rem;
+    padding-bottom: 140px !important;   /* space for sticky input */
     max-width: 760px;
+    min-height: 100vh;
 }
+
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden;
 }
+
 h1 {
     color: #ffffff !important;
     font-weight: 500 !important;
@@ -48,17 +52,28 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     padding-left: 0 !important;
 }
 
-/* Chat input */
+/* ========== STICKY BOTTOM INPUT (Grok style) ========== */
+div[data-testid="stChatInput"] {
+    position: fixed !important;
+    bottom: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(760px, 92vw) !important;
+    z-index: 999 !important;
+    background: transparent !important;
+}
+
 .stChatInput {
     background-color: #141414 !important;
     border: 1px solid #2a2a2a !important;
     border-radius: 24px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
 }
 .stChatInput textarea {
     color: #e8e8e8 !important;
 }
 
-/* Round + button */
+/* Round + button also sticky */
 div.stButton > button {
     background-color: #1a1a1a !important;
     border: 1px solid #2f2f2f !important;
@@ -73,20 +88,8 @@ div.stButton > button {
 }
 div.stButton > button:hover {
     background-color: #252525 !important;
-    border-color: #3a3a3a !important;
 }
 </style>
-
-<script>
-// Auto-scroll to bottom
-const scrollToBottom = () => {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-};
-// Run after every Streamlit rerun
-window.addEventListener('load', scrollToBottom);
-const observer = new MutationObserver(scrollToBottom);
-observer.observe(document.body, { childList: true, subtree: true });
-</script>
 """, unsafe_allow_html=True)
 
 # ── API Key ───────────────────────────────────
@@ -117,7 +120,7 @@ if "show_uploader" not in st.session_state:
 if "uploaded_image" not in st.session_state:
     st.session_state.uploaded_image = None
 
-# ── Show previous messages ────────────────────
+# ── Messages ──────────────────────────────────
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
@@ -129,7 +132,7 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# ── Bottom bar ────────────────────────────────
+# ── Bottom controls ───────────────────────────
 col_plus, col_input = st.columns([0.07, 0.93], gap="small")
 
 with col_plus:
@@ -139,7 +142,6 @@ with col_plus:
 with col_input:
     prompt = st.chat_input("Message AtlasTG...")
 
-# Show file uploader only when + is clicked
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
         "Choose an image",
@@ -158,15 +160,9 @@ if prompt:
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         b64_image = image_to_base64(image)
-
         user_content = [
             {"type": "text", "text": prompt},
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/png;base64,{b64_image}"
-                }
-            }
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
         ]
         st.session_state.uploaded_image = None
     else:
@@ -181,13 +177,9 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            api_messages = [
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ]
-
+            api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             completion = client.chat.completions.create(
-                model="qwen/qwen3.8-27b",   # current vision model
+                model="qwen/qwen3.8-27b",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=1024,
@@ -198,6 +190,3 @@ if prompt:
 
         st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
-
-    # Force scroll after response
-    st.markdown("<script>window.scrollTo(0, document.body.scrollHeight);</script>", unsafe_allow_html=True)
