@@ -22,7 +22,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2.5rem;
-    padding-bottom: 6rem;
+    padding-bottom: 7rem;
     max-width: 760px;
 }
 #MainMenu, footer, header, .stDeployButton {
@@ -38,6 +38,7 @@ h1 {
 .stCaption {
     color: #8b8b8b !important;
 }
+
 /* Hide avatars */
 div[data-testid="stChatMessageAvatarUser"],
 div[data-testid="stChatMessageAvatarAssistant"] {
@@ -54,6 +55,8 @@ div[data-testid="stMarkdownContainer"] p {
     line-height: 1.65 !important;
     font-size: 1.05rem !important;
 }
+
+/* Chat input */
 .stChatInput {
     background-color: #141414 !important;
     border: 1px solid #2a2a2a !important;
@@ -61,6 +64,32 @@ div[data-testid="stMarkdownContainer"] p {
 }
 .stChatInput textarea {
     color: #e8e8e8 !important;
+}
+
+/* Make the file uploader look like a small paperclip button */
+div[data-testid="stFileUploader"] {
+    padding: 0 !important;
+}
+div[data-testid="stFileUploader"] section {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+div[data-testid="stFileUploader"] label {
+    display: none !important;
+}
+div[data-testid="stFileUploader"] button {
+    background: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 12px !important;
+    color: #e8e8e8 !important;
+    padding: 0.55rem 0.7rem !important;
+    font-size: 1.1rem !important;
+    min-height: 42px !important;
+}
+div[data-testid="stFileUploader"] button:hover {
+    background: #222 !important;
+    border-color: #3a3a3a !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -77,7 +106,7 @@ client = Groq(api_key=api_key)
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("Text + Image Understanding · Powered by Groq")
 
-# ── Helper: convert image to base64 ───────────
+# ── Helper ────────────────────────────────────
 def image_to_base64(image: Image.Image) -> str:
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
@@ -89,11 +118,9 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Hey. You can talk to me or upload an image and ask about it."}
     ]
 
-# Display previous messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
-            # Vision message (has image + text)
             for part in msg["content"]:
                 if part["type"] == "text":
                     st.markdown(part["text"])
@@ -102,19 +129,23 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# ── Image uploader ────────────────────────────
-uploaded_file = st.file_uploader(
-    "Upload an image (optional)",
-    type=["png", "jpg", "jpeg", "webp"],
-    label_visibility="collapsed"
-)
+# ── Bottom input area (paperclip + chat) ──────
+col1, col2 = st.columns([0.08, 0.92], gap="small")
 
-# ── Chat input ────────────────────────────────
-if prompt := st.chat_input("Message AtlasTG..."):
+with col1:
+    uploaded_file = st.file_uploader(
+        "📎",
+        type=["png", "jpg", "jpeg", "webp"],
+        label_visibility="collapsed",
+        key="image_uploader"
+    )
 
-    # Build user message
+with col2:
+    prompt = st.chat_input("Message AtlasTG...")
+
+# ── Handle send ───────────────────────────────
+if prompt:
     if uploaded_file is not None:
-        # Image + text
         image = Image.open(uploaded_file)
         b64_image = image_to_base64(image)
 
@@ -128,29 +159,24 @@ if prompt := st.chat_input("Message AtlasTG..."):
             }
         ]
     else:
-        # Text only
         user_content = prompt
 
-    # Add to history & show
     st.session_state.messages.append({"role": "user", "content": user_content})
+
     with st.chat_message("user"):
         if uploaded_file is not None:
             st.image(uploaded_file, use_container_width=True)
         st.markdown(prompt)
 
-    # Call Groq (vision model)
     with st.chat_message("assistant"):
         try:
-            # Convert history for the API
-            api_messages = []
-            for m in st.session_state.messages:
-                api_messages.append({
-                    "role": m["role"],
-                    "content": m["content"]
-                })
+            api_messages = [
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ]
 
             completion = client.chat.completions.create(
-                model="qwen/qwen3.6-27b",          # Vision-capable model
+                model="qwen/qwen3.6-27b",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=1024,
