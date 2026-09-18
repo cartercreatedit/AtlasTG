@@ -62,7 +62,7 @@ div[data-testid="stChatInput"] {
     border: none !important; 
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 48px !important; 
+    padding: 6px 12px 6px 54px !important; /* Fixed left indentation */
     transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -93,11 +93,11 @@ div[data-testid="stChatInput"] *,
     padding: 8px 4px !important;
 }
 
-/* ── NATIVE INNER PLUS BUTTON ALIGNMENT OVERRIDE ── */
+/* ── NATIVE INNER PLUS BUTTON ALIGNMENT FIX ── */
 div.element-container:has(button[key="plus_btn"]) {
     position: fixed !important;
-    bottom: 40px !important; 
-    margin-left: max(calc(50vw - 366px), 22px) !important; 
+    bottom: 39px !important; /* Perfectly centers vertically within the bar container */
+    margin-left: max(calc(50vw - 364px), 24px) !important; /* Pins it directly inside the left boundary */
     z-index: 1001 !important;
     width: auto !important;
 }
@@ -255,7 +255,7 @@ if prompt:
                     temperature=0.3,
                     max_tokens=400,
                 )
-                reply = completion.choices[0].message.content
+                reply = completion.choices.message.content
             except Exception as e:
                 reply = f"Error: {e}"
 
@@ -264,4 +264,3 @@ if prompt:
     st.rerun()
 
 # ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-# Safe single-line script integration prevents triple-quote compile faults
