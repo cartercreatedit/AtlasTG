@@ -219,10 +219,6 @@ prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
-    if prompt.strip().lower() == "/upload":
-        st.session_state.show_uploader = True
-        st.rerun()
-
     uploaded_file = st.session_state.uploaded_image
 
     if uploaded_file is not None:
@@ -262,10 +258,13 @@ if prompt:
                 if is_multimodal:
                     target_model = "llama-3.2-11b-vision-preview" 
                 else:
-                    target_model = "openai/gpt-oss-20b" 
+                    target_model = "llama-3.1-8b-instant" 
                 
                 completion = client.chat.completions.create(
                     model=target_model,
                     messages=api_messages,
                     temperature=0.3,
                     max_tokens=400,
+                )
+                reply = completion.choices[0].message.content
+            except Exception as e:
