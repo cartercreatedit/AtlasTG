@@ -254,14 +254,14 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
             else:
                 api_messages.append({"role": m["role"], "content": m["content"]})
         
-        # CHANGED TO THE ACTIVE UN-THROTTLED TEXT ENGINE:
+        # LOCKED TO STABLE, ACTIVE GROQ PRODUCTION ID:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama3-8b-8192",
             messages=api_messages,
             temperature=0.7,
             max_tokens=400,
         )
-        reply = completion.choices.message.content
+        reply = completion.choices[0].message.content
 
         st.session_state.messages.append({"role": "assistant", "content": reply})
         st.rerun()
