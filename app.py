@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── AtlasTG / Grok-style CSS ──────────────────
+# ── CSS ───────────────────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -33,7 +33,6 @@ h1 {
     font-weight: 500 !important;
     font-size: 1.75rem !important;
     letter-spacing: -0.02em;
-    margin-bottom: 0.15rem !important;
 }
 .stCaption {
     color: #8b8b8b !important;
@@ -48,12 +47,6 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     background-color: transparent !important;
     border: none !important;
     padding-left: 0 !important;
-    padding-right: 0 !important;
-}
-div[data-testid="stMarkdownContainer"] p {
-    color: #e8e8e8 !important;
-    line-height: 1.65 !important;
-    font-size: 1.05rem !important;
 }
 
 /* Chat input */
@@ -66,41 +59,22 @@ div[data-testid="stMarkdownContainer"] p {
     color: #e8e8e8 !important;
 }
 
-/* ========== Grok-style + button ========== */
-div[data-testid="stFileUploader"] {
-    padding: 0 !important;
-    margin: 0 !important;
-}
-div[data-testid="stFileUploader"] > section {
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-}
-div[data-testid="stFileUploader"] label {
-    display: none !important;
-}
-div[data-testid="stFileUploader"] button {
+/* Round + button */
+div.stButton > button {
     background-color: #1a1a1a !important;
     border: 1px solid #2f2f2f !important;
-    border-radius: 50% !important;          /* round like Grok */
+    border-radius: 50% !important;
     width: 42px !important;
     height: 42px !important;
     min-width: 42px !important;
     padding: 0 !important;
     color: #e8e8e8 !important;
-    font-size: 1.4rem !important;
+    font-size: 1.5rem !important;
     font-weight: 300 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
 }
-div[data-testid="stFileUploader"] button:hover {
+div.stButton > button:hover {
     background-color: #252525 !important;
     border-color: #3a3a3a !important;
-}
-div[data-testid="stFileUploader"] button p {
-    margin: 0 !important;
-    font-size: 1.4rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -108,7 +82,7 @@ div[data-testid="stFileUploader"] button p {
 # ── API Key ───────────────────────────────────
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
-    st.error("Missing GROQ_API_KEY — add it in Streamlit Secrets")
+    st.error("Missing GROQ_API_KEY")
     st.stop()
 
 client = Groq(api_key=api_key)
@@ -123,12 +97,17 @@ def image_to_base64(image: Image.Image) -> str:
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
 
-# ── Chat history ──────────────────────────────
+# ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Hey. You can talk to me or upload an image and ask about it."}
     ]
+if "show_uploader" not in st.session_state:
+    st.session_state.show_uploader = False
+if "uploaded_image" not in st.session_state:
+    st.session_state.uploaded_image = None
 
+# ── Show previous messages ────────────────────
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if isinstance(msg["content"], list):
@@ -140,22 +119,32 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# ── Bottom bar: + button + chat input ─────────
+# ── Bottom bar ────────────────────────────────
 col_plus, col_input = st.columns([0.07, 0.93], gap="small")
 
 with col_plus:
-    uploaded_file = st.file_uploader(
-        "+",
-        type=["png", "jpg", "jpeg", "webp"],
-        label_visibility="collapsed",
-        key="image_uploader"
-    )
+    if st.button("＋", key="plus_btn"):
+        st.session_state.show_uploader = not st.session_state.show_uploader
 
 with col_input:
     prompt = st.chat_input("Message AtlasTG...")
 
-# ── Handle message ────────────────────────────
+# Show file uploader only when + is clicked
+if st.session_state.show_uploader:
+    uploaded_file = st.file_uploader(
+        "Choose an image",
+        type=["png", "jpg", "jpeg", "webp"],
+        key="file_uploader"
+    )
+    if uploaded_file is not None:
+        st.session_state.uploaded_image = uploaded_file
+        st.session_state.show_uploader = False
+        st.rerun()
+
+# ── Handle send ───────────────────────────────
 if prompt:
+    uploaded_file = st.session_state.uploaded_image
+
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         b64_image = image_to_base64(image)
@@ -169,6 +158,8 @@ if prompt:
                 }
             }
         ]
+        # Clear the stored image after using it
+        st.session_state.uploaded_image = None
     else:
         user_content = prompt
 
