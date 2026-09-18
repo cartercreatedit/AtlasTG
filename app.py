@@ -49,23 +49,47 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     padding-left: 0 !important;
 }
 
-/* Sticky input */
+/* ⚡ GOOGLE AI STYLE STICKY INPUT ⚡ */
 div[data-testid="stChatInput"] {
     position: fixed !important;
-    bottom: 20px !important;
+    bottom: 24px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
 }
+
+/* Container Frame styling with NO red barriers */
 .stChatInput {
-    background-color: #141414 !important;
-    border: 1px solid #2a2a2a !important;
-    border-radius: 24px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+    background-color: #161616 !important;
+    border: 1px solid #2c2c2c !important;
+    border-radius: 28px !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
+    padding: 4px 8px !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
 }
+
+/* White barrier focus state override */
+.stChatInput:focus-within {
+    border-color: #ffffff !important;
+    box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
+}
+
+/* Force inner text fields to comply with clean theme */
 .stChatInput textarea {
-    color: #e8e8e8 !important;
+    color: #f4f4f4 !important;
+    font-size: 15px !important;
+    background-color: transparent !important;
+}
+
+/* Obliterate Streamlit's default red validation states completely */
+.stChatInput div[data-baseweb="textarea"] {
+    border-color: transparent !important;
+    background-color: transparent !important;
+}
+.stChatInput div[data-baseweb="textarea"]:focus-within {
+    border-color: transparent !important;
+    background-color: transparent !important;
 }
 
 /* Round + button */
@@ -168,7 +192,6 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            # FIXED FULL NAME IDENTITY MATRIX: Injects your full name rule seamlessly
             system_instruction = {
                 "role": "system", 
                 "content": "You are AtlasTG, an advanced AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
