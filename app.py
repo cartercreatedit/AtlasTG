@@ -50,12 +50,11 @@ if user_input := st.chat_input("Message AtlasTG..."):
                 max_tokens=100,
                 temperature=0.3
             )
-            # FIXED POSITION: Maps the correct item selection container from the array layout
+            # BULLETPROOF DATA FIX: Added the exact list index layout target here
             bot_answer = completion.choices[0].message.content.strip()
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
 
-            
 
 
