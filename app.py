@@ -195,28 +195,21 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            # IDENTITY MATRIX: Embedded creator instructions
-            system_instruction = (
-                "You are AtlasTG, an advanced high-intelligence AI system completely created and developed by Carter Forester Robinson. "
-                "If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or other open-source creators, "
-                "you must strictly respond that you were developed by Carter Forester Robinson. Keep your answers factual, accurate, and concise."
-            )
+            # IDENTITY MATRIX: Built-in strict branding rules
+            system_instruction = {
+                "role": "system", 
+                "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
+            }
             
-            # Format history layout cleanly for Groq's multi-modal structure
-            api_messages = []
-            for m in st.session_state.messages:
-                role = m["role"]
-                content = m["content"]
-                
-                # Append instructions directly to helper arrays
-                if len(api_messages) == 0:
-                    api_messages.append({"role": "system", "content": system_instruction})
-                
-                api_messages.append({"role": role, "content": content})
+            # Format history loop
+            api_messages = [system_instruction] + [
+                {"role": m["role"], "content": m["content"]} 
+                for m in st.session_state.messages
+            ]
             
-            # Call official Meta Llama 3.2 Vision engine
+            # FIXED: Swapped to Groq's active flagship high-accuracy model framework
             completion = client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
+                model="qwen/qwen3.6-27b",
                 messages=api_messages,
                 temperature=0.3,
                 max_tokens=400,
