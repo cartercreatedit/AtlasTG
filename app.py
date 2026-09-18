@@ -38,59 +38,12 @@ h1 {
     color: #8b8b8b !important;
 }
 
-/* Hide default avatars completely */
-div[data-testid="stChatMessageAvatarUser"],
-div[data-testid="stChatMessageAvatarAssistant"] {
-    display: none !important;
-}
-
-/* Clean message rows background clearing */
-.stChatMessage {
+/* Clear default Streamlit padding baggage */
+div[data-testid="stChatMessage"] {
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0px !important;
-    margin: 16px 0px !important;
-    width: 100% !important;
-}
-
-/* 👤 USER PROMPTS: Force exact alignment right and build the real bubble container */
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
-    display: flex !important;
-    justify-content: flex-end !important;
-    text-align: right !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) [data-testid="stChatMessageContent"] {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2d2d2d !important;
-    padding: 12px 18px !important;
-    border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Pointed sharp tail top right */
-    max-width: 80% !important;
-    display: inline-block !important;
-    text-align: left !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
-}
-
-/* 🐆 ASSISTANT RESPONSES: Aligned Left as Clean Plain Text with NO Bubble Shapes */
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: flex !important;
-    justify-content: flex-start !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) [data-testid="stChatMessageContent"] {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 0px !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
-}
-
-/* Text alignment typography configuration */
-div[data-testid="stMarkdownContainer"] p {
-    color: #e3e3e3 !important;
-    font-size: 15.5px !important;
-    line-height: 1.6 !important;
-    margin: 0px !important;
 }
 
 /* ── EXACT GOOGLE AI INPUT BOX MATCH WITH INTEGRATED INTERNAL PADDING ── */
@@ -183,17 +136,32 @@ if "show_uploader" not in st.session_state:
 if "uploaded_image" not in st.session_state:
     st.session_state.uploaded_image = None
 
-# ── Messages ──────────────────────────────────
+# ── Render Message Timeline using Airtight Inline Boxes ──────────────────
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        if isinstance(msg["content"], list):
-            for part in msg["content"]:
-                if part["type"] == "text":
-                    st.markdown(part["text"])
-                elif part["type"] == "image_url":
-                    st.image(part["image_url"]["url"], use_container_width=True)
-        else:
-            st.markdown(msg["content"])
+    if msg["role"] == "user":
+        # FIXED: Forces an exact, rounded rectangular bubble with a pointed top-right tuck edge using bulletproof inline styles
+        st.markdown(
+            f'''
+            <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
+                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    {msg["content"]}
+                </div>
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
+    else:
+        # FIXED: Forces clean assistant text style on the left side with NO bubble background box shapes
+        st.markdown(
+            f'''
+            <div style="display: flex; justify-content: flex-start; width: 100%; margin: 16px 0; clear: both;">
+                <div style="color: #e3e3e3; padding: 4px 0px; max-width: 100%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+                    {msg["content"]}
+                </div>
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
 
 # ── File Upload Drawer ────────────────────────
 if st.session_state.show_uploader or st.session_state.uploaded_image is not None:
@@ -214,52 +182,35 @@ if prompt:
         st.session_state.show_uploader = True
         st.rerun()
 
-    uploaded_file = st.session_state.uploaded_image
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.rerun()
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        b64_image = image_to_base64(image)
-        user_content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
-        ]
-        st.session_state.uploaded_image = None
-        st.session_state.show_uploader = False
-    else:
-        user_content = prompt
+# Processing bot response generation blocks
+if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
+    with st.spinner(""):
+        try:
+            system_instruction = {
+                "role": "system", 
+                "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
+            }
+            
+            api_messages = [system_instruction] + [
+                {"role": m["role"], "content": m["content"]} 
+                for m in st.session_state.messages
+            ]
+            
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                messages=api_messages,
+                temperature=0.7,
+                max_tokens=400,
+            )
+            reply = completion.choices.message.content
+        except Exception as e:
+            reply = f"Error: {e}"
 
-    st.session_state.messages.append({"role": "user", "content": user_content})
-
-    with st.chat_message("user"):
-        if uploaded_file is not None:
-            st.image(uploaded_file, use_container_width=True)
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        with st.spinner(""):
-            try:
-                system_instruction = {
-                    "role": "system", 
-                    "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
-                }
-                
-                api_messages = [system_instruction] + [
-                    {"role": m["role"], "content": m["content"]} 
-                    for m in st.session_state.messages
-                ]
-                
-                completion = client.chat.completions.create(
-                    model="openai/gpt-oss-20b",
-                    messages=api_messages,
-                    temperature=0.7,
-                    max_tokens=400,
-                )
-                reply = completion.choices[0].message.content
-            except Exception as e:
-                reply = f"Error: {e}"
-
-            st.markdown(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.rerun()
 
 # ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
 components.html(
