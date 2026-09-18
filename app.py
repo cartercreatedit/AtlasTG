@@ -76,7 +76,6 @@ st.markdown('<div class="app-subtitle">Premium Engine • High-Speed Instant Res
 # 3. PASTE YOUR HUGGING FACE TOKEN (hf_xxxx) BETWEEN THE QUOTES BELOW:
 HF_TOKEN = "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"
 
-# Initialize native Hugging Face client framework
 @st.cache_resource
 def get_client(token):
     return InferenceClient(api_key=token)
@@ -88,7 +87,6 @@ if "messages" not in st.session_state:
         {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses to 1 or 2 sentences max."}
     ]
 
-# Render chat bubbles cleanly
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
@@ -102,17 +100,18 @@ if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("assistant"):
         with st.spinner("AtlasTG is processing..."):
             try:
-                # Native structural completion handles all list/dict packaging perfectly
+                # SWAPPED MODEL: Moving to Microsoft's high-uptime free server pipe
                 completion = client.chat.completions.create(
-                    model="Qwen/Qwen2.5-0.5B-Instruct",
+                    model="microsoft/Phi-3-mini-4k-instruct",
                     messages=st.session_state.messages,
                     max_tokens=80,
                     temperature=0.3
                 )
-                bot_answer = completion.choices[0].message.content.strip()
+                bot_answer = completion.choices.message.content.strip()
             except Exception:
-                bot_answer = "⚠️ AtlasTG node synchronization timeout. Please press Enter to send that one more time!"
+                bot_answer = "⚠️ Server blink. Just hit Enter to resend!"
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
+
