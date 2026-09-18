@@ -1,127 +1,132 @@
 import streamlit as st
 from groq import Groq
+import os
 
-# ────────────────────────────────────────────────
-# PASTE YOUR GROQ API KEY HERE (starts with gsk_)
-# ────────────────────────────────────────────────
-GROQ_API_KEY = "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"
-
-
-# ────────────────────────────────────────────────
-# Page + Dark Theme
-# ────────────────────────────────────────────────
+# ── Page config ───────────────────────────────
 st.set_page_config(
-    page_title="Groq Chat",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    page_title="Grok",
+    page_icon="✦",
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-st.markdown(
-    """
-    <style>
-    /* Force dark premium theme */
-    .stApp {
-        background: linear-gradient(180deg, #0b0f19 0%, #111827 100%);
-        color: #e5e7eb;
-    }
-    .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 3rem;
-        max-width: 900px;
-    }
-    h1, h2, h3, h4 {
-        color: #f9fafb !important;
-        font-weight: 600;
-    }
-    .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea {
-        background-color: #1f2937 !important;
-        color: #f3f4f6 !important;
-        border: 1px solid #374151 !important;
-        border-radius: 10px !important;
-    }
-    .stButton > button {
-        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 0.6rem 1.8rem !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease;
-    }
-    .stButton > button:hover {
-        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
-        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
-    }
-    .stChatMessage {
-        background-color: #1f2937 !important;
-        border-radius: 12px !important;
-        border: 1px solid #374151 !important;
-    }
-    div[data-testid="stMarkdownContainer"] p {
-        color: #e5e7eb;
-    }
-    /* Hide Streamlit branding for cleaner look */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# ── Grok-style CSS ────────────────────────────
+st.markdown("""
+<style>
+/* Pure dark background like Grok */
+.stApp {
+    background-color: #0a0a0a;
+    color: #e8e8e8;
+}
 
-# ────────────────────────────────────────────────
-# Header
-# ────────────────────────────────────────────────
-st.title("⚡ Groq Chat")
-st.caption("Powered by llama-3.1-8b-instant · Official Groq SDK")
+.main .block-container {
+    padding-top: 3rem;
+    padding-bottom: 6rem;
+    max-width: 760px;
+}
 
-# ────────────────────────────────────────────────
-# Session state for chat history
-# ────────────────────────────────────────────────
+/* Hide Streamlit chrome */
+#MainMenu, footer, header, .stDeployButton {
+    visibility: hidden;
+}
+
+/* Title */
+h1 {
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    font-size: 1.8rem !important;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.2rem !important;
+}
+
+/* Caption */
+.stCaption {
+    color: #8b8b8b !important;
+    font-size: 0.9rem !important;
+}
+
+/* Chat messages */
+.stChatMessage {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0.6rem 0 !important;
+}
+
+/* User message bubble */
+div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) {
+    background-color: transparent !important;
+}
+
+/* Make the chat input look more like Grok */
+.stChatInput {
+    background-color: #141414 !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 16px !important;
+}
+
+.stChatInput textarea {
+    color: #e8e8e8 !important;
+    background-color: transparent !important;
+}
+
+/* Soften the avatar circles */
+div[data-testid="stChatMessageAvatarUser"],
+div[data-testid="stChatMessageAvatarAssistant"] {
+    background-color: #1a1a1a !important;
+    border: 1px solid #2a2a2a !important;
+}
+
+/* Markdown text */
+div[data-testid="stMarkdownContainer"] p {
+    color: #e8e8e8 !important;
+    line-height: 1.6 !important;
+    font-size: 1.02rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── API Key ───────────────────────────────────
+api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+
+if not api_key:
+    st.error("Missing GROQ_API_KEY")
+    st.stop()
+
+client = Groq(api_key=api_key)
+
+# ── Header (Grok style) ───────────────────────
+st.markdown("<h1>Grok</h1>", unsafe_allow_html=True)
+st.caption("Built with Groq · openai/gpt-oss-20b")
+
+# ── Chat history ──────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! How can I help you today?"}
+        {"role": "assistant", "content": "Hey. What do you want to talk about?"}
     ]
 
-# Display previous messages
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# ────────────────────────────────────────────────
-# Chat input + Groq call
-# ────────────────────────────────────────────────
-user_input = st.chat_input("Type your message…")
-
-if user_input:
+# ── Chat input ────────────────────────────────
+if prompt := st.chat_input("Message Grok..."):
     # Add user message
-    st.session_state.messages.append({"role": "user", "content": user_input})
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(user_input)
+        st.markdown(prompt)
 
-    # Call Groq with the official client
-    try:
-        client = Groq(api_key=GROQ_API_KEY)
-
-        completion = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            temperature=0.7,
-            max_tokens=1024,
-        )
-
-        # Extract text the official way (no .json(), no dict indexing)
-        reply = completion.choices[0].message.content
-
-    except Exception as e:
-        reply = f"⚠️ Error talking to Groq: {e}"
-
-    # Show and store assistant reply
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+    # Get reply
     with st.chat_message("assistant"):
+        try:
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                messages=st.session_state.messages,
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            reply = completion.choices[0].message.content
+        except Exception as e:
+            reply = f"Error: {e}"
+
         st.markdown(reply)
+        st.session_state.messages.append({"role": "assistant", "content": reply})
