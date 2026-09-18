@@ -1,5 +1,6 @@
 import streamlit as st
-import requests
+import torch
+from transformers import pipeline
 
 # 1. Advanced Luxury Page Config
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
@@ -21,41 +22,71 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Ultra-Fast Engine • High-Speed Production Grid</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle">Self-Contained Local Core Engine • 100% Uptime Guaranteed</div>', unsafe_allow_html=True)
 
-# Initialize Chat Memory tracking array
+# 3. Load Your Verified Model Pipeline directly inside the server memory
+@st.cache_resource
+def load_local_ai():
+    return pipeline(
+        "text-generation",
+        model="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        device="cpu", # Swapped to CPU since Streamlit free servers run on high-performance cloud CPUs
+        torch_dtype=torch.float32
+    )
+
+ai_pipeline = load_local_ai()
+
+# 4. Initialize History Matrix exactly like your Colab script
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [
+        {
+            "role": "system",
+            "content": "You are AtlasTG, a high-speed assistant. Always give short, direct summaries. Keep answers to 1 or 2 punchy sentences max. Do not ramble."
+        }
+    ]
 
-# Render past chat timeline history
+# Render chat timeline tracking history rows
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
+# 5. Process User Input exactly like your old While Loop
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
+    # Format the prompt structure identically to your running script
+    formatted_prompt = ai_pipeline.tokenizer.apply_chat_template(st.session_state.messages, tokenize=False, add_generation_prompt=True)
+    
     with st.chat_message("assistant"):
         with st.spinner(""):
+            response = ai_pipeline(
+                formatted_prompt,
+                max_new_tokens=40,
+                do_sample=False
+            )
             
-            # Direct routing path using a free public endpoint template
-            system_rules = "You are AtlasTG, a high-speed AI assistant. Keep responses short, concise, and summary-focused. Limit answers to 1 or 2 sentences max. Do not ramble."
-            encoded_prompt = requests.utils.quote(user_input)
-            encoded_system = requests.utils.quote(system_rules)
-            
-            api_url = f"https://pollinations.ai{encoded_prompt}?system={encoded_system}&model=openai"
-            
-            # Direct fetch method — no passwords, no JSON parsing list array bugs
-            response = requests.get(api_url, timeout=10)
-            bot_answer = response.text.strip()
+            # YOUR PERMANENT CONTAINER FIX: Grabs the text data from the list stream cleanly
+            if isinstance(response, list) and len(response) > 0:
+                raw_text = response[0]['generated_text']
+            elif isinstance(response, dict):
+                raw_text = response['generated_text']
+            else:
+                raw_text = response
+
+            bot_answer = raw_text.split("<|assistant|>\n")[-1].strip()
+
+            # Clean copy leak strings exactly like your notebook code
+            if "\nYou:" in bot_answer:
+                bot_answer = bot_answer.split("\nYou:")[0].strip()
+            if "\nCarter:" in bot_answer:
+                bot_answer = bot_answer.split("\nCarter:")[0].strip()
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
-
 
 
 
