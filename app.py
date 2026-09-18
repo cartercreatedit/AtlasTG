@@ -82,7 +82,7 @@ st.markdown("""
 st.markdown('<div class="app-header">FlintLynx AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Optimized Core Model • High-Speed Summary Engine</div>', unsafe_allow_html=True)
 
-API_URL = "https://api-inference.huggingface.co/models/TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+API_URL = "https://huggingface.co"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -104,21 +104,24 @@ if user_input := st.chat_input("Message FlintLynx..."):
                 "inputs": formatted_prompt,
                 "options": {"wait_for_model": True}
             }
-            response = requests.post(API_URL, json=payload)
             
+            # PROTECTED NETWORKING BLOCK: Catches connection loss without crashing
             try:
+                response = requests.post(API_URL, json=payload, timeout=10)
                 raw_data = response.json()
                 
-                # BULLETPROOF DATA FIX: Unwraps list vs dictionary safely
                 if isinstance(raw_data, list):
-                    text_block = raw_data[0]['generated_text']
+                    text_block = raw_data['generated_text']
                 else:
                     text_block = raw_data['generated_text']
                 
                 bot_answer = text_block.split("<|assistant|>\n")[-1].strip()
+            except requests.exceptions.RequestException:
+                bot_answer = "⚠️ FlintLynx is experiencing heavy network traffic or lost connection to its server brain. Please try sending your message again in a few seconds!"
             except Exception:
-                bot_answer = "Sorry, I had trouble parsing the data frame. Could you try typing that one more time?"
+                bot_answer = "⚠️ Having trouble parsing the cloud data stream. Let's try sending that one more time."
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
+
