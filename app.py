@@ -59,14 +59,14 @@ div[data-testid="stChatInput"] {
 /* Outer frame matches Gemini sizing but with no visible border frame lines */
 .stChatInput {
     background-color: #161616 !important;
-    border: none !important; /* FIXED: Removed the border completely */
+    border: none !important; 
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
     padding: 6px 12px 6px 48px !important; 
     transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-/* FIXED: Obliterated the active white glowing lines on focus state completely */
+/* Obliterated the active white glowing lines on focus state completely */
 .stChatInput:focus-within {
     border: none !important;
     outline: none !important;
@@ -100,11 +100,11 @@ div[data-testid="stChatInput"]::before {
     left: 20px !important;
     top: 50% !important;
     transform: translateY(-50%) !important;
-    color: #6b7280 !important;
+    color: #8b8b8b !important;
     font-size: 1.3rem !important;
     font-weight: bold !important;
     z-index: 1001 !important;
-    pointer-events: none !important;
+    cursor: pointer !important; /* Forces pointer hand interaction */
 }
 </style>
 """, unsafe_allow_html=True)
@@ -162,8 +162,13 @@ for msg in st.session_state.messages:
             unsafe_allow_html=True
         )
 
+# ── Hidden Trigger Receiver ───────────────────
+# If the JavaScript detects a click on the plus sign, it changes this state variable
+if st.checkbox("toggle_uploader_hidden", value=st.session_state.show_uploader, label_visibility="collapsed"):
+    st.session_state.show_uploader = True
+
 # ── File Upload Drawer ────────────────────────
-if st.session_state.show_uploader or st.session_state.uploaded_image is not None:
+if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
         "Choose an image",
         type=["png", "jpg", "jpeg", "webp"],
@@ -171,12 +176,15 @@ if st.session_state.show_uploader or st.session_state.uploaded_image is not None
     )
     if uploaded_file is not None:
         st.session_state.uploaded_image = uploaded_file
+        st.session_state.show_uploader = False
+        st.rerun()
 
 # ── Chat input ────────────────────────────────
 prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
+    # Backup text command listener
     if prompt.strip().lower() == "/upload":
         st.session_state.show_uploader = True
         st.rerun()
@@ -204,26 +212,44 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 temperature=0.7,
                 max_tokens=400,
             )
-            # Ensure index position data maps natively to avoid list attribute faults
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
         st.session_state.messages.append({"role": "assistant", "content": reply})
         st.rerun()
 
-# ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+# ── INTERFACE JAVASCRIPT ANCHOR (SCROLL + CLICK CAPTURE) ──
 components.html(
     """
     <script>
-        const parentWindow = window.parent;
-        if (parentWindow) {
-            const mainContent = parentWindow.document.querySelector('.main');
-            if (mainContent) {
-                setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 50);
-                setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 250);
-            }
+        const parentDoc = window.parent.document;
+        
+        // 1. Auto-Scroll Execution
+        const mainContent = parentDoc.querySelector('.main');
+        if (mainContent) {
+            setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 50);
+            setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 250);
         }
+        
+        // 2. Click Handler for Nested Plus Sign
+        setTimeout(() => {
+            const chatInputContainer = parentDoc.querySelector('div[data-testid="stChatInput"]');
+            if (chatInputContainer) {
+                chatInputContainer.addEventListener('click', function(e) {
+                    // Check if click coordinates are near the left edge where the plus sign is positioned
+                    const rect = chatInputContainer.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    if (clickX >= 0 && clickX <= 45) {
+                        // Find and toggle the hidden checkbox to fire the Streamlit file uploader tray
+                        const checkbox = parentDoc.querySelector('input[type="checkbox"]');
+                        if (checkbox) {
+                            checkbox.click();
+                        }
+                    }
+                });
+            }
+        }, 500);
     </script>
     """,
     height=0,
