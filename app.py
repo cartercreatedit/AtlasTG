@@ -75,25 +75,24 @@ div[data-testid="stChatInput"] {
     box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
 }
 
-/* OBLITERATE INTERNAL BORDERS AND SHADOWS COMPLETELY */
+/* OBLITERATE EVERY SINGLE HIDDEN INTERNAL BORDER AND BACKGROUND SHADOW */
+div[data-testid="stChatInput"] *,
+.stChatInput div[data-baseweb="textarea"],
+.stChatInput div[data-baseweb="base-input"],
+.stChatInput textarea {
+    border: none !important;
+    border-color: transparent !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Sizing text inside the container perfectly */
 .stChatInput textarea {
     color: #f4f4f4 !important;
     font-size: 15.5px !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
     padding: 8px 4px !important;
-}
-
-/* Strip Streamlit's inner baseline containers */
-.stChatInput div[data-baseweb="textarea"],
-.stChatInput div[data-baseweb="textarea"] > div,
-.stChatInput div[data-baseweb="textarea"]:focus-within {
-    border: none !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
 }
 
 /* Round + button */
@@ -212,7 +211,7 @@ if prompt:
                 temperature=0.7,
                 max_tokens=400,
             )
-            reply = completion.choices.message.content
+            reply = completion.choices[0].message.content
         except Exception as e:
             reply = f"Error: {e}"
 
