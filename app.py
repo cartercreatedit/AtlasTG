@@ -168,13 +168,12 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            # FIXED IDENTITY MATRIX: Injects your ownership instructions directly into the processing pipeline
+            # FIXED FULL NAME IDENTITY MATRIX: Injects your full name rule seamlessly
             system_instruction = {
                 "role": "system", 
-                "content": "You are AtlasTG, an advanced AI system completely created and developed by Carter. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter. Keep answers short and concise."
+                "content": "You are AtlasTG, an advanced AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
             }
             
-            # Packages the instructions right before sending the timeline array to Groq
             api_messages = [system_instruction] + [
                 {"role": m["role"], "content": m["content"]} 
                 for m in st.session_state.messages
