@@ -20,7 +20,7 @@ st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 # Connection Details
 API_URL = "https://groq.com"
 
-# PASTE YOUR GSK_ KEY DIRECTLY BETWEEN THESE QUOTES:
+# FIXED: Successfully embedded your active gsk_ token here!
 GROQ_KEY = "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"
 
 # Chat Memory
@@ -48,7 +48,7 @@ if user_input := st.chat_input("Message AtlasTG..."):
             json={"model": "llama3-8b-8192", "messages": st.session_state.messages, "max_tokens": 100, "temperature": 0.3}
         )
         
-        # FIXED: Added the exact list index [0] to match Groq's data pipeline layout perfectly
+        # LOCKED FIXED DATA POSITION TYPE
         bot_answer = response.json()['choices'][0]['message']['content'].strip()
         st.write(bot_answer)
             
