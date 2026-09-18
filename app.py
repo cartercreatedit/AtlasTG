@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── CSS + Strong Auto-Scroll ──────────────────
+# ── CSS + Auto-Scroll ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -88,17 +88,9 @@ function scrollToBottom() {
         behavior: "smooth"
     });
 }
-
-// Run on load
 window.addEventListener("load", scrollToBottom);
-
-// Keep watching for new messages
-const observer = new MutationObserver(() => {
-    scrollToBottom();
-});
+const observer = new MutationObserver(scrollToBottom);
 observer.observe(document.body, { childList: true, subtree: true });
-
-// Also force it a few times after Streamlit updates
 setTimeout(scrollToBottom, 100);
 setTimeout(scrollToBottom, 300);
 setTimeout(scrollToBottom, 600);
@@ -204,8 +196,14 @@ if prompt:
         st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
 
-    # Extra force scroll
-    st.markdown("""
-    <script>
-        setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 50);
-        setTimeout(() 
+    # Force scroll
+    st.markdown(
+        """
+        <script>
+            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 50);
+            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 200);
+            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 500);
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
