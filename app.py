@@ -43,7 +43,7 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     display: none !important;
 }
 
-/* Clear default Streamlit chat rows background baggage */
+/* Clear all default Streamlit background fills from the rows */
 div[data-testid="stChatMessage"] {
     background-color: transparent !important;
     border: none !important;
@@ -53,12 +53,13 @@ div[data-testid="stChatMessage"] {
     width: 100% !important;
 }
 
-/* 👤 USER PROMPTS: Aligned right inside a rectangular bubble with a pointed top-right tail */
+/* 👤 USER PROMPTS: Force alignment right and construct the exact rectangular bubble container */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
     display: flex !important;
     justify-content: flex-end !important;
 }
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2),
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) [data-testid="stChatMessageContent"] {
     background-color: #1a1a1a !important;
     border: 1px solid #2d2d2d !important;
     padding: 12px 18px !important;
@@ -69,20 +70,22 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
 }
 
-/* 🐆 AI RESPONSES: Aligned left as clean plain text with NO bubble container graphics */
+/* 🐆 AI RESPONSES: Force alignment left and obliterate any hidden background boxes */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
     display: flex !important;
     justify-content: flex-start !important;
 }
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2),
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) [data-testid="stChatMessageContent"] {
     background-color: transparent !important;
+    background: transparent !important;
     border: none !important;
     padding: 0px !important;
     box-shadow: none !important;
     max-width: 100% !important;
 }
 
-/* Text alignment layout fixes inside elements */
+/* Force clean text behavior inside all message structures */
 div[data-testid="stMarkdownContainer"] p {
     color: #e3e3e3 !important;
     font-size: 15.5px !important;
