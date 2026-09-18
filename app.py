@@ -3,7 +3,7 @@ import requests
 
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
 
-# Custom UI Theme Layout styling
+# Visual Styling
 st.markdown("""
     <style>
         .stApp { background: linear-gradient(180deg, #0A0D14 0%, #05070B 100%) !important; color: #F8FAFC !important; }
@@ -17,25 +17,25 @@ st.markdown("""
 
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 
-# Connection details mapping directly to Groq's high-speed server pipeline
+# Connection Details
 API_URL = "https://groq.com"
 
-# 1. PASTE YOUR NEW COPIED GSK_ KEY DIRECTLY BETWEEN THESE QUOTES:
+# PASTE YOUR GSK_ KEY DIRECTLY BETWEEN THESE QUOTES:
 GROQ_KEY = "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"
 
-# Chat Memory tracking timeline array
+# Chat Memory
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses strictly to 1 or 2 sentences max."}
     ]
 
-# Render timeline history message rows
+# Render History
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-# Direct input processing loop
+# Process Input
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
@@ -48,8 +48,8 @@ if user_input := st.chat_input("Message AtlasTG..."):
             json={"model": "llama3-8b-8192", "messages": st.session_state.messages, "max_tokens": 100, "temperature": 0.3}
         )
         
-        # Raw Data Extraction Handshake
-        bot_answer = response.json()['choices']['message']['content'].strip()
+        # FIXED: Added the exact list index [0] to match Groq's data pipeline layout perfectly
+        bot_answer = response.json()['choices'][0]['message']['content'].strip()
         st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
