@@ -46,7 +46,7 @@ div[data-testid="stChatMessage"] {
     padding: 0px !important;
 }
 
-/* ── EXACT GOOGLE AI INPUT BOX MATCH WITH INTEGRATED INTERNAL PADDING ── */
+/* ── EXACT STEALTH INPUT BOX MATCH (NO HIGHLIGHT OUTLINE) ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -56,20 +56,21 @@ div[data-testid="stChatInput"] {
     z-index: 999 !important;
 }
 
-/* Outer frame matches Gemini sizing with explicit left indentation */
+/* Outer frame matches Gemini sizing but with no visible border frame lines */
 .stChatInput {
     background-color: #161616 !important;
-    border: 1px solid #2c2c2c !important;
+    border: none !important; /* FIXED: Removed the border completely */
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
     padding: 6px 12px 6px 48px !important; 
-    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-/* Sleek white active glow */
+/* FIXED: Obliterated the active white glowing lines on focus state completely */
 .stChatInput:focus-within {
-    border-color: #ffffff !important;
-    box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02) !important;
 }
 
 /* OBLITERATE EVERY SINGLE HIDDEN INTERNAL BORDER AND BACKGROUND SHADOW */
@@ -203,7 +204,7 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 temperature=0.7,
                 max_tokens=400,
             )
-            # FIXED EXTRACTION POSITION: Added back the explicit array position index marker
+            # Ensure index position data maps natively to avoid list attribute faults
             reply = completion.choices[0].message.content
         except Exception as e:
             reply = f"Error: {e}"
