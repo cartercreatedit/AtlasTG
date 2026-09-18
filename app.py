@@ -61,7 +61,7 @@ div[data-testid="stChatInput"] {
     background-color: #161616 !important;
     border: 1px solid #2c2c2c !important;
     border-radius: 32px !important;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.4) !important;
     padding: 6px 12px !important;
     transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
@@ -109,7 +109,7 @@ st.caption("High-Speed Intelligence Engine · Powered by Groq")
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Ask me any text prompt, local postcode, or logic question and I will solve it instantly using real-world knowledge."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt, local postcode, or logic question and I will solve it instantly."}
     ]
 
 # ── Messages Timeline Render ──────────────────
@@ -133,7 +133,7 @@ if prompt:
                 # IDENTITY MATRIX: Embedded creator instructions
                 system_instruction = {
                     "role": "system", 
-                    "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short, factual, and concise."
+                    "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short, highly factual, and concise."
                 }
                 
                 # Build clean history timeline with custom instructions
@@ -142,13 +142,12 @@ if prompt:
                     for m in st.session_state.messages
                 ]
                 
-                # Execution with embedded live web browsing tool permissions
+                # FIXED: Swapped model to Groq's massive flagship 120B intelligence engine
                 completion = client.chat.completions.create(
-                    model="openai/gpt-oss-20b",
+                    model="openai/gpt-oss-120b",
                     messages=api_messages,
-                    temperature=0.3,
+                    temperature=0.4,
                     max_tokens=400,
-                    tools=[{"type": "web_search"}] # FIXED: Activated live internet lookups to give it infinite info
                 )
                 reply = completion.choices.message.content
             except Exception as e:
