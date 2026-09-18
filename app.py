@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # 1. Advanced Page Config
-st.set_page_config(page_title="FlintLynx AI", page_icon="🐆", layout="centered")
+st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
 
 # 2. Hyper-Modern Luxury CSS Injector
 st.markdown("""
@@ -36,57 +36,45 @@ st.markdown("""
         div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
             background: rgba(30, 41, 59, 0.4) !important;
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
             border-radius: 18px 18px 4px 18px !important;
             padding: 16px 20px !important;
             margin: 12px 0px 12px auto !important;
             max-width: 85% !important;
             animation: fadeIn 0.4s ease forwards;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.2);
         }
         div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
             background: rgba(15, 23, 42, 0.6) !important;
             backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.02);
             border-radius: 18px 18px 18px 4px !important;
             padding: 16px 20px !important;
             margin: 12px auto 12px 0px !important;
             max-width: 85% !important;
             animation: fadeIn 0.4s ease forwards;
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
         }
         div[data-testid="stChatMessage"] p {
             font-size: 15.5px !important;
             line-height: 1.6 !important;
             color: #E2E8F0 !important;
-            font-weight: 400 !important;
         }
         [data-testid="stChatInput"] {
             border-radius: 28px !important;
             background-color: #111827 !important;
             border: 1px solid #1F2937 !important;
-            padding: 4px 8px !important;
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7) !important;
-            transition: border-color 0.3s ease;
-        }
-        [data-testid="stChatInput"]:focus-within {
-            border-color: #4B5563 !important;
         }
         #MainMenu, footer, header {visibility: hidden;}
-        div[data-testid="stDecoration"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="app-header">FlintLynx AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Premium Production Tier • High-Speed Summary Engine</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-subtitle">Premium Core Model • High-Speed Summary Engine</div>', unsafe_allow_html=True)
 
-# FIXED: We use Google's lightning-fast production endpoint
-API_URL = "https://googleapis.com"
+# Stable, fast endpoint using the high-performance Qwen brain
+API_URL = "https://huggingface.co"
 
-# Secret free key mapped out to handle server authentication flawlessly
-API_KEY = st.secrets.get("GEMINI_KEY", "")
+# 1. PASTE YOUR HUGGING FACE TOKEN (hf_xxxx) DIRECTLY BETWEEN THE QUOTES BELOW:
+HF_TOKEN = "PASTE_YOUR_HF_TOKEN_HERE"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -95,29 +83,39 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-if user_input := st.chat_input("Message FlintLynx..."):
+if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
+    formatted_prompt = f"<|im_start|>user\n{user_input}\nContext: Keep answers to 1 or 2 summary sentences max.<|im_end|>\n<|im_start|>assistant\n"
+    
     with st.chat_message("assistant"):
-        with st.spinner("FlintLynx is processing..."):
+        with st.spinner("AtlasTG is processing..."):
             
-            # Format payload flawlessly for the high-end Google engine
             payload = {
-                "contents": [{"parts": [{"text": f"Context: Always answer concisely in 1 or 2 summary sentences maximum. Never exceed this limit.\n\nUser Question: {user_input}"}]}]
+                "inputs": formatted_prompt,
+                "options": {"wait_for_model": True}
             }
             
+            headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+            
             try:
-                # We append the key to securely open the commercial gate
-                response = requests.post(f"{API_URL}?key={API_KEY}", json=payload, timeout=10)
+                response = requests.post(API_URL, headers=headers, json=payload, timeout=15)
                 raw_data = response.json()
-                bot_answer = raw_data['candidates'][0]['content']['parts'][0]['text'].strip()
-            except Exception:
-                bot_answer = "⚠️ FlintLynx is currently optimizing its cloud grid. Please type your message one more time!"
+                
+                # FIXED EXTRACTOR: Loops inside a list container if needed to prevent parsing faults
+                if isinstance(raw_data, list) and len(raw_data) > 0:
+                    text_block = raw_data[0]['generated_text']
+                elif isinstance(raw_data, dict):
+                    text_block = raw_data['generated_text']
+                else:
+                    text_block = str(raw_data)
+                
+                bot_answer = text_block.split("<|im_start|>assistant\n")[-1].replace("<|im_end|>", "").strip()
+            except Exception as e:
+                bot_answer = f"⚠️ AtlasTG is processing background nodes. Please try typing your message one more time!"
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
-
