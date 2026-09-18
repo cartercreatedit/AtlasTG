@@ -1,5 +1,5 @@
 import streamlit as st
-import requests
+import g4f
 
 # 1. Advanced Luxury Page Config
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
@@ -73,14 +73,17 @@ st.markdown("""
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Premium Engine • High-Speed Instant Response</div>', unsafe_allow_html=True)
 
-# Initialize ChatGPT-Style memory tracking array
+# 3. Persistent ChatGPT-Style Memory Tracking
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [
+        {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses to 1 or 2 sentences max."}
+    ]
 
-# Render past chat timeline history
+# Render previous chat messages
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    if message["role"] != "system":
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
@@ -89,21 +92,16 @@ if user_input := st.chat_input("Message AtlasTG..."):
     
     with st.chat_message("assistant"):
         with st.spinner("AtlasTG is processing..."):
-            
-            # Encodes text into a direct public routing path to guarantee instant processing
-            system_rules = "You are AtlasTG, a high-speed AI assistant. Keep responses strictly short, concise, and summary-focused. Limit answers to 1 or 2 sentences max. Do not ramble."
-            encoded_prompt = requests.utils.quote(user_input)
-            encoded_system = requests.utils.quote(system_rules)
-            
-            api_url = f"https://pollinations.ai{encoded_prompt}?system={encoded_system}"
-            
             try:
-                response = requests.get(api_url, timeout=10)
-                bot_answer = response.text.strip()
+                # Utilizing g4f's automated serverless provider loop to ensure a zero-timeout handshake
+                response = g4f.ChatCompletion.create(
+                    model=g4f.models.gpt_4o_mini,
+                    messages=st.session_state.messages,
+                )
+                bot_answer = str(response).strip()
             except Exception:
-                bot_answer = "⚠️ AtlasTG connection blink. Please hit Enter to resend your message!"
+                bot_answer = "⚠️ AtlasTG local node connection refresh. Please hit Enter to resend your message!"
                 
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
