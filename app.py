@@ -142,14 +142,14 @@ if prompt:
                     for m in st.session_state.messages
                 ]
                 
-                # FIXED: Swapped model to Groq's massive flagship 120B intelligence engine
                 completion = client.chat.completions.create(
                     model="openai/gpt-oss-120b",
                     messages=api_messages,
                     temperature=0.4,
                     max_tokens=400,
                 )
-                reply = completion.choices.message.content
+                # FIXED EXTRACTION ROW: Added back the exact list index array tracker [0]
+                reply = completion.choices[0].message.content
             except Exception as e:
                 reply = f"Error: {e}"
 
