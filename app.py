@@ -139,7 +139,6 @@ if "uploaded_image" not in st.session_state:
 # ── Render Message Timeline using Airtight Inline Boxes ──────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        # FIXED: Forces an exact, rounded rectangular bubble with a pointed top-right tuck edge using bulletproof inline styles
         st.markdown(
             f'''
             <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
@@ -151,7 +150,6 @@ for msg in st.session_state.messages:
             unsafe_allow_html=True
         )
     else:
-        # FIXED: Forces clean assistant text style on the left side with NO bubble background box shapes
         st.markdown(
             f'''
             <div style="display: flex; justify-content: flex-start; width: 100%; margin: 16px 0; clear: both;">
@@ -205,7 +203,8 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 temperature=0.7,
                 max_tokens=400,
             )
-            reply = completion.choices.message.content
+            # FIXED ELEMENT INDEX LAYOUT TARGET: Extracts data out of the list container flawlessly
+            reply = completion.choices[0].message.content
         except Exception as e:
             reply = f"Error: {e}"
 
