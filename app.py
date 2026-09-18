@@ -247,16 +247,21 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
         }
         
         api_messages = [system_instruction]
+        is_multimodal = False
+        
         for m in st.session_state.messages:
             if isinstance(m["content"], list):
-                text_part = next((part["text"] for part in m["content"] if part["type"] == "text"), "")
-                api_messages.append({"role": m["role"], "content": text_part})
-            else:
-                api_messages.append({"role": m["role"], "content": m["content"]})
+                is_multimodal = True
+            api_messages.append({"role": m["role"], "content": m["content"]})
         
-        # LOCKED TO STABLE, ACTIVE GROQ PRODUCTION ID:
+        # LINKED TO STABLE, ACTIVE GROQ PRODUCTION IDS:
+        if is_multimodal:
+            target_model = "llama-3.2-11b-vision-preview" 
+        else:
+            target_model = "llama-3.3-70b-specdec"
+        
         completion = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model=target_model,
             messages=api_messages,
             temperature=0.7,
             max_tokens=400,
