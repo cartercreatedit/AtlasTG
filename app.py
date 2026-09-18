@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── CSS ───────────────────────────────────────
+# ── CSS + Auto-scroll ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -32,7 +32,6 @@ h1 {
     color: #ffffff !important;
     font-weight: 500 !important;
     font-size: 1.75rem !important;
-    letter-spacing: -0.02em;
 }
 .stCaption {
     color: #8b8b8b !important;
@@ -77,6 +76,17 @@ div.stButton > button:hover {
     border-color: #3a3a3a !important;
 }
 </style>
+
+<script>
+// Auto-scroll to bottom
+const scrollToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+};
+// Run after every Streamlit rerun
+window.addEventListener('load', scrollToBottom);
+const observer = new MutationObserver(scrollToBottom);
+observer.observe(document.body, { childList: true, subtree: true });
+</script>
 """, unsafe_allow_html=True)
 
 # ── API Key ───────────────────────────────────
@@ -158,7 +168,6 @@ if prompt:
                 }
             }
         ]
-        # Clear the stored image after using it
         st.session_state.uploaded_image = None
     else:
         user_content = prompt
@@ -178,7 +187,7 @@ if prompt:
             ]
 
             completion = client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
+                model="qwen/qwen3.8-27b",   # current vision model
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=1024,
@@ -189,3 +198,6 @@ if prompt:
 
         st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
+
+    # Force scroll after response
+    st.markdown("<script>window.scrollTo(0, document.body.scrollHeight);</script>", unsafe_allow_html=True)
