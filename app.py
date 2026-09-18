@@ -255,7 +255,6 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                     is_multimodal = True
                 api_messages.append({"role": m["role"], "content": m["content"]})
             
-            # Hybrid framework dispatcher rules
             if is_multimodal:
                 target_model = "llama-3.2-11b-vision-preview" 
             else:
@@ -265,6 +264,6 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 model=target_model,
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=400
+                max_tokens=400,
             )
-            reply = completion.choices[0].message.content
+            # FIXED INDENTATION ROW: Aligned structural data properties perfectly
