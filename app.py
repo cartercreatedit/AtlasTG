@@ -178,7 +178,7 @@ if prompt:
             ]
 
             completion = client.chat.completions.create(
-                model="qwen/qwen3.6-27b",
+                model="qwen/qwen3.8-27b",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=1024,
