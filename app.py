@@ -22,7 +22,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 140px !important;
+    padding-bottom: 160px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -49,7 +49,7 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     padding-left: 0 !important;
 }
 
-/* ── EXACT GOOGLE AI INPUT BOX MATCH ── */
+/* ── EXACT GOOGLE AI INPUT BOX MATCH WITH INTEGRATED INTERNAL PADDING ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -59,13 +59,13 @@ div[data-testid="stChatInput"] {
     z-index: 999 !important;
 }
 
-/* Outer frame matches Gemini sizing and scale */
+/* Outer frame matches Gemini sizing with explicit left indentation */
 .stChatInput {
     background-color: #161616 !important;
     border: 1px solid #2c2c2c !important;
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 54px !important; /* FIXED: Added 54px left padding to make room for the inner button */
+    padding: 6px 12px 6px 48px !important; 
     transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -95,30 +95,18 @@ div[data-testid="stChatInput"] *,
     padding: 8px 4px !important;
 }
 
-/* ── INSIDE BUTTON ALIGNMENT OVERRIDE ── */
-div.element-container:has(button[key="plus_btn"]) {
-    position: fixed !important;
-    bottom: 40px !important; /* Aligns perfectly vertical inside the 32px baseline */
-    margin-left: max(calc(50vw - 368px), 24px) !important; /* Pins it right to the left edge of the prompt box */
-    z-index: 1000 !important;
-    width: auto !important;
-}
-
-/* Minimalist borderless inner plus button */
-div.stButton > button[key="plus_btn"] {
-    background-color: transparent !important;
-    background: transparent !important;
-    border: none !important;
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    padding: 0 !important;
-    color: #8b8b8b !important;
-    font-size: 1.4rem !important;
-    transition: color 0.2s ease !important;
-}
-div.stButton > button[key="plus_btn"]:hover {
-    color: #ffffff !important;
+/* ── INJECTED PLUS ICON INSIDE THE ACTUAL PROMPT CONTAINER ── */
+div[data-testid="stChatInput"]::before {
+    content: "＋" !important;
+    position: absolute !important;
+    left: 20px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #6b7280 !important;
+    font-size: 1.3rem !important;
+    font-weight: bold !important;
+    z-index: 1001 !important;
+    pointer-events: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -163,14 +151,8 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# ── Render Inside Controls ────────────────────
-# Render the button row first so the absolute position script can lock it into the prompt container layout
-if st.button("＋", key="plus_btn"):
-    st.session_state.show_uploader = not st.session_state.show_uploader
-
-prompt = st.chat_input("Message AtlasTG...")
-
-if st.session_state.show_uploader:
+# ── File Upload Drawer ────────────────────────
+if st.session_state.show_uploader or st.session_state.uploaded_image is not None:
     uploaded_file = st.file_uploader(
         "Choose an image",
         type=["png", "jpg", "jpeg", "webp"],
@@ -178,11 +160,17 @@ if st.session_state.show_uploader:
     )
     if uploaded_file is not None:
         st.session_state.uploaded_image = uploaded_file
-        st.session_state.show_uploader = False
-        st.rerun()
+
+# ── Chat input ────────────────────────────────
+prompt = st.chat_input("Message AtlasTG...")
 
 # ── Handle send ───────────────────────────────
 if prompt:
+    # Trigger image uploader tray toggle if user types '/upload'
+    if prompt.strip().lower() == "/upload":
+        st.session_state.show_uploader = True
+        st.rerun()
+
     uploaded_file = st.session_state.uploaded_image
 
     if uploaded_file is not None:
@@ -193,6 +181,7 @@ if prompt:
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
         ]
         st.session_state.uploaded_image = None
+        st.session_state.show_uploader = False
     else:
         user_content = prompt
 
@@ -204,30 +193,30 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        try:
-            system_instruction = {
-                "role": "system", 
-                "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
-            }
-            
-            api_messages = [system_instruction] + [
-                {"role": m["role"], "content": m["content"]} 
-                for m in st.session_state.messages
-            ]
-            
-            # Using the active, un-throttled text core model
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
-                messages=api_messages,
-                temperature=0.7,
-                max_tokens=400,
-            )
-            reply = completion.choices.message.content
-        except Exception as e:
-            reply = f"Error: {e}"
+        with st.spinner(""):
+            try:
+                system_instruction = {
+                    "role": "system", 
+                    "content": "You are AtlasTG, an advanced highly accurate AI system completely created and developed by Carter Forester Robinson. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter Forester Robinson. Keep answers short and concise."
+                }
+                
+                api_messages = [system_instruction] + [
+                    {"role": m["role"], "content": m["content"]} 
+                    for m in st.session_state.messages
+                ]
+                
+                completion = client.chat.completions.create(
+                    model="openai/gpt-oss-20b",
+                    messages=api_messages,
+                    temperature=0.7,
+                    max_tokens=400,
+                )
+                reply = completion.choices[0].message.content
+            except Exception as e:
+                reply = f"Error: {e}"
 
-        st.markdown(reply)
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+            st.markdown(reply)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
 
 # ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
 components.html(
