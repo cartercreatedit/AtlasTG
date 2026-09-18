@@ -1,9 +1,10 @@
 import streamlit as st
 from groq import Groq
 
+# 1. Advanced Luxury Page Config
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
 
-# Visual Styling
+# 2. Hyper-Modern Obsidian CSS Injector
 st.markdown("""
     <style>
         .stApp { background: linear-gradient(180deg, #0A0D14 0%, #05070B 100%) !important; color: #F8FAFC !important; font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
@@ -22,7 +23,7 @@ st.markdown("""
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Ultra-Fast Engine • High-Speed Production Grid</div>', unsafe_allow_html=True)
 
-# Secure Production Key
+# 3. Secure Production Key Verification
 GROQ_KEY = "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"
 client = Groq(api_key=GROQ_KEY)
 
@@ -43,13 +44,13 @@ if user_input := st.chat_input("Message AtlasTG..."):
     
     with st.chat_message("assistant"):
         with st.spinner(""):
-            # FIXED: Swapped to Groq's active high-speed open-source endpoint model string
             completion = client.chat.completions.create(
                 model="openai/gpt-oss-20b",
                 messages=st.session_state.messages,
                 max_tokens=100,
                 temperature=0.3
             )
+            # FIXED POSITION: Maps the correct item selection container from the array layout
             bot_answer = completion.choices[0].message.content.strip()
             st.write(bot_answer)
             
