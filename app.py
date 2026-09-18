@@ -4,7 +4,7 @@ import os
 import base64
 from PIL import Image
 import io
-import streamlit.components.v1 as components # Added the component helper
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -173,7 +173,7 @@ if prompt:
                 model="qwen/qwen3.8-27b",
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=1024,
+                max_tokens=400, # FIXED: Reduced safely below the 1000 threshold to stop 429 faults
             )
             reply = completion.choices[0].message.content
         except Exception as e:
@@ -182,8 +182,7 @@ if prompt:
         st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
 
-# ── FIXED AUTO-SCROLL INTERFACE ANCHOR ────────
-# This targets parent document nodes outside the local sandboxed iframe to lock viewport alignment
+# ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
 components.html(
     """
     <script>
