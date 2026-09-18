@@ -62,7 +62,7 @@ div[data-testid="stChatInput"] {
     border: none !important; 
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 52px !important; /* Locks left text indentation space */
+    padding: 6px 12px 6px 54px !important; /* Fixed left text indentation space */
     transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -93,19 +93,40 @@ div[data-testid="stChatInput"] *,
     padding: 8px 4px !important;
 }
 
-/* ── ＋ FIXED STRAIGHT INSIDE THE PROMPT BOX FRAME ── */
-div[data-testid="stChatInput"]::before {
-    content: "＋" !important;
-    position: absolute !important;
-    left: 22px !important; /* Physically anchors it to the inner left padding wall */
-    top: 50% !important;
-    transform: translateY(-50%) !important;
+/* ── PERMANENT NATIVE PLUS BUTTON FIX INSIDE BOX ── */
+div.element-container:has(button[key="plus_btn"]) {
+    position: fixed !important;
+    bottom: 40px !important; /* Vertically centers the button perfectly inside the bar height */
+    left: 50% !important;
+    transform: translateX(calc(-50vw + 20px)) !important;
+    z-index: 1001 !important;
+    width: auto !important;
+}
+
+/* Responsive lock for wider monitors to keep it aligned with the 760px container */
+@media (min-width: 826px) {
+    div.element-container:has(button[key="plus_btn"]) {
+        left: 50% !important;
+        transform: translateX(-360px) !important;
+    }
+}
+
+div.stButton > button[key="plus_btn"] {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
     color: #8b8b8b !important;
     font-size: 1.4rem !important;
     font-weight: bold !important;
-    z-index: 1002 !important;
-    cursor: pointer !important;
-    pointer-events: all !important; /* Makes the embedded symbol fully clickable */
+    box-shadow: none !important;
+}
+div.stButton > button[key="plus_btn"]:hover {
+    color: #ffffff !important;
+    background-color: transparent !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -176,10 +197,6 @@ for msg in st.session_state.messages:
             unsafe_allow_html=True
         )
 
-# ── Invisible Interceptor Variable ────────────
-if st.checkbox("toggle_drawer_state", value=st.session_state.show_uploader, label_visibility="collapsed"):
-    st.session_state.show_uploader = True
-
 # ── File Upload Drawer ────────────────────────
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
@@ -191,6 +208,11 @@ if st.session_state.show_uploader:
         st.session_state.uploaded_image = uploaded_file
         st.session_state.show_uploader = False
         st.rerun()
+
+# ── Official Native Plus Button ───────────────
+if st.button("＋", key="plus_btn"):
+    st.session_state.show_uploader = not st.session_state.show_uploader
+    st.rerun()
 
 # ── Chat input ────────────────────────────────
 prompt = st.chat_input("Message AtlasTG...")
@@ -247,14 +269,3 @@ if prompt:
                     messages=api_messages,
                     temperature=0.3,
                     max_tokens=400,
-                )
-                # FIXED EXTRACTION: Target position 0 array index to unpack response cleanly
-                reply = completion.choices[0].message.content
-            except Exception as e:
-                reply = f"Error: {e}"
-
-            st.markdown(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-    st.rerun()
-
-# ── AUTO-SCROLL + RELIABLE INSIDE CLICK TRIGGER INTERFACE ──
