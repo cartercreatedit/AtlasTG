@@ -1,69 +1,128 @@
 import streamlit as st
-import requests
+from groq import Groq
 
-# 1. Advanced Luxury Layout Configuration
-st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
+# ────────────────────────────────────────────────
+# PASTE YOUR GROQ API KEY HERE (starts with gsk_)
+# ────────────────────────────────────────────────
+GROQ_API_KEY = "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
+"
 
-# 2. Premium Obsidian UI Aesthetic Styling
-st.markdown("""
+# ────────────────────────────────────────────────
+# Page + Dark Theme
+# ────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Groq Chat",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
     <style>
-        .stApp { background: linear-gradient(180deg, #0A0D14 0%, #05070B 100%) !important; color: #F8FAFC !important; font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important; }
-        .app-header { text-align: center; font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 2px !important; letter-spacing: -0.8px; }
-        .app-subtitle { text-align: center; color: #64748B; font-size: 14px; font-weight: 500; margin-bottom: 30px !important; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) { background: rgba(30, 41, 59, 0.4) !important; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 18px 18px 4px 18px !important; padding: 16px 20px !important; margin: 12px 0px 12px auto !important; max-width: 85% !important; animation: fadeIn 0.4s ease forwards; }
-        div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) { background: rgba(15, 23, 42, 0.6) !important; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.02); border-radius: 18px 18px 18px 4px !important; padding: 16px 20px !important; margin: 12px auto 12px 0px !important; max-width: 85% !important; animation: fadeIn 0.4s ease forwards; }
-        div[data-testid="stChatMessage"] p { font-size: 15.5px !important; line-height: 1.6 !important; color: #E2E8F0 !important; }
-        [data-testid="stChatInput"] { border-radius: 28px !important; background-color: #111827 !important; border: 1px solid #1F2937 !important; }
-        #MainMenu, footer, header {visibility: hidden;}
-        div[data-testid="stDecoration"] {display: none;}
+    /* Force dark premium theme */
+    .stApp {
+        background: linear-gradient(180deg, #0b0f19 0%, #111827 100%);
+        color: #e5e7eb;
+    }
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+        max-width: 900px;
+    }
+    h1, h2, h3, h4 {
+        color: #f9fafb !important;
+        font-weight: 600;
+    }
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background-color: #1f2937 !important;
+        color: #f3f4f6 !important;
+        border: 1px solid #374151 !important;
+        border-radius: 10px !important;
+    }
+    .stButton > button {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 0.6rem 1.8rem !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+    .stChatMessage {
+        background-color: #1f2937 !important;
+        border-radius: 12px !important;
+        border: 1px solid #374151 !important;
+    }
+    div[data-testid="stMarkdownContainer"] p {
+        color: #e5e7eb;
+    }
+    /* Hide Streamlit branding for cleaner look */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
-st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-subtitle">Commercial Engine • Premium Production Pipeline</div>', unsafe_allow_html=True)
+# ────────────────────────────────────────────────
+# Header
+# ────────────────────────────────────────────────
+st.title("⚡ Groq Chat")
+st.caption("Powered by llama-3.1-8b-instant · Official Groq SDK")
 
-# 3. Connection Parameters Mapping to Groq Cloud Platform
-API_URL = "https://groq.com"
-GROQ_KEY = "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"
-
+# ────────────────────────────────────────────────
+# Session state for chat history
+# ────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "You are AtlasTG, a helpful commercial AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses strictly to 1 or 2 sentences max. Do not ramble."}
+        {"role": "assistant", "content": "Hello! How can I help you today?"}
     ]
 
-# Render timeline history
-for message in st.session_state.messages:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+# Display previous messages
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# 4. Live Message Stream Exchange Execution Loop
-if user_input := st.chat_input("Message AtlasTG..."):
-    with st.chat_message("user"):
-        st.write(user_input)
+# ────────────────────────────────────────────────
+# Chat input + Groq call
+# ────────────────────────────────────────────────
+user_input = st.chat_input("Type your message…")
+
+if user_input:
+    # Add user message
     st.session_state.messages.append({"role": "user", "content": user_input})
-    
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # Call Groq with the official client
+    try:
+        client = Groq(api_key=GROQ_API_KEY)
+
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ],
+            temperature=0.7,
+            max_tokens=1024,
+        )
+
+        # Extract text the official way (no .json(), no dict indexing)
+        reply = completion.choices[0].message.content
+
+    except Exception as e:
+        reply = f"⚠️ Error talking to Groq: {e}"
+
+    # Show and store assistant reply
+    st.session_state.messages.append({"role": "assistant", "content": reply})
     with st.chat_message("assistant"):
-        with st.spinner(""):
-            headers = {
-                "Authorization": f"Bearer {GROQ_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": "mixtral-8x7b-32768",
-                "messages": st.session_state.messages,
-                "max_tokens": 120,
-                "temperature": 0.3
-            }
-            
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=10)
-            
-            # FIXED POSITION ELEMENT LAYER: Target list location index 0 to ensure flawless text unpacking
-            bot_answer = response.json()['choices'][0]['message']['content'].strip()
-            st.write(bot_answer)
-            
-    st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
-
+        st.markdown(reply)
 
