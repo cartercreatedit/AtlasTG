@@ -49,47 +49,51 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     padding-left: 0 !important;
 }
 
-/* ⚡ GOOGLE AI STYLE STICKY INPUT ⚡ */
+/* ── EXACT GOOGLE AI INPUT BOX MATCH ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
-    bottom: 24px !important;
+    bottom: 32px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
 }
 
-/* Container Frame styling with NO red barriers */
+/* Outer frame matches Gemini sizing and scale */
 .stChatInput {
     background-color: #161616 !important;
     border: 1px solid #2c2c2c !important;
-    border-radius: 28px !important;
+    border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 4px 8px !important;
-    transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+    padding: 6px 12px !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-/* White barrier focus state override */
+/* Sleek white active glow */
 .stChatInput:focus-within {
     border-color: #ffffff !important;
     box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
 }
 
-/* Force inner text fields to comply with clean theme */
+/* OBLITERATE INTERNAL BORDERS AND SHADOWS COMPLETELY */
 .stChatInput textarea {
     color: #f4f4f4 !important;
-    font-size: 15px !important;
+    font-size: 15.5px !important;
     background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 8px 4px !important;
 }
 
-/* Obliterate Streamlit's default red validation states completely */
-.stChatInput div[data-baseweb="textarea"] {
-    border-color: transparent !important;
-    background-color: transparent !important;
-}
+/* Strip Streamlit's inner baseline containers */
+.stChatInput div[data-baseweb="textarea"],
+.stChatInput div[data-baseweb="textarea"] > div,
 .stChatInput div[data-baseweb="textarea"]:focus-within {
-    border-color: transparent !important;
+    border: none !important;
     background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 /* Round + button */
@@ -208,7 +212,7 @@ if prompt:
                 temperature=0.7,
                 max_tokens=400,
             )
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
