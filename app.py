@@ -41,9 +41,9 @@ if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("assistant"):
         with st.spinner(""):
             
-            # Using the official native completion call—no raw requests, no data unpacking bugs
+            # FIXED: Swapped to Groq's active high-speed Llama 3.1 instant model layout
             completion = client.chat.completions.create(
-                model="llama3-8b-8192",
+                model="llama-3.1-8b-instant",
                 messages=st.session_state.messages,
                 max_tokens=100,
                 temperature=0.3
@@ -53,4 +53,3 @@ if user_input := st.chat_input("Message AtlasTG..."):
             st.write(bot_answer)
             
     st.session_state.messages.append({"role": "assistant", "content": bot_answer})
-
