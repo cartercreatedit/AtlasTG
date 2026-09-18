@@ -25,6 +25,7 @@ st.markdown("""
     padding-bottom: 160px !important;
     max-width: 760px;
     min-height: 100vh;
+    position: relative !important; /* Establishes absolute positioning boundary baseline */
 }
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden;
@@ -62,7 +63,7 @@ div[data-testid="stChatInput"] {
     border: none !important; 
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 54px !important; /* Fixed left indentation */
+    padding: 6px 12px 6px 54px !important; /* Fixed left padding indentation */
     transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -93,14 +94,25 @@ div[data-testid="stChatInput"] *,
     padding: 8px 4px !important;
 }
 
-/* ── NATIVE INNER PLUS BUTTON ALIGNMENT FIX ── */
+/* ── BULLETPROOF RELATIVE INSIDE BUTTON ALIGNMENT FIX ── */
 div.element-container:has(button[key="plus_btn"]) {
     position: fixed !important;
-    bottom: 39px !important; /* Perfectly centers vertically within the bar container */
-    margin-left: max(calc(50vw - 364px), 24px) !important; /* Pins it directly inside the left boundary */
+    bottom: 40px !important; /* Vertically centers the button perfectly inside the bar height */
+    left: 50% !important;
+    /* Uses the exact same positioning maths as the input box, pulling it back by exactly half the container width minus inside margin */
+    transform: translateX(calc(-50vw + 20px)) !important;
     z-index: 1001 !important;
     width: auto !important;
 }
+
+/* Responsive adjustment for wider monitors to keep it locked to the max-width boundary line */
+@media (min-width: 826px) {
+    div.element-container:has(button[key="plus_btn"]) {
+        left: 50% !important;
+        transform: translateX(-360px) !important; /* Fixed coordinate offset directly inside the 760px frame */
+    }
+}
+
 div.stButton > button[key="plus_btn"] {
     background-color: transparent !important;
     background: transparent !important;
@@ -249,18 +261,3 @@ if prompt:
                 else:
                     target_model = "openai/gpt-oss-20b" 
                 
-                completion = client.chat.completions.create(
-                    model=target_model,
-                    messages=api_messages,
-                    temperature=0.3,
-                    max_tokens=400,
-                )
-                reply = completion.choices.message.content
-            except Exception as e:
-                reply = f"Error: {e}"
-
-            st.markdown(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-    st.rerun()
-
-# ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
