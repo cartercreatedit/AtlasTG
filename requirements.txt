@@ -1,3 +1,2 @@
 streamlit
-requests
-g4f
+groq
