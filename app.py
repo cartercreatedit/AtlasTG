@@ -1,16 +1,16 @@
 import streamlit as st
 import requests
 
-# 1. Premium Visual Page Configuration
+# 1. Advanced Luxury Page Config
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
 
-# 2. Luxury Midnight UI Styling
+# 2. Hyper-Modern Obsidian CSS Injector
 st.markdown("""
     <style>
         .stApp {
             background: linear-gradient(180deg, #0A0D14 0%, #05070B 100%) !important;
             color: #F8FAFC !important;
-            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            font-family: '-apple-system', BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
         }
         .app-header {
             text-align: center;
@@ -42,6 +42,7 @@ st.markdown("""
             margin: 12px 0px 12px auto !important;
             max-width: 85% !important;
             animation: fadeIn 0.4s ease forwards;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.2);
         }
         div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
             background: rgba(15, 23, 42, 0.6) !important;
@@ -52,6 +53,7 @@ st.markdown("""
             margin: 12px auto 12px 0px !important;
             max-width: 85% !important;
             animation: fadeIn 0.4s ease forwards;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
         }
         div[data-testid="stChatMessage"] p {
             font-size: 15.5px !important;
@@ -64,38 +66,47 @@ st.markdown("""
             border: 1px solid #1F2937 !important;
         }
         #MainMenu, footer, header {visibility: hidden;}
+        div[data-testid="stDecoration"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Premium Engine • High-Speed Instant Response</div>', unsafe_allow_html=True)
 
-# 3. Initialize Persistent ChatGPT-Style Memory
+# Unrestricted, highly scalable model pipe
+API_URL = "https://huggingface.co"
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Render past conversation timeline
+# Display current chat timeline
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-# 4. Handle Live User Input
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
         st.write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
+    # Packaged instruction prompts inside the template string cleanly
+    formatted_prompt = f"<|system|>\nYou are AtlasTG, a helpful AI assistant. Provide extremely short, concise answers limited strictly to 1 or 2 summary sentences maximum. Do not ramble.</s>\n<|user|>\n{user_input}</s>\n<|assistant|>\n"
+    
     with st.chat_message("assistant"):
-        with st.spinner("AtlasTG is processing..."):
-            
-            # Utilizing an un-throttled public proxy pipeline to guarantee a direct handshake
-            fallback_url = f"https://pollinations.ai{requests.utils.quote(user_input)}?system=You are AtlasTG, a high-speed AI assistant. Provide extremely short, concise answers limited strictly to 1 or 2 summary sentences maximum. Do not mention system rules."
-            
+        with st.spinner(""):
             try:
-                response = requests.get(fallback_url, timeout=10)
-                bot_answer = response.text.strip()
+                # Direct, authentication-free public handshake payload
+                response = requests.post(API_URL, json={"inputs": formatted_prompt}, timeout=10)
+                raw_data = response.json()
+                
+                if isinstance(raw_data, list):
+                    text_block = raw_data[0]['generated_text']
+                else:
+                    text_block = raw_data['generated_text']
+                    
+                bot_answer = text_block.split("<|assistant|>\n")[-1].strip()
             except Exception:
-                bot_answer = "I ran into a quick connection blink. Let's try sending that one more time!"
+                bot_answer = "AtlasTG is synchronizing channels. Please press Enter to send that one more time!"
                 
             st.write(bot_answer)
             
