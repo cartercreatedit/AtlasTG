@@ -54,12 +54,13 @@ div[data-testid="stChatMessageAvatarAssistant"] {
     width: 100% !important;
 }
 
-/* 👤 USER PROMPTS: Aligned Right inside an Exact Rectangular Bubble Shape */
+/* 👤 USER PROMPTS: Force exact alignment right and build the real bubble container */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
     display: flex !important;
     justify-content: flex-end !important;
+    text-align: right !important;
 }
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) [data-testid="stChatMessageContent"] {
     background-color: #1a1a1a !important;
     border: 1px solid #2d2d2d !important;
     padding: 12px 18px !important;
@@ -67,6 +68,8 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     border-top-right-radius: 2px !important; /* Pointed sharp tail top right */
     max-width: 80% !important;
     display: inline-block !important;
+    text-align: left !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
 }
 
 /* 🐆 ASSISTANT RESPONSES: Aligned Left as Clean Plain Text with NO Bubble Shapes */
@@ -74,7 +77,7 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
     display: flex !important;
     justify-content: flex-start !important;
 }
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) [data-testid="stChatMessageContent"] {
     background-color: transparent !important;
     border: none !important;
     padding: 0px !important;
@@ -251,7 +254,6 @@ if prompt:
                     temperature=0.7,
                     max_tokens=400,
                 )
-                # FIXED LAYER: Added the exact list index array target back into position cleanly
                 reply = completion.choices[0].message.content
             except Exception as e:
                 reply = f"Error: {e}"
