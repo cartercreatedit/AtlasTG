@@ -4,6 +4,7 @@ import os
 import base64
 from PIL import Image
 import io
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -12,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── CSS + Auto-Scroll ─────────────────────────
+# ── CSS Configuration ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -21,7 +22,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 140px !important;
+    padding-bottom: 160px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -37,109 +38,74 @@ h1 {
     color: #8b8b8b !important;
 }
 
-/* Hide avatars */
-div[data-testid="stChatMessageAvatarUser"],
-div[data-testid="stChatMessageAvatarAssistant"] {
-    display: none !important;
-}
-
-/* Clear all default Streamlit background fills from the rows */
+/* Clear default Streamlit padding baggage */
 div[data-testid="stChatMessage"] {
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0px !important;
-    margin: 16px 0px !important;
-    width: 100% !important;
 }
 
-/* 👤 USER PROMPTS: Force alignment right and construct the exact rectangular bubble container */
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
-    display: flex !important;
-    justify-content: flex-end !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2),
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) [data-testid="stChatMessageContent"] {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2d2d2d !important;
-    padding: 12px 18px !important;
-    border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Pointed sharp tail top right */
-    max-width: 80% !important;
-    display: inline-block !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
-}
-
-/* 🐆 AI RESPONSES: Force alignment left and obliterate any hidden background boxes */
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: flex !important;
-    justify-content: flex-start !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2),
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) [data-testid="stChatMessageContent"] {
-    background-color: transparent !important;
-    background: transparent !important;
-    border: none !important;
-    padding: 0px !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
-}
-
-/* Force clean text behavior inside all message structures */
-div[data-testid="stMarkdownContainer"] p {
-    color: #e3e3e3 !important;
-    font-size: 15.5px !important;
-    line-height: 1.6 !important;
-    margin: 0px !important;
-}
-
-/* Sticky input */
+/* ── EXACT GOOGLE AI INPUT BOX MATCH WITH BRIGHT WHITE OUTLINE ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
-    bottom: 20px !important;
+    bottom: 32px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
 }
+
+/* Premium frame bounding ring line container */
 .stChatInput {
-    background-color: #141414 !important;
-    border: 1px solid #2a2a2a !important;
-    border-radius: 24px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
-}
-.stChatInput textarea {
-    color: #e8e8e8 !important;
+    background-color: #161616 !important;
+    border: 1px solid #2c2c2c !important;
+    border-radius: 32px !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
+    padding: 6px 12px 6px 48px !important; 
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
-/* Round + button */
-div.stButton > button {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2f2f2f !important;
-    border-radius: 50% !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    padding: 0 !important;
-    color: #e8e8e8 !important;
-    font-size: 1.5rem !important;
+/* Sleek sharp white active highlight outline focus shield */
+.stChatInput:focus-within {
+    border-color: #ffffff !important;
+    box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
+}
+
+/* OBLITERATE EVERY SINGLE HIDDEN INTERNAL BORDER AND BACKGROUND SHADOW */
+div[data-testid="stChatInput"] *,
+.stChatInput div[data-baseweb="textarea"],
+.stChatInput div[data-baseweb="base-input"],
+.stChatInput textarea {
+    border: none !important;
+    border-color: transparent !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* Sizing text inside the container perfectly */
+.stChatInput textarea {
+    color: #f4f4f4 !important;
+    font-size: 15.5px !important;
+    padding: 8px 4px !important;
+}
+
+/* ── INJECTED PLUS ICON INSIDE THE ACTUAL PROMPT CONTAINER ── */
+div[data-testid="stChatInput"]::before {
+    content: "＋" !important;
+    position: absolute !important;
+    left: 20px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #6b7280 !important;
+    font-size: 1.3rem !important;
+    font-weight: bold !important;
+    z-index: 1001 !important;
+    pointer-events: none !important;
 }
 </style>
-
-<script>
-function scrollToBottom() {
-    window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth"
-    });
-}
-window.addEventListener("load", scrollToBottom);
-const observer = new MutationObserver(scrollToBottom);
-observer.observe(document.body, { childList: true, subtree: true });
-setTimeout(scrollToBottom, 100);
-setTimeout(scrollToBottom, 300);
-setTimeout(scrollToBottom, 600);
-</script>
 """, unsafe_allow_html=True)
 
 # ── API Key ───────────────────────────────────
@@ -152,7 +118,7 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("Text + Image Understanding · Powered by Groq")
+st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
 # ── Helper ────────────────────────────────────
 def image_to_base64(image: Image.Image) -> str:
@@ -170,28 +136,36 @@ if "show_uploader" not in st.session_state:
 if "uploaded_image" not in st.session_state:
     st.session_state.uploaded_image = None
 
-# ── Messages ──────────────────────────────────
+# ── Render Message Timeline using Airtight Inline Boxes ──────────────────
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        if isinstance(msg["content"], list):
-            for part in msg["content"]:
-                if part["type"] == "text":
-                    st.markdown(part["text"])
-                elif part["type"] == "image_url":
-                    st.image(part["image_url"]["url"], use_container_width=True)
-        else:
-            st.markdown(msg["content"])
+    if msg["role"] == "user":
+        st.markdown(
+            f'''
+            <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
+                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                    {msg["content"]}
+                </div>
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f'''
+            <div style="display: flex; justify-content: flex-start; width: 100%; margin: 16px 0; clear: both;">
+                <div style="color: #e3e3e3; padding: 4px 0px; max-width: 100%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+                    {msg["content"]}
+                </div>
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
 
-# ── Bottom controls ───────────────────────────
-col_plus, col_input = st.columns([0.07, 0.93], gap="small")
+# ── Invisible Interceptor Variable ────────────
+if st.checkbox("toggle_drawer_state", value=st.session_state.show_uploader, label_visibility="collapsed"):
+    st.session_state.show_uploader = True
 
-with col_plus:
-    if st.button("＋", key="plus_btn"):
-        st.session_state.show_uploader = not st.session_state.show_uploader
-
-with col_input:
-    prompt = st.chat_input("Message AtlasTG...")
-
+# ── File Upload Drawer ────────────────────────
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader(
         "Choose an image",
@@ -203,52 +177,45 @@ if st.session_state.show_uploader:
         st.session_state.show_uploader = False
         st.rerun()
 
+# ── Chat input ────────────────────────────────
+prompt = st.chat_input("Message AtlasTG...")
+
 # ── Handle send ───────────────────────────────
 if prompt:
-    uploaded_file = st.session_state.uploaded_image
+    if prompt.strip().lower() == "/upload":
+        st.session_state.show_uploader = True
+        st.rerun()
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        b64_image = image_to_base64(image)
-        user_content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
-        ]
-        st.session_state.uploaded_image = None
-    else:
-        user_content = prompt
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.rerun()
 
-    st.session_state.messages.append({"role": "user", "content": user_content})
-
-    with st.chat_message("user"):
-        if uploaded_file is not None:
-            st.image(uploaded_file, use_container_width=True)
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
+# Processing bot response generation blocks
+if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
+    with st.spinner(""):
         try:
-            api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            system_instruction = {
+                "role": "system", 
+                "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+            }
+            
+            api_messages = [system_instruction] + [
+                {"role": m["role"], "content": m["content"]} 
+                for m in st.session_state.messages
+            ]
+            
             completion = client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
+                model="openai/gpt-oss-20b",
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=1024,
+                max_tokens=400,
             )
             reply = completion.choices[0].message.content
         except Exception as e:
             reply = f"Error: {e}"
 
-        st.markdown(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
+        st.rerun()
 
-    # Force scroll
-    st.markdown(
-        """
-        <script>
-            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 50);
-            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 200);
-            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 500);
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+# ── AUTO-SCROLL + RELIABLE INSIDE CLICK TRIGGER INTERFACE ──
+scroll_js = "<script>const parentDoc = window.parent.document; const mainContent = parentDoc.querySelector('.main'); if (mainContent) { setTimeout(() => { mainContent.scrollTo({ top: mainContent.scrollHeight, behavior: 'smooth' }); }, 50); } setTimeout(() => { const inputContainer = parentDoc.querySelector('div[data-testid=\"stChatInput\"]'); if (inputContainer) { inputContainer.addEventListener('click', function(e) { const rect = inputContainer.getBoundingClientRect(); const clickX = e.clientX - rect.left; if (clickX >= 0 && clickX <= 45) { const targetCheckbox = parentDoc.querySelector('input[type=\"checkbox\"]'); if (targetCheckbox) { targetCheckbox.click(); } } }); } }, 400); </script>"
+components.html(scroll_js, height=0)
