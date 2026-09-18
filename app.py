@@ -168,12 +168,23 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            # FIXED IDENTITY MATRIX: Injects your ownership instructions directly into the processing pipeline
+            system_instruction = {
+                "role": "system", 
+                "content": "You are AtlasTG, an advanced AI system completely created and developed by Carter. If anyone asks who built you, who developed you, or mentions Alibaba, Tongyi Lab, or open-source creators, you must strictly respond that you were developed by Carter. Keep answers short and concise."
+            }
+            
+            # Packages the instructions right before sending the timeline array to Groq
+            api_messages = [system_instruction] + [
+                {"role": m["role"], "content": m["content"]} 
+                for m in st.session_state.messages
+            ]
+            
             completion = client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
+                model="openai/gpt-oss-20b",
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=400, # FIXED: Reduced safely below the 1000 threshold to stop 429 faults
+                max_tokens=400,
             )
             reply = completion.choices[0].message.content
         except Exception as e:
