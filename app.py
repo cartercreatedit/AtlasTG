@@ -1,5 +1,5 @@
 import streamlit as st
-from huggingface_hub import InferenceClient
+import requests
 
 # 1. Advanced Luxury Page Config
 st.set_page_config(page_title="AtlasTG AI", page_icon="🐆", layout="centered")
@@ -73,24 +73,14 @@ st.markdown("""
 st.markdown('<div class="app-header">AtlasTG AI</div>', unsafe_allow_html=True)
 st.markdown('<div class="app-subtitle">Premium Engine • High-Speed Instant Response</div>', unsafe_allow_html=True)
 
-# 3. PASTE YOUR HUGGING FACE TOKEN (hf_xxxx) BETWEEN THE QUOTES BELOW:
-HF_TOKEN = "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"
-
-@st.cache_resource
-def get_client(token):
-    return InferenceClient(api_key=token)
-
-client = get_client(HF_TOKEN)
-
+# Initialize ChatGPT-Style memory tracking array
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "system", "content": "You are AtlasTG, a helpful AI assistant. Always keep answers very short, concise, and summary-focused. Limit responses to 1 or 2 sentences max."}
-    ]
+    st.session_state.messages = []
 
+# Render past chat timeline history
 for message in st.session_state.messages:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
 if user_input := st.chat_input("Message AtlasTG..."):
     with st.chat_message("user"):
@@ -99,17 +89,19 @@ if user_input := st.chat_input("Message AtlasTG..."):
     
     with st.chat_message("assistant"):
         with st.spinner("AtlasTG is processing..."):
+            
+            # Encodes text into a direct public routing path to guarantee instant processing
+            system_rules = "You are AtlasTG, a high-speed AI assistant. Keep responses strictly short, concise, and summary-focused. Limit answers to 1 or 2 sentences max. Do not ramble."
+            encoded_prompt = requests.utils.quote(user_input)
+            encoded_system = requests.utils.quote(system_rules)
+            
+            api_url = f"https://pollinations.ai{encoded_prompt}?system={encoded_system}"
+            
             try:
-                # SWAPPED MODEL: Moving to Microsoft's high-uptime free server pipe
-                completion = client.chat.completions.create(
-                    model="microsoft/Phi-3-mini-4k-instruct",
-                    messages=st.session_state.messages,
-                    max_tokens=80,
-                    temperature=0.3
-                )
-                bot_answer = completion.choices.message.content.strip()
+                response = requests.get(api_url, timeout=10)
+                bot_answer = response.text.strip()
             except Exception:
-                bot_answer = "⚠️ Server blink. Just hit Enter to resend!"
+                bot_answer = "⚠️ AtlasTG connection blink. Please hit Enter to resend your message!"
                 
             st.write(bot_answer)
             
