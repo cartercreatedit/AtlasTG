@@ -50,7 +50,7 @@ if user_input := st.chat_input("Message AtlasTG..."):
                 max_tokens=100,
                 temperature=0.3
             )
-            # BULLETPROOF DATA FIX: Added the exact list index layout target here
+            # Reverted to exact documentation layout matching for the open model schema
             bot_answer = completion.choices[0].message.content.strip()
             st.write(bot_answer)
             
