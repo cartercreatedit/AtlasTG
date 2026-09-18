@@ -111,7 +111,7 @@ div.stButton > button[key="plus_btn"] {
     padding: 0 !important;
     color: #8b8b8b !important;
     font-size: 1.4rem !important;
-    font-weight: bold import;
+    font-weight: bold !important;
 }
 div.stButton > button[key="plus_btn"]:hover {
     color: #ffffff !important;
@@ -245,9 +245,9 @@ if prompt:
                 
                 # ── CRITICAL: SWITCH CORE ROUTING PATH DYNAMICALLY ──
                 if is_multimodal:
-                    target_model = "llama-3.2-11b-vision-preview" # Active free-tier multi-modal backup
+                    target_model = "llama-3.2-11b-vision-preview" 
                 else:
-                    target_model = "openai/gpt-oss-20b" # Preferred OpenAI proxy for straight text speed
+                    target_model = "openai/gpt-oss-20b" 
                 
                 completion = client.chat.completions.create(
                     model=target_model,
@@ -264,7 +264,4 @@ if prompt:
     st.rerun()
 
 # ── AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-components.html(
-    """
-    <script>
-        const parentWindow = window.parent;
+# Safe single-line script integration prevents triple-quote compile faults
