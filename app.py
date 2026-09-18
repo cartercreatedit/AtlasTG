@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── AtlasTG Dark Theme CSS ────────────────────
+# ── AtlasTG / Grok-style CSS ──────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -22,7 +22,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2.5rem;
-    padding-bottom: 7rem;
+    padding-bottom: 8rem;
     max-width: 760px;
 }
 #MainMenu, footer, header, .stDeployButton {
@@ -60,17 +60,18 @@ div[data-testid="stMarkdownContainer"] p {
 .stChatInput {
     background-color: #141414 !important;
     border: 1px solid #2a2a2a !important;
-    border-radius: 18px !important;
+    border-radius: 24px !important;
 }
 .stChatInput textarea {
     color: #e8e8e8 !important;
 }
 
-/* Make the file uploader look like a small paperclip button */
+/* ========== Grok-style + button ========== */
 div[data-testid="stFileUploader"] {
     padding: 0 !important;
+    margin: 0 !important;
 }
-div[data-testid="stFileUploader"] section {
+div[data-testid="stFileUploader"] > section {
     padding: 0 !important;
     border: none !important;
     background: transparent !important;
@@ -79,17 +80,27 @@ div[data-testid="stFileUploader"] label {
     display: none !important;
 }
 div[data-testid="stFileUploader"] button {
-    background: #1a1a1a !important;
-    border: 1px solid #2a2a2a !important;
-    border-radius: 12px !important;
+    background-color: #1a1a1a !important;
+    border: 1px solid #2f2f2f !important;
+    border-radius: 50% !important;          /* round like Grok */
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    padding: 0 !important;
     color: #e8e8e8 !important;
-    padding: 0.55rem 0.7rem !important;
-    font-size: 1.1rem !important;
-    min-height: 42px !important;
+    font-size: 1.4rem !important;
+    font-weight: 300 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 div[data-testid="stFileUploader"] button:hover {
-    background: #222 !important;
+    background-color: #252525 !important;
     border-color: #3a3a3a !important;
+}
+div[data-testid="stFileUploader"] button p {
+    margin: 0 !important;
+    font-size: 1.4rem !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -129,21 +140,21 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# ── Bottom input area (paperclip + chat) ──────
-col1, col2 = st.columns([0.08, 0.92], gap="small")
+# ── Bottom bar: + button + chat input ─────────
+col_plus, col_input = st.columns([0.07, 0.93], gap="small")
 
-with col1:
+with col_plus:
     uploaded_file = st.file_uploader(
-        "📎",
+        "+",
         type=["png", "jpg", "jpeg", "webp"],
         label_visibility="collapsed",
         key="image_uploader"
     )
 
-with col2:
+with col_input:
     prompt = st.chat_input("Message AtlasTG...")
 
-# ── Handle send ───────────────────────────────
+# ── Handle message ────────────────────────────
 if prompt:
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
