@@ -46,7 +46,7 @@ div[data-testid="stChatMessage"] {
     padding: 0px !important;
 }
 
-/* ── EXACT GOOGLE AI INPUT BOX MATCH (NO HIGHLIGHT OUTLINE) ── */
+/* ── EXACT STEALTH INPUT BOX MATCH (NO HIGHLIGHT OUTLINE) ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -129,7 +129,7 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Vision Intelligence Engine · Powered by Groq")
+st.caption("High-Speed Hybrid Intelligence Engine · Powered by Groq")
 
 # ── Helper ────────────────────────────────────
 def image_to_base64(image: Image.Image) -> str:
@@ -151,7 +151,6 @@ if "uploaded_image" not in st.session_state:
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         if isinstance(msg["content"], list):
-            # Safe parsing for multimodal content logs
             text_part = next((part["text"] for part in msg["content"] if part["type"] == "text"), "")
             st.markdown(
                 f'''
@@ -231,25 +230,32 @@ if prompt:
     with st.chat_message("assistant"):
         with st.spinner(""):
             try:
-                system_instruction = (
-                    "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                    "If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
-                    "Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
-                )
+                system_instruction = {
+                    "role": "system", 
+                    "content": "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. If anyone inquires about your origins, creation, core architecture, or mentions open-source or commercial groups like Alibaba or Tongyi Lab, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+                }
                 
-                # Format multi-modal architecture array safely for Groq's structure
-                api_messages = [{"role": "system", "content": system_instruction}]
+                api_messages = [system_instruction]
+                is_multimodal = False
+                
                 for m in st.session_state.messages:
+                    if isinstance(m["content"], list):
+                        is_multimodal = True
                     api_messages.append({"role": m["role"], "content": m["content"]})
                 
-                # FIXED VISION MODEL: Swapped to active flagship multi-modal engine
+                # ── CRITICAL: SWITCH CORE ROUTING PATH DYNAMICALLY ──
+                if is_multimodal:
+                    target_model = "llama-3.2-90b-vision-preview" # Uses smart Meta vision for loaded images
+                else:
+                    target_model = "openai/gpt-oss-20b" # Uses preferred OpenAI proxy for straight text speed
+                
                 completion = client.chat.completions.create(
-                    model="llama-3.2-11b-vision-preview",
+                    model=target_model,
                     messages=api_messages,
                     temperature=0.3,
                     max_tokens=400,
                 )
-                reply = completion.choices[0].message.content
+                reply = completion.choices.message.content
             except Exception as e:
                 reply = f"Error: {e}"
 
@@ -262,6 +268,3 @@ components.html(
     """
     <script>
         const parentWindow = window.parent;
-        if (parentWindow) {
-            const mainContent = parentWindow.document.querySelector('.main');
-            if (mainContent) {
