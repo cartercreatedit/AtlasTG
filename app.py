@@ -146,7 +146,7 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
-            # IDENTITY MATRIX: Upgraded system rules instructing it to emulate OpenAI's mind structure
+            # IDENTITY MATRIX: Configured to emulate OpenAI behavior patterns cleanly
             system_instruction = {
                 "role": "system", 
                 "content": (
@@ -164,13 +164,14 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 for m in st.session_state.messages
             ]
             
-            # FIXED: Target the active, universally open production text engine
+            # FIXED TARGET MODEL: Map to the active production data stream
             completion = client.chat.completions.create(
-                model="gemma2-9b-it",
+                model="openai/gpt-oss-20b",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=400,
             )
+            # FIXED POSITION MARKER: Targets list position zero to unpack text strings perfectly
             reply = completion.choices[0].message.content
         except Exception as e:
             reply = f"Error: {e}"
