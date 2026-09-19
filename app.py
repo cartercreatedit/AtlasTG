@@ -1,7 +1,6 @@
 import streamlit as st
 from groq import Groq
 import os
-import base64
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -174,16 +173,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Hey. Welcome to AtlasTG. I am fully responsive across text and audio pathways."}
     ]
-if "audio_to_play" not in st.session_state:
-    st.session_state.audio_to_play = None
 if "last_processed_audio" not in st.session_state:
     st.session_state.last_processed_audio = None
-
-# ── HIDDEN AUTOMATIC PLAYBACK ENGINE ───────────────────
-if st.session_state.audio_to_play:
-    # Uses native clean data parameters to play the generated stream immediately
-    st.audio(st.session_state.audio_to_play, format="audio/mp3", autoplay=True)
-    st.session_state.audio_to_play = None 
 
 # ── Render Message Timeline using Native Safe Structures ──────────────────
 for msg in st.session_state.messages:
@@ -245,14 +236,15 @@ if final_prompt:
             sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
+            # REMOVED TRY/EXCEPT INNER NESTING TO RESOLVE INDENTATION BLOCKS PERMANENTLY
             completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
             
-            # 🎙️ STABLE CHATGPT VOICE PIPE 🎙️
-            # Generates a premium audio output by calling Groq's active audio system
-            tts_response = client.audio.speech.create(
-                model="canopylabs/orpheus-v1-english",
-                voice="alloy", 
-                input=reply
-            )
+    st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
