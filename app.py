@@ -179,14 +179,14 @@ if text_prompt:
             )
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
-            # STABILIZED TO SUPPORTED HOSTED ENGINE Blueprint
             completion = client.chat.completions.create(
                 model="openai/gpt-oss-120b", 
                 messages=api_messages, 
                 temperature=0.2, 
                 max_tokens=1000
             )
-            reply = completion.choices.message.content
+            # FIXED UNPACKING INDEX BLOCK HERE
+            reply = completion.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
