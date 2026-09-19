@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from groq import Groq
 import os
 import base64
@@ -37,7 +38,6 @@ if st.session_state.audio_out:
     st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
     st.session_state.audio_out = None
 
-# Wipes out default Streamlit layout container spacing baggage entirely
 st.markdown("""
 <style>
 .stApp, .main, .block-container {
@@ -124,9 +124,7 @@ jarvis_frontend_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',')[1];
-                        
-                        // SECURE ROUTING: Injects data directly into URL query parameters to wake up Python instantly
+                        const base64String = reader.result.split(',');
                         const currentUrl = new URL(window.parent.location.href);
                         currentUrl.searchParams.set('vox_payload', base64String);
                         window.parent.location.href = currentUrl.toString();
@@ -182,45 +180,46 @@ jarvis_frontend_html = """
 </html>
 """
 
-# Render full screen interface container
-st.components.v1.html(jarvis_frontend_html, height=700, scrolling=False)
+components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING CORE (BUILT-IN NETWORK QUERY DECODER) ────────
-# Pulls variables natively from the URL parameter registers without needing HTML text area elements
-query_params = st.query_params
-incoming_audio = query_params.get("vox_payload")
+# ── BACK-END PROCESSING CORE (OBLITERATED ALL TRY BLOCKS TO PREVENT COMPILER ERRORS) ──
+incoming_audio = st.query_params.get("vox_payload")
 
 if incoming_audio:
-    try:
-        # Instantly decode recording packets directly in server cache
-        audio_data = base64.b64decode(incoming_audio)
-        with open("jarvis_temp.wav", "wb") as f:
-            f.write(audio_data)
-            
-        with open("jarvis_temp.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file, 
-                response_format="text"
-            )
-            
-        user_text = str(transcription).strip()
-        if os.path.exists("jarvis_temp.wav"):
-            os.remove("jarvis_temp.wav")
+    audio_data = base64.b64decode(incoming_audio)
+    with open("jarvis_temp.wav", "wb") as f:
+        f.write(audio_data)
+        
+    with open("jarvis_temp.wav", "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-large-v3-turbo", 
+            file=audio_file, 
+            response_format="text"
+        )
+        
+    user_text = str(transcription).strip()
+    if os.path.exists("jarvis_temp.wav"):
+        os.remove("jarvis_temp.wav")
 
-        if user_text:
-            st.session_state.vox_history.append({"role": "user", "content": user_text})
+    if user_text:
+        st.session_state.vox_history.append({"role": "user", "content": user_text})
+        
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-specdec", 
+            messages=st.session_state.vox_history[-6:], 
+            temperature=0.3, 
+            max_tokens=200
+        )
+        reply = completion.choices.message.content
+        st.session_state.vox_history.append({"role": "assistant", "content": reply})
+        
+        if eleven_key and voice_id:
+            escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+            raw_js = '<script>(async()=>{try{const res=await fetch("https://elevenlabs.io",{method:"POST",headers:{"xi-api-key":"ELEVEN_KEY","Content-Type":"application/json"},body:JSON.stringify({text:"REPLY_TEXT",model_id:"eleven_monolingual_v1",voice_settings:{stability:0.75,similarity_boost:0.85}})});if(res.status===200){const buf=await res.arrayBuffer();const url=URL.createObjectURL(new Blob([buf],{type:"audio/mp3"}));const audio=new Audio(url);audio.play();}}catch(e){}})();</script>'
+            raw_js = raw_js.replace("VOICE_ID", voice_id)
+            raw_js = raw_js.replace("ELEVEN_KEY", eleven_key)
+            raw_js = raw_js.replace("REPLY_TEXT", escaped_reply)
+            st.session_state.audio_out = raw_js
             
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
-                messages=st.session_state.vox_history[-6:], 
-                temperature=0.3, 
-                max_tokens=200
-            )
-            reply = completion.choices.message.content
-            st.session_state.vox_history.append({"role": "assistant", "content": reply})
-            
-            if eleven_key and voice_id:
-                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-                
-                # Compiles direct ElevenLabs voice clone audio tracks natively
+    st.query_params.clear()
+    st.rerun()
