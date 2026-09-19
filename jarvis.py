@@ -1,8 +1,8 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from groq import Groq
 import os
 import base64
+import requests
 
 st.set_page_config(
     page_title="J.A.R.V.I.S. Core",
@@ -33,10 +33,12 @@ if "vox_history" not in st.session_state:
 if "audio_out" not in st.session_state:
     st.session_state.audio_out = None
 
+# Inject hidden enterprise audio player when voice bytes stream back
 if st.session_state.audio_out:
     st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
     st.session_state.audio_out = None
 
+# Wipes out default Streamlit layout container spacing baggage entirely
 st.markdown("""
 <style>
 .stApp, .main, .block-container {
@@ -50,10 +52,20 @@ st.markdown("""
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden !important;
 }
+/* Completely hides the automated background communication field from view */
+div[data-testid="stTextArea"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── FRONT-END INTERACTION ENGINE ─────────────────────────────────────
+# ── BACK-END COUPLING PASS ───────────────────────────────────────────
+# Establishes a permanent background communication bridge straight into your browser's frame
+incoming_audio = st.text_area("audio_bridge_stream", key="audio_bridge_stream")
+
+# ── FRONT-END CHATGPT VOX INDICATOR ENGINE ───────────────────────────
 jarvis_frontend_html = """
 <!DOCTYPE html>
 <html>
@@ -118,13 +130,25 @@ jarvis_frontend_html = """
                 mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
                 
                 mediaRecorder.onstop = () => {
-                    statusLabel.innerText = "// DISPATCHING TRANSMISSION CHANNEL...";
+                    statusLabel.innerText = "// LOGGING TRANSMISSION BLUEPRINTS...";
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',');
-                        window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
+                        const base64String = reader.result.split(',')[1];
+                        
+                        // Locates and links the background data text area bridge
+                        const parentDoc = window.parent.document;
+                        const textTrays = parentDoc.querySelectorAll('textarea[data-testid="stTextAreaRootElement"]');
+                        
+                        if (textTrays.length > 0) {
+                            const activeTray = textTrays[0];
+                            activeTray.value = base64String;
+                            
+                            // Dispatches a native browser value event to instantly force Python to wake up
+                            const stateEvent = new Event('input', { bubbles: true });
+                            activeTray.dispatchEvent(stateEvent);
+                        }
                     };
                     stream.getTracks().forEach(track => track.stop());
                 };
@@ -177,13 +201,13 @@ jarvis_frontend_html = """
 </html>
 """
 
-incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
+components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING CORE ─────────────────────────────────────────
-if incoming_audio_payload:
+# ── BACK-END SECURE SERVER EXECUTION TRACK ───────────────────────────
+if incoming_audio and incoming_audio.strip() != "":
     try:
-        raw_b64 = incoming_audio_payload
-        audio_data = base64.b64decode(raw_b64)
+        # Decode the raw audio string payload directly in system storage
+        audio_data = base64.b64decode(incoming_audio)
         
         with open("jarvis_temp.wav", "wb") as f:
             f.write(audio_data)
@@ -210,18 +234,3 @@ if incoming_audio_payload:
             )
             reply = completion.choices.message.content
             st.session_state.vox_history.append({"role": "assistant", "content": reply})
-            
-            if eleven_key and voice_id:
-                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-                
-                # Single-line script string formulation prevents inner variable break leaks
-                raw_js = '<script>(async()=>{try{const res=await fetch("https://elevenlabs.io",{method:"POST",headers:{"xi-api-key":"ELEVEN_KEY","Content-Type":"application/json"},body:JSON.stringify({text:"REPLY_TEXT",model_id:"eleven_monolingual_v1",voice_settings:{stability:0.75,similarity_boost:0.85}})});if(res.status===200){const buf=await res.arrayBuffer();const url=URL.createObjectURL(new Blob([buf],{type:"audio/mp3"}));const audio=new Audio(url);audio.play();}}catch(e){}})();</script>'
-                raw_js = raw_js.replace("VOICE_ID", voice_id)
-                raw_js = raw_js.replace("ELEVEN_KEY", eleven_key)
-                raw_js = raw_js.replace("REPLY_TEXT", escaped_reply)
-                
-                st.session_state.audio_out = raw_js
-    except Exception:
-        pass
-        
-    st.rerun()
