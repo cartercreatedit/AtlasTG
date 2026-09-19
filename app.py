@@ -1,6 +1,7 @@
 import streamlit as st
 from groq import Groq
 import os
+import base64
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -128,7 +129,7 @@ st.caption("High-Speed Intelligence Engine · Powered by Groq")
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images using the plus icon."}
     ]
 
 # ── Render Message Timeline ───────────────────
@@ -137,7 +138,6 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
-            # Show text
             if isinstance(content, str) and content:
                 st.markdown(f'''
                 <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
@@ -146,7 +146,17 @@ for msg in st.session_state.messages:
                     </div>
                 </div>
                 ''', unsafe_allow_html=True)
-            # Show images if present
+            elif isinstance(content, list):
+                for part in content:
+                    if part["type"] == "text":
+                        st.markdown(f'''
+                        <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
+                            <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
+                                {part["text"]}
+                            </div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+            
             if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=280)
@@ -166,54 +176,54 @@ prompt = st.chat_input(
 if prompt:
     user_text = prompt.text if prompt.text else ""
     uploaded_files = prompt.files if prompt.files else []
+    has_images = len(uploaded_files) > 0
 
-    # Store message
-    message_data = {
-        "role": "user",
-        "content": user_text,
-        "images": uploaded_files
-    }
-    st.session_state.messages.append(message_data)
+    if has_images:
+        # Proper multimodal dictionary structure for timeline rendering
+        content_payload = [{"type": "text", "text": user_text}]
+        st.session_state.messages.append({
+            "role": "user",
+            "content": content_payload,
+            "images": uploaded_files
+        })
+    else:
+        st.session_state.messages.append({
+            "role": "user",
+            "content": user_text,
+            "images": []
+        })
 
-    with st.spinner(""):
-        try:
-            sys_content = (
-                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                "CRITICAL TIMELINE AND IDENTITY LAWS: "
-                "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
-                "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
-                "FORMATTING LAWS: "
-                "- NEVER use Markdown or HTML tables under any circumstances. "
-                "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
-                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-            )
+    sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
+    
+    # Routes dynamically to active vision node if image files are present
+    model = "qwen/qwen3.6-27b" if has_images else "openai/gpt-oss-120b"
+    api_messages = [{"role": "system", "content": sys_content}]
+    
+    if has_images:
+        content_list = [{"type": "text", "text": user_text}]
+        for file in uploaded_files:
+            bytes_data = file.read()
+            base64_image = base64.b64encode(bytes_data).decode("utf-8")
+            content_list.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
+            })
+        api_messages.append({"role": "user", "content": content_list})
+    else:
+        for m in st.session_state.messages:
+            if m["role"] == "user":
+                content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
+                api_messages.append({"role": "user", "content": content_data})
+            else:
+                api_messages.append({"role": "assistant", "content": m["content"]})
 
-            # Build messages for the API (text only for now)
-            api_messages = [{"role": "system", "content": sys_content}]
-            for m in st.session_state.messages:
-                if m["role"] == "user":
-                    content = m["content"] if m["content"] else "(User sent an image)"
-                    api_messages.append({"role": "user", "content": content})
-                else:
-                    api_messages.append({"role": "assistant", "content": m["content"]})
-
-            # SWAPPED TO THE CORRECT MODEL ID NAME
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b", 
-                messages=api_messages, 
-                temperature=0.2, 
-                max_tokens=1000
-            )
-            # SEALED UNPACKING LOOP FOR THE GPT-OSS RESPONSE MATRIX ARRAY
-            reply = completion.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-            
+    try:
+        completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
+        reply = completion.choices.message.content
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+    except Exception as e:
+        st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+        
     st.rerun()
 
 # ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
