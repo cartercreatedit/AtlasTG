@@ -101,22 +101,6 @@ div[data-testid="stAudioInput"] {
     border-radius: 20px !important;
     padding: 6px !important;
 }
-
-/* Speaker Trigger Link Style */
-.stButton > button {
-    background-color: transparent !important;
-    border: 1px solid #2d2d2d !important;
-    color: #8b8b8b !important;
-    padding: 4px 12px !important;
-    font-size: 0.8rem !important;
-    border-radius: 20px !important;
-    transition: color 0.2s ease, border-color 0.2s ease !important;
-    margin-top: 4px !important;
-}
-.stButton > button:hover {
-    color: #ffffff !important;
-    border-color: #ffffff !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -135,10 +119,12 @@ st.caption("High-Speed Audio-Text Intelligence Engine · Coded by C. F. Robinson
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. You can type a text prompt to me or record your voice right below—I will listen, reply on screen, and let you choose if you want to hear it out loud."}
+        {"role": "assistant", "content": "Hey. You can type a text prompt to me or record your voice right below—I will listen, reply on screen, and talk back to you automatically."}
     ]
 if "play_audio" not in st.session_state:
     st.session_state.play_audio = None
+if "last_processed_audio" not in st.session_state:
+    st.session_state.last_processed_audio = None
 
 # ── HIDDEN AUDIO TRANSMISSION EMBED ───────────────────
 if st.session_state.play_audio:
@@ -146,7 +132,7 @@ if st.session_state.play_audio:
     st.session_state.play_audio = None 
 
 # ── Render Message Timeline using Native Safe Structures ──────────────────
-for idx, msg in enumerate(st.session_state.messages):
+for msg in st.session_state.messages:
     if msg["role"] == "user":
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
@@ -161,21 +147,6 @@ for idx, msg in enumerate(st.session_state.messages):
         st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
         st.markdown(msg["content"])
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        if idx > 0: 
-            if st.button("Speak Answer 🔊", key=f"speak_{idx}"):
-                with st.spinner(""):
-                    try:
-                        tts_response = client.audio.speech.create(
-                            model="canopylabs/orpheus-v1-english",
-                            voice="alloy", 
-                            input=msg["content"]
-                        )
-                        audio_base64 = base64.b64encode(tts_response.content).decode('utf-8')
-                        st.session_state.play_audio = f'<audio src="data:audio/mp3;base64,{audio_base64}" autoplay="true" style="display:none;"></audio>'
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Voice Synthesis Error: {e}")
 
 # ── CONSOLIDATED FIXED BASE USER CAPTURE PANEL ────────
 st.markdown('<div class="fixed-bottom-panel">', unsafe_allow_html=True)
@@ -186,7 +157,9 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ── DOCK RECONCILIATION GATEWAYS ──────────────────────
 final_prompt = None
 
-if audio_input:
+# FIXED TIMELINE FILTER: Checks if this exact audio data chunk has already been ran before to block repeat loops
+if audio_input and audio_input.id != st.session_state.last_processed_audio:
+    st.session_state.last_processed_audio = audio_input.id # Lock the file ID down immediately
     with st.spinner(""):
         try:
             with open("temp_input.wav", "wb") as f:
@@ -213,16 +186,23 @@ if final_prompt:
     
     with st.spinner(""):
         try:
-            # IDENTITY SYSTEM DIRECTIVES DEFINED AS A FLAT CONCISE LITERAL STRING
             sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
-            
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
-            # FLAT SINGLE-LINE DESPATCH EXECUTION PREVENTS UNCLOSED BRACKET LOG FAULTS
             completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
-            
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
+            
+            # 🎙️ AUTOMATIC SPEECH SYNTHESIS LINK (AUTOMATIC CHATGPT MODE) 🎙️
+            tts_response = client.audio.speech.create(
+                model="canopylabs/orpheus-v1-english",
+                voice="alloy", 
+                input=reply
+            )
+            audio_base64 = base64.b64encode(tts_response.content).decode('utf-8')
+            # Locks audio tracking parameters inside active memory layouts to trigger instant playback
+            st.session_state.play_audio = f'<audio src="data:audio/mp3;base64,{audio_base64}" autoplay="true" style="display:none;"></audio>'
+            
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
             
