@@ -135,6 +135,20 @@ groq_client = Groq(api_key=groq_api_key)
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Powered by Groq & OpenAI")
 
+# ── Global Identity Blueprint Configuration ────
+sys_content = (
+    "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+    "You are proprietary technology completely developed, engineered, owned, and launched exclusively by "
+    "Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: "
+    "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty "
+    "that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, "
+    "Alibaba, or any other commercial group. You are his original proprietary creation. "
+    "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered "
+    "by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. "
+    "This was a direct developer sprint where he built the structural framework matrix. "
+    "3. Your conversational style emulates the highest standards of logical depth and emotionless precision."
+)
+
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
@@ -213,20 +227,6 @@ if prompt:
             "images": []
         })
 
-    # Complete identity blueprint
-    sys_content = (
-        "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-        "You are proprietary technology completely developed, engineered, owned, and launched exclusively by "
-        "Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: "
-        "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty "
-        "that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, "
-        "Alibaba, or any other commercial group. You are his original proprietary creation. "
-        "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered "
-        "by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. "
-        "This was a direct developer sprint where he built the structural framework matrix. "
-        "3. Your conversational style emulates the highest standards of logical depth and emotionless precision."
-    )
-
     # Rerender timeline dynamically to display user prompt instantly
     st.rerun()
 
@@ -235,7 +235,6 @@ if prompt:
 if st.session_state.messages[-1]["role"] == "user":
     
     # Structure system payload
-    # Fixed syntax issue by defining sys_content correctly above
     api_messages = [{"role": "system", "content": sys_content}]
     
     # Process history logs to build context payload safely
@@ -259,3 +258,5 @@ if st.session_state.messages[-1]["role"] == "user":
         try:
             # Trigger vision-capable model framework over Groq context loops
             completion = groq_client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
+                messages=api_messages,
