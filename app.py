@@ -179,8 +179,9 @@ if text_prompt:
             )
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
+            # SWAPPED TO ACTIVE NETWORK MODEL ID LINK
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile", 
+                model="llama-3.3-70b-specdec", 
                 messages=api_messages, 
                 temperature=0.2, 
                 max_tokens=1000
