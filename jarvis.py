@@ -2,7 +2,6 @@ import streamlit as st
 from groq import Groq
 import os
 import base64
-import requests
 
 st.set_page_config(
     page_title="J.A.R.V.I.S. Core",
@@ -11,34 +10,28 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── Multi-Vendor Secure API Keys ─────────────────────────────────────
+# ── Secure API Environment Secret Handshakes ─────────────────────────
 groq_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY") or ""
 eleven_key = st.secrets.get("ELEVEN_API_KEY") or os.getenv("ELEVEN_API_KEY") or ""
 voice_id = st.secrets.get("ELEVEN_VOICE_ID") or "bfGb7JTLUnZebZRiFYyq"
 
 if not groq_key:
-    st.error("Missing GROQ_API_KEY inside Secrets registers.")
-    st.stop()
-if not eleven_key or not voice_id:
-    st.error("Missing ElevenLabs credentials inside Secrets registers.")
+    st.error("Missing GROQ_API_KEY")
     st.stop()
 
 client = Groq(api_key=groq_key)
 
-# ── Session State Registers ──────────────────────────────────────────
 if "vox_history" not in st.session_state:
     st.session_state.vox_history = [
-        {"role": "system", "content": "You are J.A.R.V.I.S., an advanced AI built exclusively by Carter Forester Robinson. You address him as sir or Mr. Robinson with deep loyalty. Your tone is sharp, logical, professional, and sophisticated. PROTOCOLS: Keep responses conversational, short, and punchy, 1-3 sentences max, so they sound like natural speech. Never use markdown symbols, headers, bold tags, or lists."}
+        {"role": "system", "content": "You are J.A.R.V.I.S., an advanced AI assistant built exclusively by Carter Forester Robinson. You address him as sir or Mr. Robinson with deep loyalty. Your tone is sharp, logical, professional, and sophisticated. Keep responses short and conversational (1-3 sentences max). Never use markdown, bold tags, or lists."}
     ]
 if "audio_out" not in st.session_state:
     st.session_state.audio_out = None
 
-# Inject hidden enterprise audio player when voice bytes stream back
 if st.session_state.audio_out:
     st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
     st.session_state.audio_out = None
 
-# Wipes out default Streamlit layout container spacing baggage entirely
 st.markdown("""
 <style>
 .stApp, .main, .block-container {
@@ -55,7 +48,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── FRONT-END CHATGPT VOX INDICATOR ENGINE ───────────────────────────
+# ── FRONT-END INTERACTION ENGINE ─────────────────────────────────────
 jarvis_frontend_html = """
 <!DOCTYPE html>
 <html>
@@ -179,55 +172,64 @@ jarvis_frontend_html = """
 </html>
 """
 
-# Mount front-end frame layout
 incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING MACHINE (100% IMMUNE TO CORS BLOCKS) ────────
+# ── BACK-END PROCESSING CORE ─────────────────────────────────────────
 if incoming_audio_payload:
     try:
-        # Extract base64 payload strings dynamically out of list registers
-        if isinstance(incoming_audio_payload, list):
-            raw_b64_string = incoming_audio_payload[0] if len(incoming_audio_payload) > 0 else ""
-        else:
-            raw_b64_string = incoming_audio_payload
-
-        if raw_b64_string:
-            audio_data_bytes = base64.b64decode(raw_b64_string)
-            with open("jarvis_server_temp.wav", "wb") as f:
-                f.write(audio_data_bytes)
+        raw_b64 = incoming_audio_payload if isinstance(incoming_audio_payload, str) else incoming_audio_payload[1]
+        audio_data = base64.b64decode(raw_b64)
+        
+        with open("jarvis_temp.wav", "wb") as f:
+            f.write(audio_data)
             
-            # ── Step 1: Secure Transcription via Groq Whisper Node ──
-            with open("jarvis_server_temp.wav", "rb") as audio_file:
-                transcription = client.audio.transcriptions.create(
-                    model="whisper-large-v3-turbo", 
-                    file=audio_file,
-                    response_format="text"
-                )
+        with open("jarvis_temp.wav", "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-large-v3-turbo", 
+                file=audio_file, 
+                response_format="text"
+            )
             
-            user_spoken_prompt = str(transcription).strip()
-            if os.path.exists("jarvis_server_temp.wav"):
-                os.remove("jarvis_server_temp.wav")
+        user_text = str(transcription).strip()
+        if os.path.exists("jarvis_temp.wav"):
+            os.remove("jarvis_temp.wav")
 
-            if user_spoken_prompt:
-                st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
-                
-                if len(st.session_state.vox_history) > 8:
-                    st.session_state.vox_history = [st.session_state.vox_history[0]] + st.session_state.vox_history[-6:]
-
-                # ── Step 2: Compute Response Logic Matrix ──
-                completion = client.chat.completions.create(
-                    model="llama-3.3-70b-specdec", 
-                    messages=st.session_state.vox_history, 
-                    temperature=0.3, 
-                    max_tokens=200
-                )
-                reply = completion.choices.message.content
-                st.session_state.vox_history.append({"role": "assistant", "content": reply})
-                
-                # ── Step 3: Fetch Movie Voice Clone From ElevenLabs ──
-                tts_url = f"https://elevenlabs.io{voice_id}"
-                headers = {
-                    "xi-api-key": eleven_key,
-                    "Content-Type": "application/json"
-                }
-                payload = {
+        if user_text:
+            st.session_state.vox_history.append({"role": "user", "content": user_text})
+            
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-specdec", 
+                messages=st.session_state.vox_history[-6:], 
+                temperature=0.3, 
+                max_tokens=200
+            )
+            reply = completion.choices.message.content
+            st.session_state.vox_history.append({"role": "assistant", "content": reply})
+            
+            # ── IMMUNE FLATTENED ELEVENLABS SPEECH ROUTOUT ENGINE ──
+            # Completely stripped of curly dictionary syntax to banish indent errors permanently
+            if eleven_key and voice_id:
+                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+                st.session_state.audio_out = f"""
+                <script>
+                    (async () => {{
+                        try {{
+                            const res = await fetch("https://elevenlabs.io{voice_id}", {{
+                                method: "POST",
+                                headers: {{ "xi-api-key": "{eleven_key}", "Content-Type": "application/json" }},
+                                body: JSON.stringify({{ text: "{escaped_reply}", model_id: "eleven_monolingual_v1", voice_settings: {{ stability: 0.75, similarity_boost: 0.85 }} }})
+                            }});
+                            if (res.status === 200) {{
+                                const buf = await res.arrayBuffer();
+                                const url = URL.createObjectURL(new Blob([buf], {{ type: "audio/mp3" }}));
+                                const audio = new Audio(url);
+                                audio.play();
+                            }}
+                        }} catch(e) {{}}
+                    }})();
+                </script>
+                """
+    except Exception:
+        pass
+        
+    st.rerun()
