@@ -4,7 +4,6 @@ import os
 import base64
 from PIL import Image
 import io
-import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -37,20 +36,17 @@ h1 {
 .stCaption {
     color: #8b8b8b !important;
 }
-/* Clear default Streamlit padding baggage */
 div[data-testid="stChatMessage"] {
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0px !important;
 }
-/* Force clean text behavior inside all markdown elements */
 div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
 }
-/* ── USER PROMPT POINTED BUBBLES ── */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
     display: flex !important;
     justify-content: flex-end !important;
@@ -66,7 +62,6 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     display: inline-block !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
 }
-/* Assistant Plain Text Layout */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
     display: flex !important;
     justify-content: flex-start !important;
@@ -79,7 +74,6 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     box-shadow: none !important;
     max-width: 100% !important;
 }
-/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -100,7 +94,6 @@ div[data-testid="stChatInput"] {
     box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
     outline: none !important;
 }
-/* Obliterate inner background border constraints */
 div[data-testid="stChatInput"] *,
 .stChatInput div[data-baseweb="textarea"],
 .stChatInput div[data-baseweb="base-input"],
@@ -122,6 +115,7 @@ api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error("Missing GROQ_API_KEY")
     st.stop()
+
 client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
@@ -131,7 +125,10 @@ st.caption("High-Speed Intelligence Engine · Powered by Groq")
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images using the plus icon."}
+        {
+            "role": "assistant",
+            "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images using the plus icon."
+        }
     ]
 
 # ── Render Message Timeline ───────────────────
@@ -140,6 +137,7 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
+
             if isinstance(content, str) and content:
                 st.markdown(f'''
                 <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
@@ -148,9 +146,10 @@ for msg in st.session_state.messages:
                     </div>
                 </div>
                 ''', unsafe_allow_html=True)
+
             elif isinstance(content, list):
                 for part in content:
-                    if part["type"] == "text":
+                    if part.get("type") == "text" and part.get("text"):
                         st.markdown(f'''
                         <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
                             <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
@@ -158,8 +157,8 @@ for msg in st.session_state.messages:
                             </div>
                         </div>
                         ''', unsafe_allow_html=True)
-            
-            if "images" in msg and msg["images"]:
+
+            if msg.get("images"):
                 for img in msg["images"]:
                     st.image(img, width=280)
     else:
@@ -167,7 +166,7 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ── CHAT INPUT WITH IMAGE UPLOAD (plus icon) ─────────────────────
+# ── CHAT INPUT WITH IMAGE UPLOAD ─────────────────────
 prompt = st.chat_input(
     "Message AtlasTG...",
     accept_file=True,
@@ -180,12 +179,28 @@ if prompt:
     uploaded_files = prompt.files if prompt.files else []
     has_images = len(uploaded_files) > 0
 
+    # Store images as base64 so they survive reruns cleanly
+    image_payloads = []
+    display_images = []
+
     if has_images:
-        content_payload = [{"type": "text", "text": user_text}]
+        for file in uploaded_files:
+            bytes_data = file.read()
+            base64_image = base64.b64encode(bytes_data).decode("utf-8")
+            mime = file.type or "image/jpeg"
+
+            image_payloads.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime};base64,{base64_image}"}
+            })
+            display_images.append(bytes_data)  # for UI display
+
+        content_payload = [{"type": "text", "text": user_text}] + image_payloads
+
         st.session_state.messages.append({
             "role": "user",
             "content": content_payload,
-            "images": uploaded_files
+            "images": display_images
         })
     else:
         st.session_state.messages.append({
@@ -194,37 +209,52 @@ if prompt:
             "images": []
         })
 
-    sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-    
-    model = "meta-llama/llama-4-scout-17b-16e-instruct" if has_images else "openai/gpt-oss-120b"
-    api_messages = [{"role": "system", "content": sys_content}]
-    
-    if has_images:
-        content_list = [{"type": "text", "text": user_text}]
-        for file in uploaded_files:
-            bytes_data = file.read()
-            base64_image = base64.b64encode(bytes_data).decode("utf-8")
-            content_list.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
-            })
-        api_messages.append({"role": "user", "content": content_list})
-    else:
-        for m in st.session_state.messages:
-            if m["role"] == "user":
-                content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
-                api_messages.append({"role": "user", "content": content_data})
-            else:
-                api_messages.append({"role": "assistant", "content": m["content"]})
+    # ── System prompt ─────────────────────────────
+    sys_content = (
+        "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+        "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+        "CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. "
+        "You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
+        "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. "
+        "This was a direct developer sprint where he built the structural framework matrix. "
+        "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
+        "FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. "
+        "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
+        "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
+    )
 
+    # ── Model selection (FIXED) ───────────────────
+    # Vision model currently supported by Groq
+    model = "qwen/qwen3.6-27b" if has_images else "openai/gpt-oss-120b"
+
+    # ── Build API messages cleanly ────────────────
+    api_messages = [{"role": "system", "content": sys_content}]
+
+    for m in st.session_state.messages:
+        if m["role"] == "assistant":
+            api_messages.append({"role": "assistant", "content": m["content"]})
+        else:
+            # User message
+            if isinstance(m["content"], list):
+                # Already in vision format
+                api_messages.append({"role": "user", "content": m["content"]})
+            else:
+                api_messages.append({"role": "user", "content": m["content"]})
+
+    # ── Call Groq ─────────────────────────────────
     try:
-        completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
-        # FIXED ARRAY EXTRACTION: Unpacks choice index 0 properly to receive the text payload smoothly
+        completion = client.chat.completions.create(
+            model=model,
+            messages=api_messages,
+            temperature=0.2,
+            max_tokens=1500
+        )
         reply = completion.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": reply})
     except Exception as e:
-        st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-        
-    st.rerun()
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": f"Error: {e}"
+        })
 
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+    st.rerun()
