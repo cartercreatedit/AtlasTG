@@ -98,7 +98,7 @@ div[data-testid="stChatInput"] *,
     font-size: 15.5px !important;
 }
 
-/* 🎙️ HIDDEN FLOATING MIC CONTAINER OVERLAY 🎙️ */
+/* ── 🎙️ HIDDEN FLOATING MIC CONTAINER OVERLAY 🎙️ ── */
 .mic-overlay-container {
     position: absolute !important;
     right: 14px !important;
