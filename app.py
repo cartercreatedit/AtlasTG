@@ -187,7 +187,6 @@ if prompt:
     has_images = len(uploaded_files) > 0
 
     if has_images:
-        # CRITICAL FIX: Groq throws BadRequest if a text block contains an empty string alongside images
         resolved_text = user_text if user_text.strip() else "Analyze this image."
         content_payload = [{"type": "text", "text": resolved_text}]
         
@@ -235,10 +234,9 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
-        # If your Groq environment deprecated the llama preview vision endpoint, 
-        # you can seamlessly change the model string below to "qwen/qwen3.6-27b"
+        # FIXED: Swapped deprecated llama-3.2 preview engine out for Groq's active 2026 multimodal vision engine
         completion = groq_client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview",
+            model="qwen/qwen3.6-27b",
             messages=api_messages,
             temperature=0.2,
             max_tokens=1024,
@@ -249,3 +247,7 @@ if st.session_state.messages[-1]["role"] == "user":
             if chunk.choices and chunk.choices.delta and chunk.choices.delta.content:
                 full_response += chunk.choices.delta.content
                 message_placeholder.markdown(full_response + "▌")
+        
+        message_placeholder.markdown(full_response)
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.rerun()
