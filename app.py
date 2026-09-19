@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ADVANCED CORE AUDIO-VISUAL STYLING ─────────────────────────
+# ── INTEGRATED CHATGPT-STYLE INPUT STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -51,40 +51,43 @@ div[data-testid="stMarkdownContainer"] p {
     line-height: 1.6 !important;
 }
 
-/* ── INTEGRATED MULTI-INPUT FIXED BASE PANEL ── */
+/* ── 🤖 INTEGRATED CHATGPT INPUT OVERLAY BOX 🤖 ── */
 .fixed-bottom-panel {
     position: fixed !important;
-    bottom: 0 !important;
+    bottom: 32px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
-    background-color: #0a0a0a !important;
-    padding-bottom: 24px !important;
-    padding-top: 10px !important;
+    background-color: #161616 !important;
+    border: 1px solid #222222 !important;
+    border-radius: 32px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;
+    padding: 6px 48px 6px 16px !important; /* Makes explicit room for microphone button on the right */
     z-index: 999 !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: border-color 0.2s ease !important;
+}
+.fixed-bottom-panel:focus-within {
+    border-color: #ffffff !important;
 }
 
-/* Exact borderless prompt frame match */
+/* Make text input area completely transparent inside our parent box */
 div[data-testid="stChatInput"] {
     width: 100% !important;
 }
 .stChatInput {
-    background-color: #161616 !important;
-    border: none !important; 
-    border-radius: 32px !important;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 20px !important; 
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0px !important;
 }
-
-/* OBLITERATE EVERY SINGLE HIDDEN INTERNAL BORDER AND BACKGROUND SHADOW */
 div[data-testid="stChatInput"] *,
 .stChatInput div[data-baseweb="textarea"],
 .stChatInput div[data-baseweb="base-input"],
 .stChatInput textarea {
     border: none !important;
-    border-color: transparent !important;
     background-color: transparent !important;
-    background: transparent !important;
     box-shadow: none !important;
     outline: none !important;
 }
@@ -93,13 +96,35 @@ div[data-testid="stChatInput"] *,
     font-size: 15.5px !important;
 }
 
-/* Custom styled container for native microphone framework layout */
+/* ── MICROPHONE OVERLAY INJECTION ── */
+/* Shrinks and positions Streamlit's hardware audio bar neatly inside the text box right border */
 div[data-testid="stAudioInput"] {
-    margin-bottom: 12px !important;
-    background-color: #111111 !important;
-    border: 1px solid #222222 !important;
-    border-radius: 20px !important;
-    padding: 6px !important;
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0px !important;
+    margin: 0px !important;
+    overflow: hidden !important;
+    z-index: 1001 !important;
+}
+
+/* Shrinks the internal native button icon to match ChatGPT styling */
+div[data-testid="stAudioInput"] button {
+    width: 36px !important;
+    height: 36px !important;
+    background-color: #262626 !important;
+    border: none !important;
+    border-radius: 50% !important;
+    color: #ffffff !important;
+}
+div[data-testid="stAudioInput"] div {
+    display: none !important; /* Hides default progress wave bars to save space */
 }
 </style>
 """, unsafe_allow_html=True)
@@ -157,9 +182,8 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ── DOCK RECONCILIATION GATEWAYS ──────────────────────
 final_prompt = None
 
-# FIXED TIMELINE FILTER: Checks if this exact audio data chunk has already been ran before to block repeat loops
 if audio_input and audio_input.id != st.session_state.last_processed_audio:
-    st.session_state.last_processed_audio = audio_input.id # Lock the file ID down immediately
+    st.session_state.last_processed_audio = audio_input.id 
     with st.spinner(""):
         try:
             with open("temp_input.wav", "wb") as f:
@@ -193,14 +217,13 @@ if final_prompt:
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
             
-            # 🎙️ AUTOMATIC SPEECH SYNTHESIS LINK (AUTOMATIC CHATGPT MODE) 🎙️
+            # 🎙️ AUTOMATIC SPEECH SYNTHESIS LINK 🎙️
             tts_response = client.audio.speech.create(
                 model="canopylabs/orpheus-v1-english",
                 voice="alloy", 
                 input=reply
             )
             audio_base64 = base64.b64encode(tts_response.content).decode('utf-8')
-            # Locks audio tracking parameters inside active memory layouts to trigger instant playback
             st.session_state.play_audio = f'<audio src="data:audio/mp3;base64,{audio_base64}" autoplay="true" style="display:none;"></audio>'
             
         except Exception as e:
