@@ -1,11 +1,10 @@
 import streamlit as st
-from groq import Groq
+from google import genai
+from google.genai import types
 import os
 import base64
 from PIL import Image
 import io
-import streamlit.components.v1 as components
-import requests
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -118,15 +117,15 @@ div[data-testid="stChatInput"] *,
 </style>
 """, unsafe_allow_html=True)
 
-# ── Multi-Vendor API Configurations ─────────────────────
-groq_api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+# ── Gemini API Configuration ─────────────────────────────
+gemini_api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
-if not groq_api_key:
-    st.error("Missing GROQ_API_KEY inside workspace registers.")
+if not gemini_api_key:
+    st.error("Missing GEMINI_API_KEY inside workspace registers.")
     st.stop()
 
-# Initialize Groq client instance
-groq_client = Groq(api_key=groq_api_key)
+# Initialize the modern 2026 Google GenAI SDK client
+client = genai.Client(api_key=gemini_api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
@@ -136,6 +135,8 @@ st.caption("High-Speed Intelligence Engine · Powered by Atlas Matrix Core")
 sys_content = """You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth and emotionless precision."""
 
 # ── Session state ─────────────────────────────
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."}
@@ -152,8 +153,8 @@ for msg in st.session_state.messages:
                 display_text = content
             elif isinstance(content, list):
                 for part in content:
-                    if part["type"] == "text":
-                        display_text = part["text"]
+                    if isinstance(part, str):
+                        display_text = part
 
             if display_text:
                 st.markdown(f'''
@@ -185,77 +186,68 @@ if prompt:
     uploaded_files = prompt.files if prompt.files else []
     has_images = len(uploaded_files) > 0
 
+    # Build contents array format required by Gemini SDK
+    payload_contents = []
+    
     if has_images:
         resolved_text = user_text if user_text.strip() else "Analyze this image."
-        content_payload = [{"type": "text", "text": resolved_text}]
+        payload_contents.append(resolved_text)
         
         for f in uploaded_files:
-            bytes_data = f.getvalue()
-            base64_image = base64.b64encode(bytes_data).decode("utf-8")
-            content_payload.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{f.type};base64,{base64_image}"
-                }
-            })
+            img = Image.open(f)
+            payload_contents.append(img)
             
         st.session_state.messages.append({
             "role": "user",
-            "content": content_payload,
+            "content": resolved_text,
             "images": [f.getvalue() for f in uploaded_files]
         })
     else:
+        payload_contents.append(user_text)
         st.session_state.messages.append({
             "role": "user",
             "content": user_text,
             "images": []
         })
 
+    # Store formatted data for raw API calls
+    st.session_state.chat_history.append({"role": "user", "parts": payload_contents})
     st.rerun()
 
 # ── GENERATE AI RESPONSE ─────────────────
 if st.session_state.messages[-1]["role"] == "user":
-    api_messages = [{"role": "system", "content": sys_content}]
     
-    for msg in st.session_state.messages:
-        if msg["role"] == "user":
-            api_messages.append({
-                "role": "user",
-                "content": msg["content"]
-            })
-        elif msg["role"] == "assistant":
-            api_messages.append({
-                "role": "assistant",
-                "content": msg["content"]
-            })
+    # Flatten history into Gemini structured content formats
+    formatted_contents = []
+    for turn in st.session_state.chat_history:
+        formatted_contents.append(
+            types.Content(role=turn["role"], parts=[
+                p if isinstance(p, Image.Image) else types.Part.from_text(text=p) for p in turn["parts"]
+            ])
+        )
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
         
-        # Try active production model names with fallback catch
-        try:
-            completion = groq_client.chat.completions.create(
-                model="qwen-2.5-72b",
-                messages=api_messages,
-                temperature=0.2,
-                max_tokens=1024,
-                stream=True
+        # Streams gemini-2.5-flash completely free
+        response_stream = client.models.generate_content_stream(
+            model='gemini-2.5-flash',
+            contents=formatted_contents,
+            config=types.GenerateContentConfig(
+                system_instruction=sys_content,
+                temperature=0.2
             )
-        except Exception:
-            completion = groq_client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
-                messages=api_messages,
-                temperature=0.2,
-                max_tokens=1024,
-                stream=True
-            )
+        )
         
-        for chunk in completion:
-            if chunk.choices and chunk.choices.delta and chunk.choices.delta.content:
-                full_response += chunk.choices.delta.content
+        for chunk in response_stream:
+            if chunk.text:
+                full_response += chunk.text
                 message_placeholder.markdown(full_response + "▌")
         
         message_placeholder.markdown(full_response)
+        
+        # Save states to both timeline view and context logs
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.session_state.chat_history.append({"role": "model", "parts": [full_response]})
         st.rerun()
