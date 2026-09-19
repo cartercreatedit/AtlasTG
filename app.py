@@ -140,7 +140,6 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
-            # Render standard text payloads safely
             if isinstance(content, str) and content:
                 st.markdown(f'''
                 <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
@@ -150,7 +149,6 @@ for msg in st.session_state.messages:
                 </div>
                 ''', unsafe_allow_html=True)
             elif isinstance(content, list):
-                # Unpack visual prompt structures cleanly for history rendering
                 for part in content:
                     if part["type"] == "text":
                         st.markdown(f'''
@@ -161,7 +159,6 @@ for msg in st.session_state.messages:
                         </div>
                         ''', unsafe_allow_html=True)
             
-            # Show images if present on timeline memory arrays
             if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=280)
@@ -183,10 +180,8 @@ if prompt:
     uploaded_files = prompt.files if prompt.files else []
     has_images = len(uploaded_files) > 0
 
-    # Build memory registers based on multimodal asset input flags
     if has_images:
         stored_content = [{"type": "text", "text": user_text}]
-        # Process data files immediately into image timeline registers
         st.session_state.messages.append({
             "role": "user",
             "content": stored_content,
@@ -214,13 +209,10 @@ if prompt:
                 "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
             )
 
-            # Route straight to Llama 4 Scout for image parsing, or GPT-OSS for clean text variables
             model = "meta-llama/llama-4-scout-17b-16e-instruct" if has_images else "openai/gpt-oss-120b"
-
             api_messages = [{"role": "system", "content": sys_content}]
             
             if has_images:
-                # INTEGRATED BASE64 MATRIX TRANSLATION LINK: Packs binary images into JSON arrays natively
                 content_list = [{"type": "text", "text": user_text}]
                 for file in uploaded_files:
                     bytes_data = file.read()
@@ -233,3 +225,14 @@ if prompt:
             else:
                 for m in st.session_state.messages:
                     if m["role"] == "user":
+                        content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
+                        api_messages.append({"role": "user", "content": content_data})
+                    else:
+                        api_messages.append({"role": "assistant", "content": m["content"]})
+
+            completion = client.chat.completions.create(
+                model=model,
+                messages=api_messages,
+                temperature=0.2,
+                max_tokens=1000
+            )
