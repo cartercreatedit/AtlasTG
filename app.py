@@ -100,7 +100,7 @@ div[data-testid="stChatInput"] {
 }
 .stChatInput:focus-within {
     border: none !important;
-    box-shadow: 0 4px 35 rgba(0,0,0,0.6) !important;
+    box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
     outline: none !important;
 }
 
@@ -202,7 +202,9 @@ if prompt:
 
             # Determine whether vision model processing is required
             has_images = len(uploaded_files) > 0
-            model = "qwen/qwen3.6-27b" if has_images else "openai/gpt-oss-120b"
+            
+            # FIXED MODEL IDs: Using supported native preview vision and flagship text IDs
+            model = "llama-3.2-11b-vision-preview" if has_images else "openai/gpt-oss-120b"
 
             # Assemble clean message structure for the endpoint
             api_messages = [{"role": "system", "content": sys_content}]
@@ -234,7 +236,7 @@ if prompt:
                 max_tokens=1000
             )
             
-            # Sealed unpacking index path handles response safely without array log faults
+            # Unpack the response data text stream cleanly
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
             
