@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── RESTORED BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
+# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -92,12 +92,11 @@ div[data-testid="stChatInput"] {
 }
 .stChatInput {
     background-color: #161616 !important;
-    border: none !important; /* REMOVED BORDER LINES completely */
+    border: none !important; 
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
     padding: 6px 12px 6px 20px !important; 
 }
-/* OBLITERATES WHITE HIGHLIGHT RING FOCUS OVERRIDES AT THE CORE INTERFACES */
 .stChatInput:focus-within {
     border: none !important;
     box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
@@ -131,12 +130,12 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
+st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. The interface has been completely restored to its clean, high-performance baseline."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly."}
     ]
 
 # ── Render Message Timeline using Native Safe Structures ──────────────────
@@ -165,10 +164,27 @@ if text_prompt:
     
     with st.spinner(""):
         try:
-            sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
+            # FIXED IDENTITY MATRIX VALUE OVERRIDE LOCK
+            sys_content = (
+                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+                "CRITICAL TIMELINE AND IDENTITY LAWS: "
+                "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
+                "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
+                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
+                "FORMATTING LAWS: "
+                "- NEVER use Markdown or HTML tables under any circumstances. "
+                "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
+                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or technical math questions."
+            )
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
-            completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=api_messages, temperature=0.2, max_tokens=1000)
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-versatile", 
+                messages=api_messages, 
+                temperature=0.2, 
+                max_tokens=1000
+            )
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
