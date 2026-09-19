@@ -54,7 +54,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── FRONT-END INTERACTION ENGINE (CORS-SAFE COMPONENT PROTOCAL) ──────
+# ── FRONT-END INTERACTION ENGINE (CLEAN CLICK FIX) ───────────────────
 jarvis_frontend_html = """
 <!DOCTYPE html>
 <html>
@@ -99,7 +99,6 @@ jarvis_frontend_html = """
     <div class="status-indicator" id="statusLabel">// TAP ONCE TO AWAKEN SYSTEM PROTOCOLS</div>
 </div>
 
-<script src="https://jsdelivr.net"></script>
 <script>
     let mediaRecorder; let audioChunks = []; let isRecording = false;
     let audioContext; let analyser; let dataArray; let bufferLength; let streamRef;
@@ -126,7 +125,8 @@ jarvis_frontend_html = """
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
                         const base64String = reader.result.split(',');
-                        Streamlit.setComponentValue(base64String);
+                        // Re-established the proven parent transmission link
+                        window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
                 };
@@ -181,7 +181,7 @@ jarvis_frontend_html = """
 
 incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING CORE (OBLITERATED NESTED INDENT BLOCKS PERMANENTLY) ──
+# ── BACK-END PROCESSING CORE (ZERO COMPILER INDENT ACCIDENTS) ─────────
 if incoming_audio_payload and incoming_audio_payload != "":
     raw_b64 = incoming_audio_payload
     audio_data = base64.b64decode(raw_b64)
