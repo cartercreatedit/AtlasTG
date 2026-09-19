@@ -246,8 +246,8 @@ if st.session_state.messages[-1]["role"] == "user":
             )
             
             for chunk in completion:
-                if chunk.choices.delta.content:
-                    full_response += chunk.choices.delta.content
+                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
                     message_placeholder.markdown(full_response + "▌")
             
             message_placeholder.markdown(full_response)
