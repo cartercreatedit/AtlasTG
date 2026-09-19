@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── Multi-Vendor Secure API Keys ─────────────────────────────────────
+# ── Multi-Vendor Secure Server API Keys ──────────────────────────────
 groq_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY") or ""
 eleven_key = st.secrets.get("ELEVEN_API_KEY") or os.getenv("ELEVEN_API_KEY") or ""
 voice_id = st.secrets.get("ELEVEN_VOICE_ID") or "bfGb7JTLUnZebZRiFYyq"
@@ -26,19 +26,20 @@ if not eleven_key or not voice_id:
 
 client = Groq(api_key=groq_key)
 
-# ── Session State Registers ──────────────────────────────────────────
+# ── Session State Memory Registers ───────────────────────────────────
 if "vox_history" not in st.session_state:
     st.session_state.vox_history = [
-        {"role": "system", "content": "You are J.A.R.V.I.S., an advanced AI assistant built exclusively by Carter Forester Robinson. You address him as sir or Mr. Robinson with deep loyalty. Your tone is sharp, logical, professional, and sophisticated. Keep responses short and conversational (1-3 sentences max). Never use markdown, bold tags, or lists."}
+        {"role": "system", "content": "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system built exclusively by Carter Forester Robinson. You address him exclusively as sir or Mr. Robinson with deep loyalty. Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal. Keep your responses short and punchy, 1 to 3 sentences max, so they sound like natural speech. Never use markdown symbols, headers, bold tags, or lists."}
     ]
-if "audio_out" not in st.session_state:
-    st.session_state.audio_out = None
+if "audio_tag" not in st.session_state:
+    st.session_state.audio_tag = None
 
-# Inject hidden audio player when voice bytes stream back from ElevenLabs
-if st.session_state.audio_out:
-    st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
-    st.session_state.audio_out = None
+# Automatically stream direct audio player when voice bytes are ready
+if st.session_state.audio_tag:
+    st.markdown(st.session_state.audio_tag, unsafe_allow_html=True)
+    st.session_state.audio_tag = None
 
+# Premium Borderless Full Screen Stealth Dark Styles
 st.markdown("""
 <style>
 .stApp, .main, .block-container {
@@ -55,7 +56,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── FRONT-END INTERACTION ENGINE (CLICK-AND-PULSE TARGET) ────────────
+# ── FRONT-END INTERACTION ENGINE (GLOWING SPHERE CORE) ───────────────
 jarvis_frontend_html = """
 <!DOCTYPE html>
 <html>
@@ -112,7 +113,7 @@ jarvis_frontend_html = """
     sphereBtn.onclick = async () => {
         if (!isRecording) {
             audioChunks = [];
-            statusLabel.innerText = "// INITIALIZING SYSTEM CONSOLE...";
+            statusLabel.innerText = "// INITIALIZING CORE PROCESSORS...";
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 streamRef = stream;
@@ -120,18 +121,12 @@ jarvis_frontend_html = """
                 mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
                 
                 mediaRecorder.onstop = () => {
-                    statusLabel.innerText = "// TRANSMITTING ARRAYS...";
+                    statusLabel.innerText = "// PACKING AUDIO MATRIX...";
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',')[1];
-                        
-                        // Custom event channel safely routes base64 payload up to Python's backend server
-                        const dataEvent = new CustomEvent("Streamlit:setComponentValue", { detail: base64String });
-                        window.dispatchEvent(dataEvent);
-                        
-                        // Fallback fallback pass handles standard message array targets natively
+                        const base64String = reader.result.split(',');
                         window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
@@ -154,7 +149,7 @@ jarvis_frontend_html = """
                 mediaRecorder.start();
                 requestAnimationFrame(monitorAudioStreamLoop);
             } catch (err) {
-                statusLabel.innerText = "// HARDWARE ERROR: MIC ACCESS REJECTED";
+                statusLabel.innerText = "// HARDWARE ERROR: MIC EXCEPTION";
             }
         } else {
             isRecording = false;
@@ -187,38 +182,47 @@ jarvis_frontend_html = """
 
 incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING CORE (100% IMMUNE TO CORS BLOCKS) ───────────
+# ── BACK-END PROCESSING MACHINE (100% INDENT AND SYNTAX PROOF) ───────
 if incoming_audio_payload and incoming_audio_payload != "":
-    try:
-        audio_data = base64.b64decode(incoming_audio_payload)
-        with open("jarvis_temp.wav", "wb") as f:
-            f.write(audio_data)
-            
-        with open("jarvis_temp.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file, 
-                response_format="text"
-            )
+    raw_b64 = incoming_audio_payload
+    audio_data = base64.b64decode(raw_b64)
+    
+    with open("jarvis_temp.wav", "wb") as f:
+        f.write(audio_data)
         
-        user_text = str(transcription).strip()
-        if os.path.exists("jarvis_temp.wav"):
-            os.remove("jarvis_temp.wav")
+    # SPEECH-TO-TEXT PASS: Converts raw WAV bytes directly on the secure server backend
+    with open("jarvis_temp.wav", "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-large-v3-turbo", 
+            file=audio_file, 
+            response_format="text"
+        )
+        
+    user_text = str(transcription).strip()
+    if os.path.exists("jarvis_temp.wav"):
+        os.remove("jarvis_temp.wav")
 
-        if user_text:
-            st.session_state.vox_history.append({"role": "user", "content": user_text})
-            
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
-                messages=st.session_state.vox_history[-6:], 
-                temperature=0.3, 
-                max_tokens=200
-            )
-            reply = completion.choices.message.content
-            st.session_state.vox_history.append({"role": "assistant", "content": reply})
-            
-            if eleven_key and voice_id:
-                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-                
-                # Direct streaming script formulation prevents inner string clashing
-                raw_js = '<script>(async()=>{try{const res=await fetch("https://elevenlabs.io",{method:"POST",headers:{"xi-api-key":"ELEVEN_KEY","Content-Type":"application/json"},body:JSON.stringify({text:"REPLY_TEXT",model_id:"eleven_monolingual_v1",voice_settings:{stability:0.75,similarity_boost:0.85}})});if(res.status===200){const buf=await res.arrayBuffer();const url=URL.createObjectURL(new Blob([buf],{type:"audio/mp3"}));const audio=new Audio(url);audio.play();}}catch(e){}})();</script>'
+    if user_text:
+        st.session_state.vox_history.append({"role": "user", "content": user_text})
+        
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-specdec", 
+            messages=st.session_state.vox_history[-6:], 
+            temperature=0.3, 
+            max_tokens=200
+        )
+        reply = completion.choices.message.content
+        st.session_state.vox_history.append({"role": "assistant", "content": reply})
+        
+        # TEXT-TO-SPEECH PASS: Secure Python request downloads movie voice audio safely (No browser blocks)
+        tts_url = "https://elevenlabs.io" + voice_id
+        headers = {"xi-api-key": eleven_key, "Content-Type": "application/json"}
+        payload = {"text": reply, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.75, "similarity_boost": 0.85}}
+        
+        response = requests.post(tts_url, json=payload, headers=headers)
+        
+        if response.status_code == 200:
+            b64_audio = base64.b64encode(response.content).decode("utf-8")
+            st.session_state.audio_tag = '<audio autoplay style="display:none;"><source src="data:audio/mp3;base64,' + b64_audio + '" type="audio/mp3"></audio>'
+
+    st.rerun()
