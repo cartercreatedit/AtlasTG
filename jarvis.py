@@ -185,12 +185,12 @@ incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrol
 # ── BACK-END PROCESSING MACHINE (100% IMMUNE TO CORS BLOCKS) ────────
 if incoming_audio_payload:
     try:
-        # Handles single strings or lists coming from the web component safely
+        # Extract base64 payload strings dynamically out of list registers
         if isinstance(incoming_audio_payload, list):
             raw_b64_string = incoming_audio_payload[0] if len(incoming_audio_payload) > 0 else ""
         else:
             raw_b64_string = incoming_audio_payload
-            
+
         if raw_b64_string:
             audio_data_bytes = base64.b64decode(raw_b64_string)
             with open("jarvis_server_temp.wav", "wb") as f:
@@ -230,3 +230,4 @@ if incoming_audio_payload:
                     "xi-api-key": eleven_key,
                     "Content-Type": "application/json"
                 }
+                payload = {
