@@ -163,7 +163,6 @@ if voice_mode_active and not st.session_state.audio_base64:
     st.markdown('<p style="color:#00f2fe; font-size:0.85rem; letter-spacing:1px; margin-bottom:8px; font-weight:bold;">// AUTO-SENSING AUDIO CORE ACTIVE</p>', unsafe_allow_html=True)
     st.markdown('<p style="color:#8b8b8b; font-size:0.75rem;">Speak normally. The engine will auto-detect silence and close the transmission stream immediately.</p>', unsafe_allow_html=True)
     
-    # Custom HTML5 Component capturing microphone thresholds and auto-submitting upon 1.5s of silence
     custom_mic_html = """
     <div style="display: flex; justify-content: center; align-items: center; padding: 10px;">
         <button id="micBtn" style="background-color: #ff416c; border: none; color: white; padding: 10px 24px; font-family: monospace; border-radius: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(255, 65, 108, 0.4);">🎤 RECORDING...</button>
@@ -186,14 +185,13 @@ if voice_mode_active and not st.session_state.audio_base64:
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
-                    const base64data = reader.result.split(',')[1];
+                    const base64data = reader.result.split(',');
                     window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64data }, '*');
                 };
             };
 
-            // Set up audio monitoring algorithms to detect natural user speech pauses
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioContext.createAnalyse || audioContext.createAnalyser();
+            analyser = audioContext.createAnalyser();
             const source = audioContext.createMediaStreamSource(stream);
             source.connect(analyser);
             analyser.fftSize = 256;
@@ -208,7 +206,7 @@ if voice_mode_active and not st.session_state.audio_base64:
                 for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
                 let average = sum / bufferLength;
 
-                if (average < 8) { // Silence volume threshold anchor
+                if (average < 8) { 
                     if (!silenceTimeout) {
                         silenceTimeout = setTimeout(() => {
                             if (mediaRecorder.state === "recording") {
@@ -216,7 +214,7 @@ if voice_mode_active and not st.session_state.audio_base64:
                                 streamFile.getTracks().forEach(track => track.stop());
                                 audioContext.close();
                             }
-                        }, 1500); // Auto-stops exactly after 1.5 seconds of silence
+                        }, 1500); 
                     }
                 } else {
                     clearTimeout(silenceTimeout);
@@ -232,10 +230,8 @@ if voice_mode_active and not st.session_state.audio_base64:
         });
     </script>
     """
-    # Renders the auto-sensing container safely into Streamlit layout views
     mic_value = components.html(custom_mic_html, height=100)
     
-    # Process base64 strings returned natively by the browser macro handler
     if mic_value:
         st.session_state.audio_base64 = mic_value
         st.rerun()
@@ -263,3 +259,12 @@ if st.session_state.audio_base64:
         except Exception as e:
             st.error(f"Speech Matrix Exception: {e}")
         finally:
+            # FIXED INDENTATION: Wrapped execution variables tightly to prevent compiler faults
+            st.session_state.audio_base64 = None
+
+# ── Render Message Timeline using Native Safe Structures ──────────────────
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        col_spacer, col_bubble = st.columns([0.2, 0.8])
+        with col_bubble:
+            st.markdown(f'''
