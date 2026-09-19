@@ -126,35 +126,14 @@ div[data-testid="stChatInput"] *,
     padding: 24px !important;
     margin-bottom: 24px !important;
     box-shadow: 0 10px 30px rgba(0,0,0,0.7) !important;
-    animation: slideDown 0.3s ease-out !important;
-}
-@keyframes slideDown {
-    from { transform: translateY(-10px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
 }
 
 /* Custom styled container for native microphone framework layout */
 div[data-testid="stAudioInput"] {
-    background-color: #16161e !important;
-    border: 1px solid #2a2a35 !important;
+    background-color: #161616 !important;
+    border: 1px solid #2c2c2c !important;
     border-radius: 28px !important;
     padding: 8px !important;
-}
-
-/* Minimalist Audio Trigger Link style */
-.stButton > button[key="vox_toggle"] {
-    background-color: transparent !important;
-    border: 1px solid #2d2d2d !important;
-    color: #8b8b8b !important;
-    padding: 6px 16px !important;
-    font-size: 0.85rem !important;
-    border-radius: 20px !important;
-    transition: all 0.2s ease !important;
-}
-.stButton > button[key="vox_toggle"]:hover {
-    color: #00f2fe !important;
-    border-color: #00f2fe !important;
-    box-shadow: 0 0 10px rgba(0, 242, 254, 0.15) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -174,24 +153,17 @@ st.caption("High-Speed Audio-Text Intelligence Engine · Coded by C. F. Robinson
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Text intelligence is active below, or click the link shortcut to slide open the voice core channel."}
+        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Text intelligence is active below, or click the checkbox to slide open the voice core channel."}
     ]
-if "voice_mode_active" not in st.session_state:
-    st.session_state.voice_mode_active = False
 if "last_processed_audio" not in st.session_state:
     st.session_state.last_processed_audio = None
 
 # ── 🎙️ MINIMALIST VOICE OVERLAY TRIGGER ────────────────
-col_left, col_right = st.columns([0.7, 0.3])
-with col_right:
-    # Minimal toggle switch that protects your core layout design
-    if st.button("🎙️ Voice Core Matrix", key="vox_toggle"):
-        st.session_state.voice_mode_active = not st.session_state.voice_mode_active
-        st.rerun()
+# Using a clean checkbox layout completely stops button state rendering faults
+voice_mode_active = st.checkbox("🎙️ Activate Voice Core Matrix", value=False)
 
-# Dynamic slider drawer logic
 audio_prompt = None
-if st.session_state.voice_mode_active:
+if voice_mode_active:
     st.markdown('<div class="voice-panel-box">', unsafe_allow_html=True)
     st.markdown('<p style="color:#00f2fe; font-size:0.85rem; letter-spacing:1px; margin-bottom:12px; font-weight:bold;">// AUDIO CAPTURE ARRAY STREAMING</p>', unsafe_allow_html=True)
     
@@ -214,9 +186,6 @@ if st.session_state.voice_mode_active:
                     audio_prompt = transcribed_text
                 if os.path.exists("temp_input.wav"):
                     os.remove("temp_input.wav")
-                
-                # Auto-close panel on complete capture execution
-                st.session_state.voice_mode_active = False
             except Exception as e:
                 st.error(f"Audio Handshake Error: {e}")
                 
@@ -228,7 +197,7 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             st.markdown(f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
+            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
                 <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
                     {msg["content"]}
                 </div>
@@ -254,4 +223,15 @@ if final_prompt:
             sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
-            # Locked onto un-throttled free production text node
+            # FIXED INDENTATION LINE AT LEVEL 0 TO PREVENT ROADBLOCK COMPILER FAULTS
+            completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=api_messages, temperature=0.2, max_tokens=1000)
+            reply = completion.choices.message.content
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+            
+    st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
