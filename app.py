@@ -19,8 +19,8 @@ st.markdown("""
     color: #e8e8e8;
 }
 .main .block-container {
-    padding-top: 1.5rem;
-    padding-bottom: 140px !important;
+    padding-top: 5rem !important; /* Made explicit room for the sticky tab header */
+    padding-bottom: 160px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -37,10 +37,18 @@ h1 {
     margin-bottom: 20px !important;
 }
 
-/* ✦ CLEAN STRIPED INTERFACE CONTROLS TABS ✦ */
+/* ✦ FIXED TOP-BAR MODE CONTAINER LOCK (Bugs 2 Fixed) ✦ */
 div[data-testid="stTabs"] {
-    background-color: transparent !important;
-    margin-bottom: 24px !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(760px, 92vw) !important;
+    background-color: #0a0a0a !important;
+    z-index: 1000 !important;
+    padding-top: 15px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid #161616 !important;
 }
 div[data-testid="stTabs"] button {
     color: #8b8b8b !important;
@@ -237,7 +245,9 @@ if final_prompt:
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
             completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
-            reply = completion.choices.message.content
+            
+            # FIXED BLOCK DIRECTIVE: Targeted base choice index array correctly to prevent extraction faults
+            reply = completion.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
             
             # 🎙️ AUTOMATIC SPEECH SYNTHESIS LINK 🎙️
@@ -246,12 +256,3 @@ if final_prompt:
                 voice="alloy", 
                 input=reply
             )
-            audio_base64 = base64.b64encode(tts_response.content).decode('utf-8')
-            st.session_state.play_audio = f'<audio src="data:audio/mp3;base64,{audio_base64}" autoplay="true" style="display:none;"></audio>'
-            
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-            
-    st.rerun()
-
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
