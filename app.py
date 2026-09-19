@@ -236,18 +236,19 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
-        try:
-            completion = groq_client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
-                messages=api_messages,
-                temperature=0.2,
-                max_tokens=1024,
-                stream=True
-            )
-            
-            for chunk in completion:
-                if chunk.choices and chunk.choices.delta and chunk.choices.delta.content:
-                    full_response += chunk.choices.delta.content
-                    message_placeholder.markdown(full_response + "▌")
-            
-            message_placeholder.markdown(full_response)
+        completion = groq_client.chat.completions.create(
+            model="llama-3.2-11b-vision-preview",
+            messages=api_messages,
+            temperature=0.2,
+            max_tokens=1024,
+            stream=True
+        )
+        
+        for chunk in completion:
+            if chunk.choices and chunk.choices.delta and chunk.choices.delta.content:
+                full_response += chunk.choices.delta.content
+                message_placeholder.markdown(full_response + "▌")
+        
+        message_placeholder.markdown(full_response)
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.rerun()
