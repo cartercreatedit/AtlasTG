@@ -242,14 +242,11 @@ if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
     if user_spoken_prompt:
         st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
         
-        sys_content = (
-            "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. "
-            "You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. "
-            "You address him exclusively as 'sir' or 'Mr. Robinson' with absolute loyalty and respect. "
-            "Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal—resembling Tony Stark's assistant Jarvis. "
-            "CRITICAL PROTOCOLS: Keep your responses highly conversational, short, and punchy (1-3 sentences max) so they sound like natural spoken speech. Never use markdown symbols, headers, bold tags, or lists."
-        )
-        api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.vox_history[-6:]]
+        sys_content = "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. You address him exclusively as 'sir' or 'Mr. Robinson' with absolute loyalty and respect. Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal—resembling Tony Stark's assistant Jarvis. CRITICAL PROTOCOLS: Keep your responses highly conversational, short, and punchy (1-3 sentences max) so they sound like natural spoken speech. Never use markdown symbols, headers, bold tags, or lists."
+        api_messages = [{"role": "system", "content": sys_content}]
         
-        # LOCKED TO THE CORRECT AND STABILIZED ENGINE GATEWAY
-        completion = client.chat.completions.create(
+        for m in st.session_state.vox_history[-6:]:
+            api_messages.append({"role": m["role"], "content": m["content"]})
+        
+        # FIXED EXPLICIT BRACKET SEALS
+        completion = client.chat.completions.create(model="llama-3.3-70b-specdec", messages=api_messages, temperature=0.3, max_tokens=200)
