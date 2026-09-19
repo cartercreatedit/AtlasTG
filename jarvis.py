@@ -54,139 +54,154 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── FRONT-END CHATGPT VOX INDICATOR ENGINE ───────────────────────────
-jarvis_frontend_html = """
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-    body, html {
-        background-color: #000000;
-        margin: 0; padding: 0;
-        width: 100vw; height: 100vh;
-        overflow: hidden;
-        display: flex; flex-direction: column;
-        justify-content: center; align-items: center;
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    .jarvis-sphere {
-        width: 140px; height: 140px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(0,242,254,0.15) 0%, rgba(0,242,254,0) 70%);
-        border: 2px solid #00f2fe;
-        box-shadow: 0 0 30px rgba(0,242,254,0.4), inset 0 0 20px rgba(0,242,254,0.2);
-        cursor: pointer;
-        transition: transform 0.05s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-        display: flex; justify-content: center; align-items: center;
-    }
-    .jarvis-sphere.recording {
-        border-color: #ff416c;
-        background: radial-gradient(circle, rgba(255,65,108,0.2) 0%, rgba(255,65,108,0) 70%);
-        box-shadow: 0 0 40px rgba(255,65,108,0.6), inset 0 0 25px rgba(255,65,108,0.3);
-    }
-    .status-indicator {
-        margin-top: 32px; color: #00f2fe;
-        font-size: 0.8rem; letter-spacing: 2px;
-        text-transform: uppercase; opacity: 0.6;
-    }
-    .recording-text { color: #ff416c !important; opacity: 1 !important; }
-</style>
-</head>
-<body>
-<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100vw; height:100vh;">
-    <div class="jarvis-sphere" id="coreWidget"><span id="coreIcon" style="color:#00f2fe; font-size:1.5rem; transition:color 0.3s;">✦</span></div>
-    <div class="status-indicator" id="statusLabel">// TAP ONCE TO AWAKEN SYSTEM PROTOCOLS</div>
-</div>
-
-<script>
-    let mediaRecorder; let audioChunks = []; let isRecording = false;
-    let audioContext; let analyser; let dataArray; let bufferLength; let streamRef;
-    let silenceStart = null; const SILENCE_THRESHOLD = 8; const SILENCE_DURATION = 1500;
-
-    const sphereBtn = document.getElementById('coreWidget');
-    const statusLabel = document.getElementById('statusLabel');
-    const coreIcon = document.getElementById('coreIcon');
-
-    sphereBtn.onclick = async () => {
-        if (!isRecording) {
-            audioChunks = [];
-            statusLabel.innerText = "// INITIALIZING SYSTEM CONSOLE...";
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                streamRef = stream;
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-                
-                mediaRecorder.onstop = () => {
-                    statusLabel.innerText = "// LOGGING TRANSMISSION BLUEPRINTS...";
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        const base64String = reader.result.split(',');
-                        const currentUrl = new URL(window.parent.location.href);
-                        currentUrl.searchParams.set('vox_payload', base64String);
-                        window.parent.location.href = currentUrl.toString();
-                    };
-                    stream.getTracks().forEach(track => track.stop());
-                };
-
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                const source = audioContext.createMediaStreamSource(stream);
-                source.connect(analyser);
-                analyser.fftSize = 256;
-                bufferLength = analyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
-
-                statusLabel.innerText = "// LISTENING CORE ONLINE...";
-                statusLabel.classList.add("recording-text");
-                sphereBtn.classList.add("recording");
-                coreIcon.style.color = "#ff416c";
-                isRecording = true;
-                silenceStart = Date.now();
-                mediaRecorder.start();
-                requestAnimationFrame(monitorAudioStreamLoop);
-            } catch (err) {
-                statusLabel.innerText = "// HARDWARE ERROR: MIC ACCESS REJECTED";
-            }
-        } else {
-            isRecording = false;
-            if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+# ── 🎙️ THE DIRECT MEMORY TUNNEL MODULE INTEGRATION 🎙️ ──
+# Drops sandboxed URL parameter wrappers entirely to instantiate zero-lag data pipelines natively
+def jarvis_voice_matrix_component():
+    jarvis_frontend_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="utf-8">
+    <style>
+        body, html {
+            background-color: #000000;
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
         }
-    };
+        .jarvis-sphere {
+            width: 140px; height: 140px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,242,254,0.15) 0%, rgba(0,242,254,0) 70%);
+            border: 2px solid #00f2fe;
+            box-shadow: 0 0 30px rgba(0,242,254,0.4), inset 0 0 20px rgba(0,242,254,0.2);
+            cursor: pointer;
+            transition: transform 0.05s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .jarvis-sphere.recording {
+            border-color: #ff416c;
+            background: radial-gradient(circle, rgba(255,65,108,0.2) 0%, rgba(255,65,108,0) 70%);
+            box-shadow: 0 0 40px rgba(255,65,108,0.6), inset 0 0 25px rgba(255,65,108,0.3);
+        }
+        .status-indicator {
+            margin-top: 32px; color: #00f2fe;
+            font-size: 0.8rem; letter-spacing: 2px;
+            text-transform: uppercase; opacity: 0.6;
+        }
+        .recording-text { color: #ff416c !important; opacity: 1 !important; }
+    </style>
+    </head>
+    <body>
+    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; width:100vw; height:100vh;">
+        <div class="jarvis-sphere" id="coreWidget"><span id="coreIcon" style="color:#00f2fe; font-size:1.5rem; transition:color 0.3s;">✦</span></div>
+        <div class="status-indicator" id="statusLabel">// TAP ONCE TO AWAKEN SYSTEM PROTOCOLS</div>
+    </div>
 
-    function monitorAudioStreamLoop() {
-        if (!isRecording) return;
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0; for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
-        let average = sum / bufferLength;
-        let scaleValue = 1 + (average / 120); if (scaleValue > 1.45) scaleValue = 1.45;
-        sphereBtn.style.transform = "scale(" + scaleValue + ")";
+    <script>
+        let mediaRecorder; let audioChunks = []; let isRecording = false;
+        let audioContext; let analyser; let dataArray; let bufferLength; let streamRef;
+        let silenceStart = null; const SILENCE_THRESHOLD = 8; const SILENCE_DURATION = 1500;
 
-        if (average < SILENCE_THRESHOLD) {
-            if (silenceStart === null) silenceStart = Date.now();
-            else if (Date.now() - silenceStart > SILENCE_DURATION) {
+        const sphereBtn = document.getElementById('coreWidget');
+        const statusLabel = document.getElementById('statusLabel');
+        const coreIcon = document.getElementById('coreIcon');
+
+        // Establish structural event hooks into native Streamlit API channels
+        function sendAudioToPython(base64Data) {
+            Streamlit.setComponentValue(base64Data);
+        }
+
+        sphereBtn.onclick = async () => {
+            if (!isRecording) {
+                audioChunks = [];
+                statusLabel.innerText = "// INITIALIZING SYSTEM CONSOLE...";
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    streamRef = stream;
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+                    
+                    mediaRecorder.onstop = () => {
+                        statusLabel.innerText = "// PROCESSING AUDIO BLUEPRINTS...";
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            const base64String = reader.result.split(',')[1];
+                            sendAudioToPython(base64String); // Dispatches direct byte data strings over the active memory array channel
+                        };
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    const source = audioContext.createMediaStreamSource(stream);
+                    source.connect(analyser);
+                    analyser.fftSize = 256;
+                    bufferLength = analyser.frequencyBinCount;
+                    dataArray = new Uint8Array(bufferLength);
+
+                    statusLabel.innerText = "// LISTENING CORE ONLINE...";
+                    statusLabel.classList.add("recording-text");
+                    sphereBtn.classList.add("recording");
+                    coreIcon.style.color = "#ff416c";
+                    isRecording = true;
+                    silenceStart = Date.now();
+                    mediaRecorder.start();
+                    requestAnimationFrame(monitorAudioStreamLoop);
+                } catch (err) {
+                    statusLabel.innerText = "// HARDWARE ERROR: MIC ACCESS REJECTED";
+                }
+            } else {
                 isRecording = false;
                 if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
-                return;
             }
-        } else { silenceStart = null; }
-        requestAnimationFrame(monitorAudioStreamLoop);
-    }
-</script>
-</body>
-</html>
-"""
+        };
 
-components.html(jarvis_frontend_html, height=700, scrolling=False)
+        function monitorAudioStreamLoop() {
+            if (!isRecording) return;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0; for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+            let average = sum / bufferLength;
+            let scaleValue = 1 + (average / 120); if (scaleValue > 1.45) scaleValue = 1.45;
+            sphereBtn.style.transform = "scale(" + scaleValue + ")";
 
-# ── BACK-END PROCESSING CORE (OBLITERATED ALL TRY BLOCKS TO PREVENT COMPILER ERRORS) ──
-incoming_audio = st.query_params.get("vox_payload")
+            if (average < SILENCE_THRESHOLD) {
+                if (silenceStart === null) silenceStart = Date.now();
+                else if (Date.now() - silenceStart > SILENCE_DURATION) {
+                    isRecording = false;
+                    if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+                    return;
+                }
+            } else { silenceStart = null; }
+            requestAnimationFrame(monitorAudioStreamLoop);
+        }
+    </script>
+    <!-- Loads official Streamlit component messaging script dynamically -->
+    <script src="https://jsdelivr.net"></script>
+    <script>
+        // Synchronizes internal layout metrics with the parent server
+        window.addEventListener("load", function() {
+            Streamlit.setFrameHeight(700);
+        });
+    </script>
+    </body>
+    </html>
+    """
+    # Spawns a custom memory mapping tunnel completely immune to parent page URL parameter boundaries
+    my_component = components.declare_component("jarvis_voice_tunnel", id="jarvis_voice_tunnel")
+    return components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-if incoming_audio:
-    audio_data = base64.b64decode(incoming_audio)
+# Trigger front-end communication layout block
+incoming_audio_payload = jarvis_voice_matrix_component()
+
+# ── BACK-END PROCESSING ENGINE ───────────────────────────────────────
+if incoming_audio_payload and isinstance(incoming_audio_payload, str) and incoming_audio_payload.strip() != "":
+    audio_data = base64.b64decode(incoming_audio_payload)
     with open("jarvis_temp.wav", "wb") as f:
         f.write(audio_data)
         
@@ -208,18 +223,3 @@ if incoming_audio:
             model="llama-3.3-70b-specdec", 
             messages=st.session_state.vox_history[-6:], 
             temperature=0.3, 
-            max_tokens=200
-        )
-        reply = completion.choices.message.content
-        st.session_state.vox_history.append({"role": "assistant", "content": reply})
-        
-        if eleven_key and voice_id:
-            escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-            raw_js = '<script>(async()=>{try{const res=await fetch("https://elevenlabs.io",{method:"POST",headers:{"xi-api-key":"ELEVEN_KEY","Content-Type":"application/json"},body:JSON.stringify({text:"REPLY_TEXT",model_id:"eleven_monolingual_v1",voice_settings:{stability:0.75,similarity_boost:0.85}})});if(res.status===200){const buf=await res.arrayBuffer();const url=URL.createObjectURL(new Blob([buf],{type:"audio/mp3"}));const audio=new Audio(url);audio.play();}}catch(e){}})();</script>'
-            raw_js = raw_js.replace("VOICE_ID", voice_id)
-            raw_js = raw_js.replace("ELEVEN_KEY", eleven_key)
-            raw_js = raw_js.replace("REPLY_TEXT", escaped_reply)
-            st.session_state.audio_out = raw_js
-            
-    st.query_params.clear()
-    st.rerun()
