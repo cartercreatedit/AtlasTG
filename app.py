@@ -235,6 +235,7 @@ if prompt:
 if st.session_state.messages[-1]["role"] == "user":
     
     # Structure system payload
+    # Fixed syntax issue by defining sys_content correctly above
     api_messages = [{"role": "system", "content": sys_content}]
     
     # Process history logs to build context payload safely
@@ -258,4 +259,3 @@ if st.session_state.messages[-1]["role"] == "user":
         try:
             # Trigger vision-capable model framework over Groq context loops
             completion = groq_client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
