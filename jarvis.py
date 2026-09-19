@@ -18,7 +18,10 @@ eleven_key = st.secrets.get("ELEVEN_API_KEY") or os.getenv("ELEVEN_API_KEY") or 
 voice_id = st.secrets.get("ELEVEN_VOICE_ID") or "bfGb7JTLUnZebZRiFYyq"
 
 if not groq_key:
-    st.error("Missing GROQ_API_KEY")
+    st.error("Missing GROQ_API_KEY inside Secrets registers.")
+    st.stop()
+if not eleven_key or not voice_id:
+    st.error("Missing ElevenLabs credentials inside Secrets registers.")
     st.stop()
 
 client = Groq(api_key=groq_key)
@@ -121,7 +124,7 @@ jarvis_frontend_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',');
+                        const base64String = reader.result.split(',')[1]; // Explicitly target only the clean base64 data payload track
                         window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
@@ -180,57 +183,49 @@ incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrol
 # ── BACK-END PROCESSING CORE ─────────────────────────────────────────
 if incoming_audio_payload:
     try:
-        raw_b64 = incoming_audio_payload[0] if isinstance(incoming_audio_payload, list) else incoming_audio_payload
-        audio_data = base64.b64decode(raw_b64)
-        
-        with open("jarvis_temp.wav", "wb") as f:
-            f.write(audio_data)
-            
-        with open("jarvis_temp.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file, 
-                response_format="text"
-            )
-            
-        user_text = str(transcription).strip()
-        if os.path.exists("jarvis_temp.wav"):
-            os.remove("jarvis_temp.wav")
+        # Secure unboxing checks extraction type protocols explicitly
+        if isinstance(incoming_audio_payload, list):
+            raw_b64 = incoming_audio_payload[0] if incoming_audio_payload else ""
+        else:
+            raw_b64 = incoming_audio_payload
 
-        if user_text:
-            st.session_state.vox_history.append({"role": "user", "content": user_text})
+        if raw_b64:
+            audio_data = base64.b64decode(raw_b64)
             
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
-                messages=st.session_state.vox_history[-6:], 
-                temperature=0.3, 
-                max_tokens=200
-            )
-            reply = completion.choices.message.content
-            st.session_state.vox_history.append({"role": "assistant", "content": reply})
-            
-            if eleven_key and voice_id:
-                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-                st.session_state.audio_out = f"""
-                <script>
-                    (async () => {{
-                        try {{
-                            const res = await fetch("https://elevenlabs.io{voice_id}", {{
-                                method: "POST",
-                                headers: {{ "xi-api-key": "{eleven_key}", "Content-Type": "application/json" }},
-                                body: JSON.stringify({{ text: "{escaped_reply}", model_id: "eleven_monolingual_v1", voice_settings: {{ stability: 0.75, similarity_boost: 0.85 }} }})
-                            }});
-                            if (res.status === 200) {{
-                                const buf = await res.arrayBuffer();
-                                const url = URL.createObjectURL(new Blob([buf], {{ type: "audio/mp3" }}));
-                                const audio = new Audio(url);
-                                audio.play();
-                            }}
-                        }} catch(e) {{}}
-                    }})();
-                </script>
-                """
-    except Exception:
-        pass
-        
-    st.rerun()
+            with open("jarvis_temp.wav", "wb") as f:
+                f.write(audio_data)
+                
+            with open("jarvis_temp.wav", "rb") as audio_file:
+                transcription = client.audio.transcriptions.create(
+                    model="whisper-large-v3-turbo", 
+                    file=audio_file, 
+                    response_format="text"
+                )
+                
+            user_text = str(transcription).strip()
+            if os.path.exists("jarvis_temp.wav"):
+                os.remove("jarvis_temp.wav")
+
+            if user_text:
+                st.session_state.vox_history.append({"role": "user", "content": user_text})
+                
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-specdec", 
+                    messages=st.session_state.vox_history[-6:], 
+                    temperature=0.3, 
+                    max_tokens=200
+                )
+                reply = completion.choices.message.content
+                st.session_state.vox_history.append({"role": "assistant", "content": reply})
+                
+                if eleven_key and voice_id:
+                    escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+                    st.session_state.audio_out = f"""
+                    <script>
+                        (async () => {{
+                            try {{
+                                const res = await fetch("https://elevenlabs.io{voice_id}", {{
+                                    method: "POST",
+                                    headers: {{ "xi-api-key": "{eleven_key}", "Content-Type": "application/json" }},
+                                    body: JSON.stringify({{ text: "{escaped_reply}", model_id: "eleven_monolingual_v1", voice_settings: {{ stability: 0.75, similarity_boost: 0.85 }} }})
+                                }});
