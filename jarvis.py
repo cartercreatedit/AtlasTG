@@ -182,15 +182,18 @@ jarvis_frontend_html = """
 
 incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING MACHINE (100% INDENT AND SYNTAX PROOF) ───────
+# ── BACK-END PROCESSING MACHINE (100% UNWRAPPED DATA HANDSHAKE) ──────
 if incoming_audio_payload and incoming_audio_payload != "":
-    raw_b64 = incoming_audio_payload
+    # Clean extraction layer: isolates data regardless of string or list packing formats
+    if isinstance(incoming_audio_payload, list):
+        raw_b64 = incoming_audio_payload[1] if len(incoming_audio_payload) > 1 else incoming_audio_payload[0]
+    else:
+        raw_b64 = incoming_audio_payload
+
     audio_data = base64.b64decode(raw_b64)
-    
     with open("jarvis_temp.wav", "wb") as f:
         f.write(audio_data)
         
-    # SPEECH-TO-TEXT PASS: Converts raw WAV bytes directly on the secure server backend
     with open("jarvis_temp.wav", "rb") as audio_file:
         transcription = client.audio.transcriptions.create(
             model="whisper-large-v3-turbo", 
@@ -214,7 +217,7 @@ if incoming_audio_payload and incoming_audio_payload != "":
         reply = completion.choices.message.content
         st.session_state.vox_history.append({"role": "assistant", "content": reply})
         
-        # TEXT-TO-SPEECH PASS: Secure Python request downloads movie voice audio safely (No browser blocks)
+        # Safe text-to-speech engine passthrough
         tts_url = "https://elevenlabs.io" + voice_id
         headers = {"xi-api-key": eleven_key, "Content-Type": "application/json"}
         payload = {"text": reply, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.75, "similarity_boost": 0.85}}
