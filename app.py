@@ -4,8 +4,6 @@ import os
 import base64
 from PIL import Image
 import io
-import streamlit.components.v1 as components
-import requests
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -14,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
+# ── CSS + Auto-Scroll ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -23,7 +21,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 160px !important;
+    padding-bottom: 140px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -38,99 +36,88 @@ h1 {
 .stCaption {
     color: #8b8b8b !important;
 }
-/* Clear default Streamlit padding baggage */
-div[data-testid="stChatMessage"] {
+
+/* Hide avatars */
+div[data-testid="stChatMessageAvatarUser"],
+div[data-testid="stChatMessageAvatarAssistant"] {
+    display: none !important;
+}
+.stChatMessage {
     background-color: transparent !important;
     border: none !important;
-    box-shadow: none !important;
-    padding: 0px !important;
+    padding-left: 0 !important;
 }
-/* Force clean text behavior inside all markdown elements */
-div[data-testid="stMarkdownContainer"] p {
-    color: #f1f5f9 !important;
-    font-size: 15.5px !important;
-    line-height: 1.6 !important;
-}
-/* ── USER PROMPT POINTED BUBBLES ── */
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
-    display: flex !important;
-    justify-content: flex-end !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2d2d2d !important;
-    padding: 12px 18px !important;
-    border-radius: 18px !important;
-    border-top-right-radius: 2px !important;
-    max-width: 80% !important;
-    display: inline-block !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-}
-/* Assistant Plain Text Layout */
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: flex !important;
-    justify-content: flex-start !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 4px 0px !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
-}
-/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
+
+/* Sticky input */
 div[data-testid="stChatInput"] {
     position: fixed !important;
-    bottom: 32px !important;
+    bottom: 20px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
 }
 .stChatInput {
-    background-color: #161616 !important;
-    border: none !important; 
-    border-radius: 32px !important;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 20px !important; 
-}
-.stChatInput:focus-within {
-    border: none !important;
-    box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
-    outline: none !important;
-}
-/* Obliterate inner background border constraints */
-div[data-testid="stChatInput"] *,
-.stChatInput div[data-baseweb="textarea"],
-.stChatInput div[data-baseweb="base-input"],
-.stChatInput textarea {
-    border: none !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
+    background-color: #141414 !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 24px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
 }
 .stChatInput textarea {
-    color: #f4f4f4 !important;
-    font-size: 15.5px !important;
+    color: #e8e8e8 !important;
+}
+
+/* Round + button */
+div.stButton > button {
+    background-color: #1a1a1a !important;
+    border: 1px solid #2f2f2f !important;
+    border-radius: 50% !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    padding: 0 !important;
+    color: #e8e8e8 !important;
+    font-size: 1.5rem !important;
 }
 </style>
+
+<script>
+// Function to scroll the Streamlit container, not the window
+function scrollToBottom() {
+    const container = document.querySelector('div[data-testid="stMainBlockContainer"]');
+    if (container) {
+        // Check if user is near the bottom (within 100px)
+        const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 100;
+        if (isNearBottom) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+}
+
+// Observe changes to the DOM and scroll if content is added
+const observer = new MutationObserver(scrollToBottom);
+const targetNode = document.querySelector('div[data-testid="stMainBlockContainer"]');
+
+if (targetNode) {
+    observer.observe(targetNode, { childList: true, subtree: true });
+}
+
+// Initial scroll
+setTimeout(scrollToBottom, 100);
+</script>
 """, unsafe_allow_html=True)
 
-# ── Multi-Vendor API Configurations ─────────────────────
-groq_api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
-
-if not groq_api_key:
-    st.error("Missing GROQ_API_KEY inside workspace registers.")
+# ── API Key ───────────────────────────────────
+api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+if not api_key:
+    st.error("Missing GROQ_API_KEY")
     st.stop()
 
-# Initialize Groq client instance
-groq_client = Groq(api_key=groq_api_key)
+client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Powered by Atlas Matrix Core")
+st.caption("Text + Image Understanding · Powered by Groq")
 
 # ── Identity Rules ────────────────────────────
 sys_content = """You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth and emotionless precision."""
@@ -143,36 +130,20 @@ if "messages" not in st.session_state:
 
 # ── Render Message Timeline ───────────────────
 for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        col_spacer, col_bubble = st.columns([0.2, 0.8])
-        with col_bubble:
-            content = msg["content"]
-            display_text = ""
-            if isinstance(content, str):
-                display_text = content
-            elif isinstance(content, list):
-                for part in content:
-                    if part["type"] == "text":
-                        display_text = part["text"]
+    with st.chat_message(msg["role"]):
+        content = msg["content"]
+        if isinstance(content, str):
+            st.markdown(content)
+        elif isinstance(content, list):
+            for part in content:
+                if part["type"] == "text":
+                    st.markdown(part["text"])
+        
+        if "images" in msg and msg["images"]:
+            for img_bytes in msg["images"]:
+                st.image(img_bytes, width=280)
 
-            if display_text:
-                st.markdown(f'''
-                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                        {display_text}
-                    </div>
-                </div>
-                ''', unsafe_allow_html=True)
-            
-            if "images" in msg and msg["images"]:
-                for img_bytes in msg["images"]:
-                    st.image(img_bytes, width=280)
-    else:
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-        st.markdown(msg["content"])
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ── CHAT INPUT WITH IMAGE UPLOAD (plus icon) ─────────────────────
+# ── CHAT INPUT WITH IMAGE UPLOAD ──────────────
 prompt = st.chat_input(
     "Message AtlasTG...",
     accept_file=True,
@@ -233,8 +204,7 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
-        # Uses Groq's official active production vision engine
-        completion = groq_client.chat.completions.create(
+        completion = client.chat.completions.create(
             model="llama-3.2-11b-vision-instruct",
             messages=api_messages,
             temperature=0.2,
