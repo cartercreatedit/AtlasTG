@@ -233,14 +233,23 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
-        # FIXED: Swapped out legacy ID for Groq's active multimodal engine
-        completion = groq_client.chat.completions.create(
-            model="qwen/qwen3.6-27b",
-            messages=api_messages,
-            temperature=0.2,
-            max_tokens=1024,
-            stream=True
-        )
+        # Try active production model names with fallback catch
+        try:
+            completion = groq_client.chat.completions.create(
+                model="qwen-2.5-72b",
+                messages=api_messages,
+                temperature=0.2,
+                max_tokens=1024,
+                stream=True
+            )
+        except Exception:
+            completion = groq_client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
+                messages=api_messages,
+                temperature=0.2,
+                max_tokens=1024,
+                stream=True
+            )
         
         for chunk in completion:
             if chunk.choices and chunk.choices.delta and chunk.choices.delta.content:
