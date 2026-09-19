@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
+# ── RESTORED ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -194,45 +194,34 @@ if prompt:
             "images": []
         })
 
-    with st.spinner(""):
-        try:
-            sys_content = (
-                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                "CRITICAL TIMELINE AND IDENTITY LAWS: "
-                "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
-                "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
-                "FORMATTING LAWS: "
-                "- NEVER use Markdown or HTML tables under any circumstances. "
-                "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
-                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-            )
-
-            model = "meta-llama/llama-4-scout-17b-16e-instruct" if has_images else "openai/gpt-oss-120b"
-            api_messages = [{"role": "system", "content": sys_content}]
-            
-            if has_images:
-                content_list = [{"type": "text", "text": user_text}]
-                for file in uploaded_files:
-                    bytes_data = file.read()
-                    base64_image = base64.b64encode(bytes_data).decode("utf-8")
-                    content_list.append({
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
-                    })
-                api_messages.append({"role": "user", "content": content_list})
+    # OBLITERATED INTERIOR NESTING TO ENSURE FLUID WORKSPACE STABILITY
+    sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
+    model = "meta-llama/llama-4-scout-17b-16e-instruct" if has_images else "openai/gpt-oss-120b"
+    api_messages = [{"role": "system", "content": sys_content}]
+    
+    if has_images:
+        content_list = [{"type": "text", "text": user_text}]
+        for file in uploaded_files:
+            bytes_data = file.read()
+            base64_image = base64.b64encode(bytes_data).decode("utf-8")
+            content_list.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
+            })
+        api_messages.append({"role": "user", "content": content_list})
+    else:
+        for m in st.session_state.messages:
+            if m["role"] == "user":
+                content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
+                api_messages.append({"role": "user", "content": content_data})
             else:
-                for m in st.session_state.messages:
-                    if m["role"] == "user":
-                        content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
-                        api_messages.append({"role": "user", "content": content_data})
-                    else:
-                        api_messages.append({"role": "assistant", "content": m["content"]})
+                api_messages.append({"role": "assistant", "content": m["content"]})
 
-            completion = client.chat.completions.create(
-                model=model,
-                messages=api_messages,
-                temperature=0.2,
-                max_tokens=1000
-            )
+    completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
+    reply = completion.choices.message.content
+    st.session_state.messages.append({"role": "assistant", "content": reply})
+    st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
