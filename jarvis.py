@@ -238,7 +238,7 @@ jarvis_mainframe_html = """
             memoryHistory.push({ "role": "user", "content": userText });
             
             if (memoryHistory.length > 8) {
-                memoryHistory = [memoryHistory].concat(memoryHistory.slice(-6));
+                memoryHistory = [memoryHistory[0]].concat(memoryHistory.slice(-6));
             }
 
             const completionRes = await fetch('https://groq.com', {
@@ -256,7 +256,7 @@ jarvis_mainframe_html = """
             });
             
             const completionJson = await completionRes.json();
-            const replyText = completionJson.choices.message.content;
+            const replyText = completionJson.choices[0].message.content;
             console.log("Response text: " + replyText);
             memoryHistory.push({ "role": "assistant", "content": replyText });
 
@@ -271,7 +271,7 @@ jarvis_mainframe_html = """
                     text: replyText,
                     model_id: "eleven_monolingual_v1",
                     voice_settings: { stability: 0.75, similarity_boost: 0.85 }
-                }
+                })
             });
 
             if (ttsRes.status === 200) {
