@@ -138,7 +138,7 @@ for msg in st.session_state.messages:
         with col_bubble:
             content = msg["content"]
             # Show text
-            if isinstance(content, str):
+            if isinstance(content, str) and content:
                 st.markdown(f'''
                 <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
                     <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
@@ -158,7 +158,7 @@ for msg in st.session_state.messages:
 # ── CHAT INPUT WITH IMAGE UPLOAD (plus icon) ─────────────────────
 prompt = st.chat_input(
     "Message AtlasTG...",
-    accept_file=True,                    # ← enables the + / attachment button
+    accept_file=True,
     file_type=["jpg", "jpeg", "png", "webp"]
 )
 
@@ -199,13 +199,14 @@ if prompt:
                 else:
                     api_messages.append({"role": "assistant", "content": m["content"]})
 
-            # SWAPPED TO THE CORRECT MODEL PARAMETER TERMINAL GATEWAY
+            # SWAPPED TO THE CORRECT MODEL ID NAME
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
+                model="openai/gpt-oss-120b", 
                 messages=api_messages, 
                 temperature=0.2, 
                 max_tokens=1000
             )
+            # SEALED UNPACKING LOOP FOR THE GPT-OSS RESPONSE MATRIX ARRAY
             reply = completion.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
