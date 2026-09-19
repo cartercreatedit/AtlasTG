@@ -158,10 +158,6 @@ for msg in st.session_state.messages:
                             </div>
                         </div>
                         ''', unsafe_allow_html=True)
-            
-            if "images" in msg and msg["images"]:
-                for img in msg["images"]:
-                    st.image(img, width=280)
     else:
         st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
         st.markdown(msg["content"])
@@ -180,47 +176,50 @@ if prompt:
     uploaded_files = prompt.files if prompt.files else []
     has_images = len(uploaded_files) > 0
 
+    # Uniformly structure the content list format to prevent downstream server payload conflicts
     if has_images:
-        stored_content = [{"type": "text", "text": user_text}]
-        st.session_state.messages.append({
-            "role": "user",
-            "content": stored_content,
-            "images": uploaded_files
-        })
-    else:
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_text,
-            "images": []
-        })
-
-    sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-    
-    # LOCKED ONTO ACTIVE HARDWARE PRODUCTION ENDPOINTS
-    model = "llama-3.2-11b-vision-preview" if has_images else "llama-3.3-70b-specdec"
-    api_messages = [{"role": "system", "content": sys_content}]
-    
-    if has_images:
-        content_list = [{"type": "text", "text": user_text}]
+        content_payload = [{"type": "text", "text": user_text}]
         for file in uploaded_files:
             bytes_data = file.read()
             base64_image = base64.b64encode(bytes_data).decode("utf-8")
-            content_list.append({
+            content_payload.append({
                 "type": "image_url",
                 "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
             })
-        api_messages.append({"role": "user", "content": content_list})
     else:
-        for m in st.session_state.messages:
-            if m["role"] == "user":
-                content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
-                api_messages.append({"role": "user", "content": content_data})
-            else:
-                api_messages.append({"role": "assistant", "content": m["content"]})
+        content_payload = user_text
 
-    completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
-    reply = completion.choices[0].message.content
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+    st.session_state.messages.append({
+        "role": "user",
+        "content": content_payload
+    })
+
+    sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
+    
+    # If the conversation context contains multi-modal items, use the vision engine globally
+    has_any_images = any(m["role"] == "user" and isinstance(m["content"], list) for m in st.session_state.messages)
+    model = "llama-3.2-11b-vision-preview" if has_any_images else "llama-3.3-70b-versatile"
+    
+    api_messages = [{"role": "system", "content": sys_content}]
+    for m in st.session_state.messages:
+        api_messages.append({
+            "role": m["role"],
+            "content": m["content"]
+        })
+
+    try:
+        completion = client.chat.completions.create(
+            model=model, 
+            messages=api_messages, 
+            temperature=0.2, 
+            max_tokens=1000
+        )
+        # Standard index extraction targets the choices structure seamlessly
+        reply = completion.choices[0].message.content
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+    except Exception as e:
+        st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+        
     st.rerun()
 
 # ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
