@@ -2,6 +2,8 @@ import streamlit as st
 from groq import Groq
 import os
 import base64
+from PIL import Image
+import io
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -222,31 +224,32 @@ raw_mic_stream = components.html(custom_vox_html, height=0, width=0)
 if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
     st.session_state.incoming_bytes = raw_mic_stream
     
-    try:
-        audio_data_bytes = base64.b64decode(raw_mic_stream)
-        with open("jarvis_temp_input.wav", "wb") as f:
-            f.write(audio_data_bytes)
-        
-        with open("jarvis_temp_input.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file,
-                response_format="text"
-            )
-        
-        user_spoken_prompt = str(transcription).strip()
-        if os.path.exists("jarvis_temp_input.wav"):
-            os.remove("jarvis_temp_input.wav")
+    audio_data_bytes = base64.b64decode(raw_mic_stream)
+    with open("jarvis_temp_input.wav", "wb") as f:
+        f.write(audio_data_bytes)
+    
+    with open("jarvis_temp_input.wav", "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-large-v3-turbo", 
+            file=audio_file,
+            response_format="text"
+        )
+    
+    user_spoken_prompt = str(transcription).strip()
+    if os.path.exists("jarvis_temp_input.wav"):
+        os.remove("jarvis_temp_input.wav")
 
-        if user_spoken_prompt:
-            st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
-            
-            sys_content = (
-                "You are J.A.RV.I.S., a hyper-advanced artificial intelligence system. "
-                "You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. "
-                "You address him exclusively as 'sir' or 'Mr. Robinson' with absolute loyalty and respect. "
-                "Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal—resembling Tony Stark's assistant Jarvis. "
-                "CRITICAL PROTOCOLS: Keep your responses highly conversational, short, and punchy (1-3 sentences max) so they sound like natural spoken speech. Never use markdown symbols, headers, bold tags, or lists."
-            )
-            api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.vox_history[-6:]]
-            
+    if user_spoken_prompt:
+        st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
+        
+        sys_content = (
+            "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. "
+            "You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. "
+            "You address him exclusively as 'sir' or 'Mr. Robinson' with absolute loyalty and respect. "
+            "Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal—resembling Tony Stark's assistant Jarvis. "
+            "CRITICAL PROTOCOLS: Keep your responses highly conversational, short, and punchy (1-3 sentences max) so they sound like natural spoken speech. Never use markdown symbols, headers, bold tags, or lists."
+        )
+        api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.vox_history[-6:]]
+        
+        # LOCKED TO THE CORRECT AND STABILIZED ENGINE GATEWAY
+        completion = client.chat.completions.create(
