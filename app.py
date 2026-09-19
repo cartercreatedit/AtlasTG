@@ -2,6 +2,8 @@ import streamlit as st
 from groq import Groq
 import os
 import base64
+from PIL import Image
+import io
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -179,7 +181,6 @@ if prompt:
     has_images = len(uploaded_files) > 0
 
     if has_images:
-        # Proper multimodal dictionary structure for timeline rendering
         content_payload = [{"type": "text", "text": user_text}]
         st.session_state.messages.append({
             "role": "user",
@@ -195,7 +196,6 @@ if prompt:
 
     sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
     
-    # Routes dynamically to active vision node if image files are present
     model = "qwen/qwen3.6-27b" if has_images else "openai/gpt-oss-120b"
     api_messages = [{"role": "system", "content": sys_content}]
     
@@ -219,7 +219,8 @@ if prompt:
 
     try:
         completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
-        reply = completion.choices.message.content
+        # FIXED UNPACKING PARSER: Targets choices array index 0 to cleanly extract server text stream
+        reply = completion.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": reply})
     except Exception as e:
         st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
