@@ -199,14 +199,14 @@ if prompt:
                 else:
                     api_messages.append({"role": "assistant", "content": m["content"]})
 
-            # FIXED ENGINE DISPATCH ROUTE
             completion = client.chat.completions.create(
                 model="openai/gpt-oss-120b", 
                 messages=api_messages, 
                 temperature=0.2, 
                 max_tokens=1000
             )
-            reply = completion.choices.message.content
+            # FIXED EXTRACTION LINE: Uses list indexing [0] to cleanly read the message array payload
+            reply = completion.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
