@@ -56,7 +56,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── FRONT-END CHATGPT VOX INDICATOR ENGINE ───────────────────────────
-# Renders the pulsing holographic core and tracks automatic voice pauses locally
 jarvis_frontend_html = """
 <!DOCTYPE html>
 <html>
@@ -126,8 +125,7 @@ jarvis_frontend_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',')[1];
-                        // Safely post data payload array up to Python secure server layers
+                        const base64String = reader.result.split(',');
                         window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
@@ -187,46 +185,48 @@ incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrol
 # ── BACK-END PROCESSING MACHINE (100% IMMUNE TO CORS BLOCKS) ────────
 if incoming_audio_payload:
     try:
-        # Unpack incoming base64 voice variables safely on the server side
-        audio_data_bytes = base64.b64decode(incoming_audio_payload)
-        with open("jarvis_server_temp.wav", "wb") as f:
-            f.write(audio_data_bytes)
-        
-        # ── Step 1: Secure Transcription via Groq Whisper Node ──
-        with open("jarvis_server_temp.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file,
-                response_format="text"
-            )
-        
-        user_spoken_prompt = str(transcription).strip()
-        if os.path.exists("jarvis_server_temp.wav"):
-            os.remove("jarvis_server_temp.wav")
-
-        if user_spoken_prompt:
-            st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
+        # Handles single strings or lists coming from the web component safely
+        if isinstance(incoming_audio_payload, list):
+            raw_b64_string = incoming_audio_payload[0] if len(incoming_audio_payload) > 0 else ""
+        else:
+            raw_b64_string = incoming_audio_payload
             
-            # Keep Rolling History logs packed safely to prevent network dropping loops
-            if len(st.session_state.vox_history) > 8:
-                st.session_state.vox_history = [st.session_state.vox_history[0]] + st.session_state.vox_history[-6:]
-
-            # ── Step 2: Compute Response Logic Matrix ──
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
-                messages=st.session_state.vox_history, 
-                temperature=0.3, 
-                max_tokens=200
-            )
-            reply = completion.choices[0].message.content
-            st.session_state.vox_history.append({"role": "assistant", "content": reply})
+        if raw_b64_string:
+            audio_data_bytes = base64.b64decode(raw_b64_string)
+            with open("jarvis_server_temp.wav", "wb") as f:
+                f.write(audio_data_bytes)
             
-            # ── Step 3: Fetch Movie Voice Clone From ElevenLabs ──
-            tts_url = f"https://elevenlabs.io{voice_id}"
-            headers = {
-                "xi-api-key": eleven_key,
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "text": reply,
-                "model_id": "eleven_monolingual_v1",
+            # ── Step 1: Secure Transcription via Groq Whisper Node ──
+            with open("jarvis_server_temp.wav", "rb") as audio_file:
+                transcription = client.audio.transcriptions.create(
+                    model="whisper-large-v3-turbo", 
+                    file=audio_file,
+                    response_format="text"
+                )
+            
+            user_spoken_prompt = str(transcription).strip()
+            if os.path.exists("jarvis_server_temp.wav"):
+                os.remove("jarvis_server_temp.wav")
+
+            if user_spoken_prompt:
+                st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
+                
+                if len(st.session_state.vox_history) > 8:
+                    st.session_state.vox_history = [st.session_state.vox_history[0]] + st.session_state.vox_history[-6:]
+
+                # ── Step 2: Compute Response Logic Matrix ──
+                completion = client.chat.completions.create(
+                    model="llama-3.3-70b-specdec", 
+                    messages=st.session_state.vox_history, 
+                    temperature=0.3, 
+                    max_tokens=200
+                )
+                reply = completion.choices.message.content
+                st.session_state.vox_history.append({"role": "assistant", "content": reply})
+                
+                # ── Step 3: Fetch Movie Voice Clone From ElevenLabs ──
+                tts_url = f"https://elevenlabs.io{voice_id}"
+                headers = {
+                    "xi-api-key": eleven_key,
+                    "Content-Type": "application/json"
+                }
