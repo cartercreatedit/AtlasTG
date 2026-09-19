@@ -184,7 +184,8 @@ if text_prompt:
                 temperature=0.2, 
                 max_tokens=1000
             )
-            reply = completion.choices.message.content
+            # FIXED EXTRACTION SYNTAX: Properly accesses index position 0 of the choices array layout
+            reply = completion.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
