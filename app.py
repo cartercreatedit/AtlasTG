@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI
+from groq import Groq
 import os
 import base64
 from PIL import Image
@@ -119,14 +119,14 @@ div[data-testid="stChatInput"] *,
 """, unsafe_allow_html=True)
 
 # ── Multi-Vendor API Configurations ─────────────────────
-openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+groq_api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 
-if not openai_api_key:
-    st.error("Missing OPENAI_API_KEY inside workspace registers.")
+if not groq_api_key:
+    st.error("Missing GROQ_API_KEY inside workspace registers.")
     st.stop()
 
-# Initialize native OpenAI client instance
-ai_client = OpenAI(api_key=openai_api_key)
+# Initialize Groq client instance
+groq_client = Groq(api_key=groq_api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
@@ -147,7 +147,6 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
-            # FIXED: Added support to read raw text strings as well as structured payloads
             display_text = ""
             if isinstance(content, str):
                 display_text = content
@@ -234,8 +233,9 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
-        completion = ai_client.chat.completions.create(
-            model="gpt-4o-mini",
+        # Uses Groq's high-speed active chat engine to handle user streams
+        completion = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
             messages=api_messages,
             temperature=0.2,
             max_tokens=1024,
