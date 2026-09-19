@@ -179,7 +179,7 @@ if text_prompt:
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
+                model="openai/gpt-oss-120b", 
                 messages=api_messages, 
                 temperature=0.2, 
                 max_tokens=1000
