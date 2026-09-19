@@ -213,10 +213,10 @@ for msg in st.session_state.messages:
             if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=280)
-else:
-    st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-    st.markdown(msg["content"])
-    st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
+        st.markdown(msg["content"])
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ── INTEGRATED LAYOUT DOCK PANEL ────
 if st.session_state.show_uploader:
@@ -254,4 +254,3 @@ if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.spinner(""):
-        try:
