@@ -1,8 +1,9 @@
 import streamlit as st
 from groq import Groq
 import os
-import streamlit.components.v1 as components
 import base64
+from PIL import Image
+import io
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -11,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
+# ── CSS + Auto-Scroll ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -20,7 +21,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 160px !important;
+    padding-bottom: 140px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -36,92 +37,67 @@ h1 {
     color: #8b8b8b !important;
 }
 
-/* Clear default Streamlit padding baggage */
-div[data-testid="stChatMessage"] {
+/* Hide avatars */
+div[data-testid="stChatMessageAvatarUser"],
+div[data-testid="stChatMessageAvatarAssistant"] {
+    display: none !important;
+}
+.stChatMessage {
     background-color: transparent !important;
     border: none !important;
-    box-shadow: none !important;
-    padding: 0px !important;
+    padding-left: 0 !important;
 }
 
-/* Force clean text behavior inside all markdown elements */
-div[data-testid="stMarkdownContainer"] p {
-    color: #f1f5f9 !important;
-    font-size: 15.5px !important;
-    line-height: 1.6 !important;
-}
-
-/* ── USER PROMPT POINTED BUBBLES ── */
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
-    display: flex !important;
-    justify-content: flex-end !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2d2d2d !important;
-    padding: 12px 18px !important;
-    border-radius: 18px !important;
-    border-top-right-radius: 2px !important;
-    max-width: 80% !important;
-    display: inline-block !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-}
-
-/* Assistant Plain Text Layout */
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: flex !important;
-    justify-content: flex-start !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 4px 0px !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
-}
-
-/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
+/* Sticky input */
 div[data-testid="stChatInput"] {
     position: fixed !important;
-    bottom: 32px !important;
+    bottom: 20px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
 }
 .stChatInput {
-    background-color: #161616 !important;
-    border: none !important;
-    border-radius: 32px !important;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 20px !important;
+    background-color: #141414 !important;
+    border: 1px solid #2a2a2a !important;
+    border-radius: 24px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
 }
-.stChatInput:focus-within {
-    border: none !important;
-    box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
-    outline: none !important;
+.stChatInput textarea {
+    color: #e8e8e8 !important;
 }
 
-/* Obliterate inner background border constraints */
-div[data-testid="stChatInput"] *,
-.stChatInput div[data-baseweb="textarea"],
-.stChatInput div[data-baseweb="base-input"],
-.stChatInput textarea {
-    border: none !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-.stChatInput textarea {
-    color: #f4f4f4 !important;
-    font-size: 15.5px !important;
+/* Round + button */
+div.stButton > button {
+    background-color: #1a1a1a !important;
+    border: 1px solid #2f2f2f !important;
+    border-radius: 50% !important;
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    padding: 0 !important;
+    color: #e8e8e8 !important;
+    font-size: 1.5rem !important;
 }
 </style>
+
+<script>
+function scrollToBottom() {
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth"
+    });
+}
+window.addEventListener("load", scrollToBottom);
+const observer = new MutationObserver(scrollToBottom);
+observer.observe(document.body, { childList: true, subtree: true });
+setTimeout(scrollToBottom, 100);
+setTimeout(scrollToBottom, 300);
+setTimeout(scrollToBottom, 600);
+</script>
 """, unsafe_allow_html=True)
 
-# ── API Key Configuration ─────────────────────
+# ── API Key ───────────────────────────────────
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error("Missing GROQ_API_KEY")
@@ -131,120 +107,103 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Powered by Groq")
+st.caption("Text + Image Understanding · Powered by Groq")
+
+# ── Helper ────────────────────────────────────
+def image_to_base64(image: Image.Image) -> str:
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."
-        }
+        {"role": "assistant", "content": "Hey. You can talk to me or upload an image and ask about it."}
     ]
+if "show_uploader" not in st.session_state:
+    st.session_state.show_uploader = False
+if "uploaded_image" not in st.session_state:
+    st.session_state.uploaded_image = None
 
-# ── Render Message Timeline ───────────────────
+# ── Messages ──────────────────────────────────
 for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        col_spacer, col_bubble = st.columns([0.2, 0.8])
-        with col_bubble:
-            content = msg["content"]
-            if isinstance(content, str) and content:
-                st.markdown(f'''
-                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                        {content}
-                    </div>
-                </div>
-                ''', unsafe_allow_html=True)
-            
-            # Show images inline if present
-            if "images" in msg and msg["images"]:
-                for img in msg["images"]:
-                    st.image(img, width=280)
-    else:
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-        st.markdown(msg["content"])
-        st.markdown('</div>', unsafe_allow_html=True)
+    with st.chat_message(msg["role"]):
+        if isinstance(msg["content"], list):
+            for part in msg["content"]:
+                if part["type"] == "text":
+                    st.markdown(part["text"])
+                elif part["type"] == "image_url":
+                    st.image(part["image_url"]["url"], use_container_width=True)
+        else:
+            st.markdown(msg["content"])
 
-# ── CHAT INPUT WITH IMAGE UPLOAD (plus icon) ─────────────────────
-prompt = st.chat_input(
-    "Message AtlasTG...",
-    accept_file=True,
-    file_type=["jpg", "jpeg", "png", "webp"]
-)
+# ── Bottom controls ───────────────────────────
+col_plus, col_input = st.columns([0.07, 0.93], gap="small")
 
-# ── PROCESS INPUT ──────────────────────
+with col_plus:
+    if st.button("＋", key="plus_btn"):
+        st.session_state.show_uploader = not st.session_state.show_uploader
+
+with col_input:
+    prompt = st.chat_input("Message AtlasTG...")
+
+if st.session_state.show_uploader:
+    uploaded_file = st.file_uploader(
+        "Choose an image",
+        type=["png", "jpg", "jpeg", "webp"],
+        key="file_uploader"
+    )
+    if uploaded_file is not None:
+        st.session_state.uploaded_image = uploaded_file
+        st.session_state.show_uploader = False
+        st.rerun()
+
+# ── Handle send ───────────────────────────────
 if prompt:
-    user_text = prompt.text if prompt.text else ""
-    uploaded_files = prompt.files if prompt.files else []
+    uploaded_file = st.session_state.uploaded_image
 
-    # Store user payload
-    st.session_state.messages.append({
-        "role": "user",
-        "content": user_text,
-        "images": uploaded_files
-    })
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        b64_image = image_to_base64(image)
+        user_content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
+        ]
+        st.session_state.uploaded_image = None
+    else:
+        user_content = prompt
 
-    with st.spinner(""):
+    st.session_state.messages.append({"role": "user", "content": user_content})
+
+    with st.chat_message("user"):
+        if uploaded_file is not None:
+            st.image(uploaded_file, use_container_width=True)
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
         try:
-            sys_content = (
-                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                "CRITICAL TIMELINE AND IDENTITY LAWS: "
-                "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
-                "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
-                "FORMATTING LAWS: "
-                "- NEVER use Markdown or HTML tables under any circumstances. "
-                "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
-                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-            )
-
-            # Determine whether vision model processing is required
-            has_images = len(uploaded_files) > 0
-            
-            # FIXED MODEL IDs: Using supported native preview vision and flagship text IDs
-            model = "llama-3.2-11b-vision-preview" if has_images else "openai/gpt-oss-120b"
-
-            # Assemble clean message structure for the endpoint
-            api_messages = [{"role": "system", "content": sys_content}]
-            
-            if has_images:
-                # Format vision payloads using proper multi-modal parameter configurations
-                content_list = [{"type": "text", "text": user_text}]
-                for file in uploaded_files:
-                    bytes_data = file.read()
-                    base64_image = base64.b64encode(bytes_data).decode("utf-8")
-                    content_list.append({
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
-                    })
-                api_messages.append({"role": "user", "content": content_list})
-            else:
-                # Standard clean conversation loops for the text model
-                for m in st.session_state.messages:
-                    if m["role"] == "user":
-                        api_messages.append({"role": "user", "content": m["content"]})
-                    else:
-                        api_messages.append({"role": "assistant", "content": m["content"]})
-
-            # Fire the authorized network query
+            api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             completion = client.chat.completions.create(
-                model=model,
+                model="qwen/qwen3.8-27b",
                 messages=api_messages,
-                temperature=0.2,
-                max_tokens=1000
+                temperature=0.7,
+                max_tokens=1024,
             )
-            
-            # Unpack the response data text stream cleanly
-            reply = completion.choices.message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-            
+            reply = completion.choices[0].message.content
         except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-            
-    st.rerun()
+            reply = f"Error: {e}"
 
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
+        st.markdown(reply)
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+
+    # Force scroll
+    st.markdown(
+        """
+        <script>
+            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 50);
+            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 200);
+            setTimeout(function(){ window.scrollTo(0, document.body.scrollHeight); }, 500);
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
