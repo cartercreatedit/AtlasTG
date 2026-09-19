@@ -111,6 +111,7 @@ div[data-testid="stAudioInput"] {
     font-size: 0.8rem !important;
     border-radius: 20px !important;
     transition: color 0.2s ease, border-color 0.2s ease !important;
+    margin-top: 4px !important;
 }
 .stButton > button:hover {
     color: #ffffff !important;
@@ -142,10 +143,9 @@ if "play_audio" not in st.session_state:
 # ── HIDDEN AUDIO TRANSMISSION EMBED ───────────────────
 if st.session_state.play_audio:
     st.markdown(st.session_state.play_audio, unsafe_allow_html=True)
-    st.session_state.play_audio = None # Flushes audio player after immediate playback
+    st.session_state.play_audio = None 
 
 # ── Render Message Timeline using Native Safe Structures ──────────────────
-# FIXED LOOP: Adds a custom speaker button hook to every assistant message card row
 for idx, msg in enumerate(st.session_state.messages):
     if msg["role"] == "user":
         col_spacer, col_bubble = st.columns([0.2, 0.8])
@@ -162,12 +162,10 @@ for idx, msg in enumerate(st.session_state.messages):
         st.markdown(msg["content"])
         st.markdown('</div>', unsafe_allow_html=True)
         
-        # Injects an independent speaker trigger key matching this exact response block row
-        if idx > 0: # Avoid adding button to initial welcome message unless needed
+        if idx > 0: 
             if st.button("Speak Answer 🔊", key=f"speak_{idx}"):
                 with st.spinner(""):
                     try:
-                        # Direct speech generation step
                         tts_response = client.audio.speech.create(
                             model="canopylabs/orpheus-v1-english",
                             voice="alloy", 
@@ -181,13 +179,8 @@ for idx, msg in enumerate(st.session_state.messages):
 
 # ── CONSOLIDATED FIXED BASE USER CAPTURE PANEL ────────
 st.markdown('<div class="fixed-bottom-panel">', unsafe_allow_html=True)
-
-# Input Node A: Hardware Microphone Audio Capture Array
 audio_input = st.audio_input("Voice Input Mode", label_visibility="collapsed")
-
-# Input Node B: Text Console Character Entry Dock
 text_input = st.chat_input("Message AtlasTG...")
-
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ── DOCK RECONCILIATION GATEWAYS ──────────────────────
@@ -198,23 +191,19 @@ if audio_input:
         try:
             with open("temp_input.wav", "wb") as f:
                 f.write(audio_input.read())
-            
             with open("temp_input.wav", "rb") as audio_file:
                 transcription = client.audio.transcriptions.create(
                     model="whisper-large-v3-turbo", 
                     file=audio_file,
                     response_format="text"
                 )
-            
             transcribed_text = str(transcription).strip()
             if transcribed_text:
                 final_prompt = transcribed_text
-            
             if os.path.exists("temp_input.wav"):
                 os.remove("temp_input.wav")
         except Exception as e:
             st.error(f"Audio Handshake Error: {e}")
-
 elif text_input:
     final_prompt = text_input
 
@@ -224,26 +213,21 @@ if final_prompt:
     
     with st.spinner(""):
         try:
-            system_instruction = {
-                "role": "system", 
-                "content": (
-                    "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                    "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                    "CRITICAL TIMELINE AND IDENTITY LAWS: "
-                    "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
-                    "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-                    "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
-                    "FORMATTING LAWS: "
-                    "- NEVER use Markdown or HTML tables under any circumstances. "
-                    "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
-                    "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or technical math questions."
-                )
-            }
+            # IDENTITY SYSTEM DIRECTIVES DEFINED AS A FLAT CONCISE LITERAL STRING
+            sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
             
-            api_messages = [system_instruction] + [
-                {"role": m["role"], "content": m["content"]} 
-                for m in st.session_state.messages
-            ]
+            api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
+            # FLAT SINGLE-LINE DESPATCH EXECUTION PREVENTS UNCLOSED BRACKET LOG FAULTS
+            completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
+            
+            reply = completion.choices.message.content
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+            
+    st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
