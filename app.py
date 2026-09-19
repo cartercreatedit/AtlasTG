@@ -233,9 +233,9 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
-        # Uses Groq's high-speed active chat engine to handle user streams
+        # FIXED: Swapped out legacy ID for Groq's active multimodal engine
         completion = groq_client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="qwen/qwen3.6-27b",
             messages=api_messages,
             temperature=0.2,
             max_tokens=1024,
