@@ -1,9 +1,7 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from groq import Groq
 import os
 import base64
-import requests
 
 st.set_page_config(
     page_title="J.A.R.V.I.S. Core",
@@ -53,17 +51,8 @@ st.markdown("""
 #MainMenu, footer, header, .stDeployButton {
     visibility: hidden !important;
 }
-/* Completely hides the automated background communication field from view */
-div[data-testid="stTextArea"] {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0px !important;
-}
 </style>
 """, unsafe_allow_html=True)
-
-# ── BACK-END COUPLING PASS ───────────────────────────────────────────
-incoming_audio = st.text_area("audio_bridge_stream", key="audio_bridge_stream")
 
 # ── FRONT-END CHATGPT VOX INDICATOR ENGINE ───────────────────────────
 jarvis_frontend_html = """
@@ -136,13 +125,11 @@ jarvis_frontend_html = """
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
                         const base64String = reader.result.split(',')[1];
-                        const parentDoc = window.parent.document;
-                        const textTrays = parentDoc.querySelectorAll('textarea[data-testid="stTextAreaRootElement"]');
-                        if (textTrays.length > 0) {
-                            textTrays[0].value = base64String;
-                            const stateEvent = new Event('input', { bubbles: true });
-                            textTrays[0].dispatchEvent(stateEvent);
-                        }
+                        
+                        // SECURE ROUTING: Injects data directly into URL query parameters to wake up Python instantly
+                        const currentUrl = new URL(window.parent.location.href);
+                        currentUrl.searchParams.set('vox_payload', base64String);
+                        window.parent.location.href = currentUrl.toString();
                     };
                     stream.getTracks().forEach(track => track.stop());
                 };
@@ -191,41 +178,49 @@ jarvis_frontend_html = """
         requestAnimationFrame(monitorAudioStreamLoop);
     }
 </script>
-</script>
 </body>
 </html>
 """
 
-components.html(jarvis_frontend_html, height=700, scrolling=False)
+# Render full screen interface container
+st.components.v1.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING CORE (OBLITERATED UNMATCHED NESTED TRY BLOCKS) ──
-if incoming_audio and incoming_audio.strip() != "":
-    audio_data = base64.b64decode(incoming_audio)
-    with open("jarvis_temp.wav", "wb") as f:
-        f.write(audio_data)
-        
-    with open("jarvis_temp.wav", "rb") as audio_file:
-        transcription = client.audio.transcriptions.create(
-            model="whisper-large-v3-turbo", 
-            file=audio_file, 
-            response_format="text"
-        )
-        
-    user_text = str(transcription).strip()
-    if os.path.exists("jarvis_temp.wav"):
-        os.remove("jarvis_temp.wav")
+# ── BACK-END PROCESSING CORE (BUILT-IN NETWORK QUERY DECODER) ────────
+# Pulls variables natively from the URL parameter registers without needing HTML text area elements
+query_params = st.query_params
+incoming_audio = query_params.get("vox_payload")
 
-    if user_text:
-        st.session_state.vox_history.append({"role": "user", "content": user_text})
-        
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-specdec", 
-            messages=st.session_state.vox_history[-6:], 
-            temperature=0.3, 
-            max_tokens=200
-        )
-        reply = completion.choices.message.content
-        st.session_state.vox_history.append({"role": "assistant", "content": reply})
-        
-        if eleven_key and voice_id:
-            escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+if incoming_audio:
+    try:
+        # Instantly decode recording packets directly in server cache
+        audio_data = base64.b64decode(incoming_audio)
+        with open("jarvis_temp.wav", "wb") as f:
+            f.write(audio_data)
+            
+        with open("jarvis_temp.wav", "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-large-v3-turbo", 
+                file=audio_file, 
+                response_format="text"
+            )
+            
+        user_text = str(transcription).strip()
+        if os.path.exists("jarvis_temp.wav"):
+            os.remove("jarvis_temp.wav")
+
+        if user_text:
+            st.session_state.vox_history.append({"role": "user", "content": user_text})
+            
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-specdec", 
+                messages=st.session_state.vox_history[-6:], 
+                temperature=0.3, 
+                max_tokens=200
+            )
+            reply = completion.choices.message.content
+            st.session_state.vox_history.append({"role": "assistant", "content": reply})
+            
+            if eleven_key and voice_id:
+                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+                
+                # Compiles direct ElevenLabs voice clone audio tracks natively
