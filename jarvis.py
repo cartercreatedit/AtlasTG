@@ -1,7 +1,9 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from groq import Groq
 import os
 import base64
+import requests
 
 st.set_page_config(
     page_title="J.A.R.V.I.S. Core",
@@ -10,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── Secure API Environment Secret Handshakes ─────────────────────────
+# ── Multi-Vendor Secure API Keys ─────────────────────────────────────
 groq_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY") or ""
 eleven_key = st.secrets.get("ELEVEN_API_KEY") or os.getenv("ELEVEN_API_KEY") or ""
 voice_id = st.secrets.get("ELEVEN_VOICE_ID") or "bfGb7JTLUnZebZRiFYyq"
@@ -21,6 +23,7 @@ if not groq_key:
 
 client = Groq(api_key=groq_key)
 
+# ── Session State Registers ──────────────────────────────────────────
 if "vox_history" not in st.session_state:
     st.session_state.vox_history = [
         {"role": "system", "content": "You are J.A.R.V.I.S., an advanced AI assistant built exclusively by Carter Forester Robinson. You address him as sir or Mr. Robinson with deep loyalty. Your tone is sharp, logical, professional, and sophisticated. Keep responses short and conversational (1-3 sentences max). Never use markdown, bold tags, or lists."}
@@ -177,7 +180,7 @@ incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrol
 # ── BACK-END PROCESSING CORE ─────────────────────────────────────────
 if incoming_audio_payload:
     try:
-        raw_b64 = incoming_audio_payload if isinstance(incoming_audio_payload, str) else incoming_audio_payload[1]
+        raw_b64 = incoming_audio_payload[0] if isinstance(incoming_audio_payload, list) else incoming_audio_payload
         audio_data = base64.b64decode(raw_b64)
         
         with open("jarvis_temp.wav", "wb") as f:
@@ -206,8 +209,6 @@ if incoming_audio_payload:
             reply = completion.choices.message.content
             st.session_state.vox_history.append({"role": "assistant", "content": reply})
             
-            # ── IMMUNE FLATTENED ELEVENLABS SPEECH ROUTOUT ENGINE ──
-            # Completely stripped of curly dictionary syntax to banish indent errors permanently
             if eleven_key and voice_id:
                 escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
                 st.session_state.audio_out = f"""
