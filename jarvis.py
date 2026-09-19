@@ -85,7 +85,7 @@ jarvis_mainframe_html = f"""
     <div class="jarvis-sphere" id="coreWidget">
         <span id="coreIcon" style="color: #00f2fe; font-size: 1.5rem; transition: color 0.3s;">✦</span>
     </div>
-    <div class="status-indicator" id="statusLabel">// TAP ONCE TO AWAKEN MAINMAIN SYSTEM</div>
+    <div class="status-indicator" id="statusLabel">// TAP ONCE TO AWAKEN SYSTEM PROTOCOLS</div>
 </div>
 
 <script>
@@ -109,10 +109,9 @@ jarvis_mainframe_html = f"""
     let bufferLength;
     let streamRef;
     
-    // Silence detection variables
     let silenceStart = null;
-    const SILENCE_THRESHOLD = 8; // Audio sensitivity floor
-    const SILENCE_DURATION = 1500; // Time in milliseconds to confirm user finished sentence
+    const SILENCE_THRESHOLD = 8;
+    const SILENCE_DURATION = 1500;
 
     const sphereBtn = document.getElementById('coreWidget');
     const statusLabel = document.getElementById('statusLabel');
@@ -198,22 +197,18 @@ jarvis_mainframe_html = f"""
         }}
         let average = sum / bufferLength;
         
-        // Dynamic mic volume sphere scaling animation
         let scaleValue = 1 + (average / 120);
         if (scaleValue > 1.45) scaleValue = 1.45;
         sphereBtn.style.transform = "scale(" + scaleValue + ")";
         
-        // ── 🧠 AUTONOMOUS VOICE ACTIVITY DETECTION (VAD) INTERFACE ──
         if (average < SILENCE_THRESHOLD) {{
             if (silenceStart === null) {{
                 silenceStart = Date.now();
             }} else if (Date.now() - silenceStart > SILENCE_DURATION) {{
-                // Silence threshold validated -> Automatically shut off mic and dispatch parameters
                 stopListeningSystem();
                 return;
             }}
         }} else {{
-            // Active speech frequency registered -> Reset silence timer completely
             silenceStart = null;
         }}
         
@@ -243,7 +238,7 @@ jarvis_mainframe_html = f"""
             memoryHistory.push({{ "role": "user", "content": userText }});
             
             if (memoryHistory.length > 8) {{
-                memoryHistory = [memoryHistory[0]].concat(memoryHistory.slice(-6));
+                memoryHistory = [memoryHistory].concat(memoryHistory.slice(-6));
             }}
 
             const completionRes = await fetch('https://groq.com', {{
@@ -271,3 +266,13 @@ jarvis_mainframe_html = f"""
                 headers: {{
                     'xi-api-key': elevenKey,
                     'Content-Type': 'application/json'
+                }},
+                body: JSON.stringify({{
+                    text: replyText,
+                    model_id: "eleven_monolingual_v1",
+                    voice_settings: {{ stability: 0.75, similarity_boost: 0.85 }}
+                }})
+            }});
+
+            if (ttsRes.status === 200) {{
+                const audioBuffer = await ttsRes.arrayBuffer();
