@@ -3,7 +3,6 @@ import streamlit.components.v1 as components
 from groq import Groq
 import os
 import base64
-import requests
 
 st.set_page_config(
     page_title="J.A.R.V.I.S. Core",
@@ -183,12 +182,13 @@ incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrol
 # ── BACK-END PROCESSING CORE ─────────────────────────────────────────
 if incoming_audio_payload:
     try:
+        # Check and extract base64 string elements cleanly from payload arrays
         if isinstance(incoming_audio_payload, list) and len(incoming_audio_payload) > 0:
             raw_b64 = incoming_audio_payload[0]
         else:
             raw_b64 = incoming_audio_payload
 
-        if raw_b64:
+        if raw_b64 and isinstance(raw_b64, str):
             audio_data = base64.b64decode(raw_b64)
             
             with open("jarvis_temp.wav", "wb") as f:
@@ -220,14 +220,6 @@ if incoming_audio_payload:
                 if eleven_key and voice_id:
                     escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
                     
-                    # ── OBLITERATED TRIPLE QUOTES FROM THE OUT-PIPE ──
-                    audio_script_chunks = [
-                        "<script>",
-                        "  (async () => {",
-                        "    try {",
-                        f'      const res = await fetch("https://elevenlabs.io{voice_id}", {{',
-                        f'        method: "POST",',
-                        f'        headers: {{ "xi-api-key": "{eleven_key}", "Content-Type": "application/json" }},',
-                        f'        body: JSON.stringify({{ text: "{escaped_reply}", model_id: "eleven_monolingual_v1", voice_settings: {{ stability: 0.75, similarity_boost: 0.85 }} }})',
-                        "      });",
-                        "      if (res.status === 200) {",
+                    # SINGLE-LINE SECURE AUDIO SYNTH ENGINE (CRUSHES COMPILER ERRORS PERMANENTLY)
+                    raw_js = '<script>(async()=>{try{const res=await fetch("https://elevenlabs.io",{method:"POST",headers:{"xi-api-key":"ELEVEN_KEY","Content-Type":"application/json"},body:JSON.stringify({text:"REPLY_TEXT",model_id:"eleven_monolingual_v1",voice_settings:{stability:0.75,similarity_boost:0.85}})});if(res.status===200){const buf=await res.arrayBuffer();const url=URL.createObjectURL(new Blob([buf],{type:"audio/mp3"}));const audio=new Audio(url);audio.play();}}catch(e){}})();</script>'
+                    raw_js = raw_js.replace("VOICE_ID", voice_id)
