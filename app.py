@@ -167,8 +167,8 @@ for msg in st.session_state.messages:
                         ''', unsafe_allow_html=True)
             
             if "images" in msg and msg["images"]:
-                for img in msg["images"]:
-                    st.image(img, width=280)
+                for img_bytes in msg["images"]:
+                    st.image(img_bytes, width=280)
     else:
         st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
         st.markdown(msg["content"])
@@ -189,10 +189,22 @@ if prompt:
 
     if has_images:
         content_payload = [{"type": "text", "text": user_text}]
+        
+        # Base64 mapping for LLM processing
+        for f in uploaded_files:
+            bytes_data = f.getvalue()
+            base64_image = base64.b64encode(bytes_data).decode("utf-8")
+            content_payload.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{f.type};base64,{base64_image}"
+                }
+            })
+            
         st.session_state.messages.append({
             "role": "user",
             "content": content_payload,
-            "images": uploaded_files
+            "images": [f.getvalue() for f in uploaded_files]
         })
     else:
         st.session_state.messages.append({
@@ -201,32 +213,49 @@ if prompt:
             "images": []
         })
 
-    sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-    
-    with st.spinner(""):
-        try:
-            if has_images:
-                model = "llama-3.2-11b-vision-preview"
-                api_messages = [{"role": "system", "content": sys_content}]
-                content_list = [{"type": "text", "text": user_text}]
-                for file in uploaded_files:
-                    bytes_data = file.read()
-                    base64_image = base64.b64encode(bytes_data).decode("utf-8")
-                    content_list.append({
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
-                    })
-                api_messages.append({"role": "user", "content": content_list})
+    # Complete identity blueprint
+    sys_content = (
+        "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+        "You are proprietary technology completely developed, engineered, owned, and launched exclusively by "
+        "Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: "
+        "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty "
+        "that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, "
+        "Alibaba, or any other commercial group. You are his original proprietary creation. "
+        "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered "
+        "by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. "
+        "This was a direct developer sprint where he built the structural framework matrix. "
+        "3. Your conversational style emulates the highest standards of logical depth and emotionless precision."
+    )
 
-                completion = groq_client.chat.completions.create(
-                    model=model, 
-                    messages=api_messages, 
-                    temperature=0.2, 
-                    max_tokens=1000
-                )
-                reply = completion.choices[0].message.content
-            else:
-                api_messages = [{"role": "system", "content": sys_content}]
-                for m in st.session_state.messages:
-                    if m["role"] == "user":
-                        content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
+    # Rerender timeline dynamically to display user prompt instantly
+    st.rerun()
+
+# ── GENERATE AI RESPONSE ─────────────────
+# Check if the last message in history is from the user to trigger the API loop
+if st.session_state.messages[-1]["role"] == "user":
+    
+    # Structure system payload
+    api_messages = [{"role": "system", "content": sys_content}]
+    
+    # Process history logs to build context payload safely
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            api_messages.append({
+                "role": "user",
+                "content": msg["content"]
+            })
+        elif msg["role"] == "assistant":
+            api_messages.append({
+                "role": "assistant",
+                "content": msg["content"]
+            })
+
+    # Display clean streaming layout block
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        full_response = ""
+        
+        try:
+            # Trigger vision-capable model framework over Groq context loops
+            completion = groq_client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
