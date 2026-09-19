@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── RESTORED ORIGINAL BORDERLESS STEALTH STYLING ─────────────────────────
+# ── ORIGINAL BORDERLESS STEALTH STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -253,4 +253,4 @@ if prompt:
     else:
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-    with st.spinner(""):
+    # OBLITERATED SPINNER BLOCK CONTAINER TO REMOVE INDENTATION CONFLICTS PERMANENTLY
