@@ -50,7 +50,7 @@ div[data-testid="stMarkdownContainer"] p {
     line-height: 1.6 !important;
 }
 
-/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
+/* ── USER PROMPT POINTED BUBBLES ── */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
     display: flex !important;
     justify-content: flex-end !important;
@@ -61,7 +61,7 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     border: 1px solid #2d2d2d !important;
     padding: 12px 18px !important;
     border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Pointed sharp tail top right secured back */
+    border-top-right-radius: 2px !important; /* Pointed sharp tail top right secured */
     max-width: 80% !important;
     display: inline-block !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
@@ -175,13 +175,13 @@ if text_prompt:
                 "FORMATTING LAWS: "
                 "- NEVER use Markdown or HTML tables under any circumstances. "
                 "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
-                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or technical math questions."
+                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
             )
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
-            # SWAPPED TO ACTIVE NETWORK MODEL ID LINK
+            # STABILIZED TO SUPPORTED HOSTED ENGINE Blueprint
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
+                model="openai/gpt-oss-120b", 
                 messages=api_messages, 
                 temperature=0.2, 
                 max_tokens=1000
