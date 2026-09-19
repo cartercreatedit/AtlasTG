@@ -37,7 +37,7 @@ h1 {
     margin-bottom: 20px !important;
 }
 
-/* ✦ FIXED TOP-BAR MODE CONTAINER LOCK (Bugs 2 Fixed) ✦ */
+/* ✦ FIXED TOP-BAR MODE CONTAINER LOCK ✦ */
 div[data-testid="stTabs"] {
     position: fixed !important;
     top: 0 !important;
@@ -88,7 +88,7 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     border: 1px solid #2d2d2d !important;
     padding: 12px 18px !important;
     border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Pointed sharp tail top right secured back */
+    border-top-right-radius: 2px !important;
     max-width: 80% !important;
     display: inline-block !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
@@ -244,15 +244,12 @@ if final_prompt:
             sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
             
+            # REMOVED TRY/EXCEPT INNER GAP FOR SCRIPT FLATTENING
             completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
-            
-            # FIXED BLOCK DIRECTIVE: Targeted base choice index array correctly to prevent extraction faults
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
             
             # 🎙️ AUTOMATIC SPEECH SYNTHESIS LINK 🎙️
-            tts_response = client.audio.speech.create(
-                model="canopylabs/orpheus-v1-english",
-                voice="alloy", 
-                input=reply
-            )
+            tts_response = client.audio.speech.create(model="canopylabs/orpheus-v1-english", voice="alloy", input=reply)
+            audio_base64 = base64.b64encode(tts_response.content).decode('utf-8')
+            st.session_state.play_audio = f'<audio src="data:audio/mp3;base64,{audio_base64}" autoplay="true" style="display:none;"></audio>'
