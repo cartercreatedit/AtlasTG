@@ -96,7 +96,7 @@ jarvis_mainframe_html = """
     let memoryHistory = [
         {
             "role": "system", 
-            "content": "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. You address him exclusively as sir or Mr. Robinson with absolute loyalty and respect. Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal resembling Tony Starks assistant Jarvis. CRITICAL PROTOCOLS: Keep your responses highly conversational, short, and punchy, 1 to 3 sentences max, so they sound like natural spoken speech. Never use markdown symbols, headers, bold tags, or lists."
+            "content": "You are J.A.R.V.I.S., a advanced AI built exclusively by Carter Forester Robinson. You address him as sir or Mr. Robinson with deep loyalty. Your tone is sharp, logical, professional, and sophisticated. PROTOCOLS: Keep responses conversational, short, and punchy, 1-3 sentences max, so they sound like natural speech. Never use markdown symbols, headers, bold tags, or lists."
         }
     ];
 
@@ -238,7 +238,7 @@ jarvis_mainframe_html = """
             memoryHistory.push({ "role": "user", "content": userText });
             
             if (memoryHistory.length > 8) {
-                memoryHistory = [memoryHistory].concat(memoryHistory.slice(-6));
+                memoryHistory = [memoryHistory[0]].concat(memoryHistory.slice(-6));
             }
 
             const completionRes = await fetch('https://groq.com', {
@@ -256,7 +256,7 @@ jarvis_mainframe_html = """
             });
             
             const completionJson = await completionRes.json();
-            const replyText = completionJson.choices.message.content;
+            const replyText = completionJson.choices[0].message.content;
             console.log("Response text: " + replyText);
             memoryHistory.push({ "role": "assistant", "content": replyText });
 
@@ -277,3 +277,6 @@ jarvis_mainframe_html = """
             if (ttsRes.status === 200) {
                 const audioBuffer = await ttsRes.arrayBuffer();
                 const audioBlob = new Blob([audioBuffer], { type: 'audio/mp3' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                
