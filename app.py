@@ -144,7 +144,6 @@ for msg in st.session_state.messages:
             </div>
             ''', unsafe_allow_html=True)
     else:
-        # Clean, borderless raw text rows ensure no cartoon robot avatars can ever spawn
         st.markdown(f'''
         <div style="margin: 20px 0; clear: both; text-align: left; font-size: 15.5px; line-height: 1.6; color: #e3e3e3; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
             {msg["content"]}
@@ -156,7 +155,7 @@ st.markdown('<div class="fixed-bottom-panel">', unsafe_allow_html=True)
 text_prompt = st.chat_input("Message AtlasTG...")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ── FLOATING JAVASCRIPT MICROPHONE BUTTON OVERLAY (Bug 1 & 2 Fix) ──
+# ── FLOATING JAVASCRIPT MICROPHONE BUTTON OVERLAY ──
 st.markdown('<div class="mic-overlay-container">', unsafe_allow_html=True)
 custom_mic_html = """
 <div style="display: flex; justify-content: center; align-items: center; width: 36px; height: 36px;">
@@ -173,7 +172,9 @@ custom_mic_html = """
             audioChunks = [];
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = e => audioChunks.push(event.data);
+            mediaRecorder.ondataavailable = e => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
             
             mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
@@ -181,7 +182,6 @@ custom_mic_html = """
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     const base64String = reader.result.split(',')[1];
-                    // Secure cross-window handshake dispatches raw text strings straight into the parent script
                     window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                 };
                 stream.getTracks().forEach(track => track.stop());
@@ -200,7 +200,6 @@ custom_mic_html = """
     });
 </script>
 """
-# Embed the custom data component right into the fixed layout boundaries
 mic_response = components.html(custom_mic_html, height=36, width=36)
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -210,7 +209,6 @@ if mic_response and mic_response != st.session_state.audio_capture_data:
     st.session_state.audio_capture_data = mic_response
     with st.spinner("Processing speech frequencies..."):
         try:
-            # Safely parse the verified incoming base64 data string
             audio_bytes = base64.b64decode(mic_response)
             with open("temp_vox.wav", "wb") as f:
                 f.write(audio_bytes)
@@ -243,3 +241,9 @@ if final_prompt:
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+            
+    st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
