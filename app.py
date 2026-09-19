@@ -1,6 +1,7 @@
 import streamlit as st
 from groq import Groq
 import os
+import base64
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -10,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ULTIMATE VOX CORE GRAPHICS CONFIGURATION ──────────────────
+# ── PREMIUM MINIMAL STEALTH STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -19,7 +20,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 180px !important;
+    padding-bottom: 160px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -123,17 +124,10 @@ div[data-testid="stChatInput"] *,
     background-color: #0d0d11 !important;
     border: 1px solid #252530 !important;
     border-radius: 20px !important;
-    padding: 24px !important;
+    padding: 20px !important;
     margin-bottom: 24px !important;
     box-shadow: 0 10px 30px rgba(0,0,0,0.7) !important;
-}
-
-/* Custom styled container for native microphone framework layout */
-div[data-testid="stAudioInput"] {
-    background-color: #161616 !important;
-    border: 1px solid #2c2c2c !important;
-    border-radius: 28px !important;
-    padding: 8px !important;
+    text-align: center;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -153,85 +147,119 @@ st.caption("High-Speed Audio-Text Intelligence Engine · Coded by C. F. Robinson
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Text intelligence is active below, or click the checkbox to slide open the voice core channel."}
+        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Text intelligence is active below, or check the box to initialize the intelligent auto-stopping voice matrix."}
     ]
-if "last_processed_audio" not in st.session_state:
-    st.session_state.last_processed_audio = None
+if "audio_base64" not in st.session_state:
+    st.session_state.audio_base64 = None
 
-# ── 🎙️ MINIMALIST VOICE OVERLAY TRIGGER ────────────────
-# Using a clean checkbox layout completely stops button state rendering faults
-voice_mode_active = st.checkbox("🎙️ Activate Voice Core Matrix", value=False)
+# ── Header Dynamic Tab Switcher ──────────────────
+voice_mode_active = st.checkbox("🎙️ Initialize Intelligent Auto-Stop Voice Core", value=False)
 
 audio_prompt = None
-if voice_mode_active:
+
+# ── 🎙️ CUSTOM AUTO-STOPPING JAVASCRIPT MICROPHONE 🎙️ ──
+if voice_mode_active and not st.session_state.audio_base64:
     st.markdown('<div class="voice-panel-box">', unsafe_allow_html=True)
-    st.markdown('<p style="color:#00f2fe; font-size:0.85rem; letter-spacing:1px; margin-bottom:12px; font-weight:bold;">// AUDIO CAPTURE ARRAY STREAMING</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#00f2fe; font-size:0.85rem; letter-spacing:1px; margin-bottom:8px; font-weight:bold;">// AUTO-SENSING AUDIO CORE ACTIVE</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#8b8b8b; font-size:0.75rem;">Speak normally. The engine will auto-detect silence and close the transmission stream immediately.</p>', unsafe_allow_html=True)
     
-    audio_capture = st.audio_input("Voice Input Mode", label_visibility="collapsed")
+    # Custom HTML5 Component capturing microphone thresholds and auto-submitting upon 1.5s of silence
+    custom_mic_html = """
+    <div style="display: flex; justify-content: center; align-items: center; padding: 10px;">
+        <button id="micBtn" style="background-color: #ff416c; border: none; color: white; padding: 10px 24px; font-family: monospace; border-radius: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(255, 65, 108, 0.4);">🎤 RECORDING...</button>
+    </div>
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioContext;
+        let analyser;
+        let streamFile;
+        let silenceTimeout;
+
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            streamFile = stream;
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64data = reader.result.split(',')[1];
+                    window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64data }, '*');
+                };
+            };
+
+            // Set up audio monitoring algorithms to detect natural user speech pauses
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyse || audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            mediaRecorder.start();
+
+            function checkSilence() {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+                let average = sum / bufferLength;
+
+                if (average < 8) { // Silence volume threshold anchor
+                    if (!silenceTimeout) {
+                        silenceTimeout = setTimeout(() => {
+                            if (mediaRecorder.state === "recording") {
+                                mediaRecorder.stop();
+                                streamFile.getTracks().forEach(track => track.stop());
+                                audioContext.close();
+                            }
+                        }, 1500); // Auto-stops exactly after 1.5 seconds of silence
+                    }
+                } else {
+                    clearTimeout(silenceTimeout);
+                    silenceTimeout = null;
+                }
+                if (mediaRecorder.state === "recording") {
+                    requestAnimationFrame(checkSilence);
+                }
+            }
+            requestAnimationFrame(checkSilence);
+        }).catch(err => {
+            console.error("Microphone Access Blocked: " + err);
+        });
+    </script>
+    """
+    # Renders the auto-sensing container safely into Streamlit layout views
+    mic_value = components.html(custom_mic_html, height=100)
     
-    if audio_capture and audio_capture.id != st.session_state.last_processed_audio:
-        st.session_state.last_processed_audio = audio_capture.id
-        with st.spinner("Processing speech frequencies..."):
-            try:
-                with open("temp_input.wav", "wb") as f:
-                    f.write(audio_capture.read())
-                with open("temp_input.wav", "rb") as audio_file:
-                    transcription = client.audio.transcriptions.create(
-                        model="whisper-large-v3-turbo", 
-                        file=audio_file,
-                        response_format="text"
-                    )
-                transcribed_text = str(transcription).strip()
-                if transcribed_text:
-                    audio_prompt = transcribed_text
-                if os.path.exists("temp_input.wav"):
-                    os.remove("temp_input.wav")
-            except Exception as e:
-                st.error(f"Audio Handshake Error: {e}")
-                
+    # Process base64 strings returned natively by the browser macro handler
+    if mic_value:
+        st.session_state.audio_base64 = mic_value
+        st.rerun()
+        
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Render Message Timeline using Native Safe Structures ──────────────────
-for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        col_spacer, col_bubble = st.columns([0.2, 0.8])
-        with col_bubble:
-            st.markdown(f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
-                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                    {msg["content"]}
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-        st.markdown(msg["content"])
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ── SINGLE TEXT INPUT CONSOLE DOCK ─────────────────────
-text_prompt = st.chat_input("Message AtlasTG...")
-
-# Reconcile final prompt path parameters
-final_prompt = audio_prompt if audio_prompt else text_prompt
-
-# ── PROCESS INJECTED PARAMETERS ──────────────────────
-if final_prompt:
-    st.session_state.messages.append({"role": "user", "content": final_prompt})
-    
-    with st.spinner(""):
+# ── TRANSCRIBE RECEIVED BASE64 CHUNKS IMMEDIATELY ───────
+if st.session_state.audio_base64:
+    with st.spinner("Processing speech frequencies..."):
         try:
-            sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
-            api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            raw_data = base64.b64decode(st.session_state.audio_base64)
+            with open("temp_voice_input.wav", "wb") as f:
+                f.write(raw_data)
             
-            # FIXED INDENTATION LINE AT LEVEL 0 TO PREVENT ROADBLOCK COMPILER FAULTS
-            completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=api_messages, temperature=0.2, max_tokens=1000)
-            reply = completion.choices.message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
+            with open("temp_voice_input.wav", "rb") as audio_file:
+                transcription = client.audio.transcriptions.create(
+                    model="whisper-large-v3-turbo", 
+                    file=audio_file,
+                    response_format="text"
+                )
+            audio_prompt = str(transcription).strip()
+            
+            if os.path.exists("temp_voice_input.wav"):
+                os.remove("temp_voice_input.wav")
         except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-            
-    st.rerun()
-
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
+            st.error(f"Speech Matrix Exception: {e}")
+        finally:
