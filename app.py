@@ -174,15 +174,16 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Hey. Welcome to AtlasTG. I am fully responsive across text and audio pathways."}
     ]
-if "play_audio" not in st.session_state:
-    st.session_state.play_audio = None
+if "audio_to_play" not in st.session_state:
+    st.session_state.audio_to_play = None
 if "last_processed_audio" not in st.session_state:
     st.session_state.last_processed_audio = None
 
-# ── HIDDEN AUDIO TRANSMISSION EMBED ───────────────────
-if st.session_state.play_audio:
-    st.markdown(st.session_state.play_audio, unsafe_allow_html=True)
-    st.session_state.play_audio = None 
+# ── HIDDEN AUTOMATIC PLAYBACK ENGINE ───────────────────
+if st.session_state.audio_to_play:
+    # Uses native clean data parameters to play the generated stream immediately
+    st.audio(st.session_state.audio_to_play, format="audio/mp3", autoplay=True)
+    st.session_state.audio_to_play = None 
 
 # ── Render Message Timeline using Native Safe Structures ──────────────────
 for msg in st.session_state.messages:
@@ -248,10 +249,10 @@ if final_prompt:
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
             
-            # 🎙️ BROWSER-NATIVE AUDIO FEEDBACK PIPELINE 🎙️
-            # Generates clean, fast browser-native text-to-speech speaker elements without server-side compression faults
-            escaped_reply = reply.replace("'", "\\'").replace("\n", " ")
-            st.session_state.play_audio = f"""
-            <script>
-                const synth = window.parent.speechSynthesis;
-                if (synth) {{
+            # 🎙️ STABLE CHATGPT VOICE PIPE 🎙️
+            # Generates a premium audio output by calling Groq's active audio system
+            tts_response = client.audio.speech.create(
+                model="canopylabs/orpheus-v1-english",
+                voice="alloy", 
+                input=reply
+            )
