@@ -126,7 +126,8 @@ jarvis_frontend_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',');
+                        // FIXED AUDIO EXTLECTION: Explicitly targets index 1 to isolate pure base64 text chunks
+                        const base64String = reader.result.split(',')[1];
                         window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
@@ -184,7 +185,7 @@ incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrol
 
 # ── BACK-END PROCESSING MACHINE (100% UNWRAPPED DATA HANDSHAKE) ──────
 if incoming_audio_payload and incoming_audio_payload != "":
-    # Clean extraction layer: isolates data regardless of string or list packing formats
+    # Safe fallback parsing layers verify clean text conversions
     if isinstance(incoming_audio_payload, list):
         raw_b64 = incoming_audio_payload[1] if len(incoming_audio_payload) > 1 else incoming_audio_payload[0]
     else:
