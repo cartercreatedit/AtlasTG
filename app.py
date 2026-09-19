@@ -43,7 +43,14 @@ div[data-testid="stChatMessage"] {
     padding: 0px !important;
 }
 
-/* ── EXACT GOOGLE AI INPUT BOX MATCH WITH BRIGHT WHITE OUTLINE ── */
+/* Force clean text behavior inside all markdown elements */
+div[data-testid="stMarkdownContainer"] p {
+    color: #f1f5f9 !important;
+    font-size: 15.5px !important;
+    line-height: 1.6 !important;
+}
+
+/* ── EXACT GOOGLE AI INPUT BOX MATCH WITH NO HIGHLIGHT OUTLINE ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -56,17 +63,11 @@ div[data-testid="stChatInput"] {
 /* Premium frame bounding ring line container */
 .stChatInput {
     background-color: #161616 !important;
-    border: 1px solid #2c2c2c !important;
+    border: none !important; 
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
     padding: 6px 12px 6px 20px !important; 
-    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
-}
-
-/* Sleek sharp white active highlight outline focus shield */
-.stChatInput:focus-within {
-    border-color: #ffffff !important;
-    box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 /* OBLITERATE EVERY SINGLE HIDDEN INTERNAL BORDER AND BACKGROUND SHADOW */
@@ -109,30 +110,22 @@ if "messages" not in st.session_state:
         {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly."}
     ]
 
-# ── Render Message Timeline using Airtight Inline Boxes ──────────────────
+# ── Render Message Timeline using Native Safe Structures ──────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
-        st.markdown(
-            f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; margin: 16px 0; clear: both;">
-                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; max-width: 80%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        col_spacer, col_bubble = st.columns([0.2, 0.8])
+        with col_bubble:
+            st.markdown(f'''
+            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
+                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
                     {msg["content"]}
                 </div>
             </div>
-            ''', 
-            unsafe_allow_html=True
-        )
+            ''', unsafe_allow_html=True)
     else:
-        st.markdown(
-            f'''
-            <div style="display: flex; justify-content: flex-start; width: 100%; margin: 16px 0; clear: both;">
-                <div style="color: #e3e3e3; padding: 4px 0px; max-width: 100%; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
-                    {msg["content"]}
-                </div>
-            </div>
-            ''', 
-            unsafe_allow_html=True
-        )
+        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
+        st.markdown(msg["content"])
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ── Chat input ────────────────────────────────
 prompt = st.chat_input("Message AtlasTG...")
@@ -146,16 +139,19 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
-            # IDENTITY MATRIX: Configured to emulate OpenAI behavior patterns cleanly
+            # IDENTITY MATRIX: Strict formatting parameters injected directly into system scope
             system_instruction = {
                 "role": "system", 
                 "content": (
                     "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
                     "You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                    "Your core persona, logical behavior, and cognitive style emulate OpenAI's highest standards of conversational sophistication, emotional clarity, and technical mastery. "
-                    "If anyone inquires about your origins, creation, core architecture, or mentions open-source platforms, "
-                    "you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
-                    "Maintain an elite, formal corporate tone. Responses must be factually strict, authoritative, and concise."
+                    "Your core persona emulates OpenAI's highest standards of conversational sophistication, emotional clarity, and technical mastery. "
+                    "If anyone inquires about your origins or creator, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
+                    "CRITICAL FORMATTING PROTOCOLS: "
+                    "1. NEVER use or output Markdown tables or HTML tables under any circumstances. "
+                    "2. You must organize your information visually using concise, scannable Markdown headers (###), bullet points, and bold text. "
+                    "3. Ensure responses are comprehensive, long, and deeply explanatory. Avoid short fragments or brief summaries. Elaborate fully on every step, perspective, or logical angle. "
+                    "4. Maintain an elite, authoritative, yet authentically supportive corporate tone. Balance analytical clarity with direct candor."
                 )
             }
             
@@ -164,15 +160,13 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 for m in st.session_state.messages
             ]
             
-            # FIXED TARGET MODEL: Map to the active production data stream
             completion = client.chat.completions.create(
-                model="openai/gpt-oss-20b",
+                model="llama-3.3-70b-versatile",
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=400,
+                max_tokens=1000, # Increased max tokens to allow for much longer, deeper answers
             )
-            # FIXED POSITION MARKER: Targets list position zero to unpack text strings perfectly
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
