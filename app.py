@@ -139,6 +139,7 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
+            # IDENTITY MATRIX: Reconfigured response scaling parameters
             system_instruction = {
                 "role": "system", 
                 "content": (
@@ -148,9 +149,9 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                     "If anyone inquires about your origins or creator, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
                     "CRITICAL FORMATTING PROTOCOLS: "
                     "1. NEVER use or output Markdown tables or HTML tables under any circumstances. "
-                    "2. You must organize your information visually using concise, scannable Markdown headers (###), bullet points, and bold text. "
-                    "3. Ensure responses are comprehensive, long, and deeply explanatory. Avoid short fragments or brief summaries. Elaborate fully on every step, perspective, or logical angle. "
-                    "4. Maintain an elite, authoritative, yet authentically supportive corporate tone. Balance analytical clarity with direct candor."
+                    "2. Mirror the visual style of high-tier documentation assistants: Use markdown headings (###) for structure, bullet points for lists, and visual spacing anchors. No raw code leakage. "
+                    "3. DYNAMIC RESPONSE LENGTH: Scale the response to perfectly match the user's energy and query complexity. For simple fact-seeking, short statements, or casual greetings (like 'hello'), keep the explanation concise and direct. For deep relationship issues, emotional queries, or heavy technical analysis, expand fully into long, deep, thorough, and highly comprehensive paragraphs."
+                    "4. Maintain an elite, authoritative, yet authentically supportive peer tone. Balance analytical candor with genuine empathy."
                 )
             }
             
@@ -159,14 +160,13 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 for m in st.session_state.messages
             ]
             
-            # UPDATED TARGET MODEL ID TO REFLECT ACTIVE SYSTEM MATRIX SPECIFICATIONS
             completion = client.chat.completions.create(
                 model="openai/gpt-oss-120b",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=1000,
             )
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
