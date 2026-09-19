@@ -1,6 +1,9 @@
 import streamlit as st
 from groq import Groq
 import os
+import base64
+from PIL import Image
+import io
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -128,7 +131,7 @@ st.caption("High-Speed Intelligence Engine · Powered by Groq")
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images using the plus icon."}
     ]
 
 # ── Render Message Timeline ───────────────────
@@ -137,7 +140,7 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
-            # Show text
+            # Render standard text payloads safely
             if isinstance(content, str) and content:
                 st.markdown(f'''
                 <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
@@ -146,7 +149,19 @@ for msg in st.session_state.messages:
                     </div>
                 </div>
                 ''', unsafe_allow_html=True)
-            # Show images if present
+            elif isinstance(content, list):
+                # Unpack visual prompt structures cleanly for history rendering
+                for part in content:
+                    if part["type"] == "text":
+                        st.markdown(f'''
+                        <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
+                            <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
+                                {part["text"]}
+                            </div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+            
+            # Show images if present on timeline memory arrays
             if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=280)
@@ -158,7 +173,7 @@ for msg in st.session_state.messages:
 # ── CHAT INPUT WITH IMAGE UPLOAD (plus icon) ─────────────────────
 prompt = st.chat_input(
     "Message AtlasTG...",
-    accept_file=True,                    # ← enables the + / attachment button
+    accept_file=True,
     file_type=["jpg", "jpeg", "png", "webp"]
 )
 
@@ -166,14 +181,23 @@ prompt = st.chat_input(
 if prompt:
     user_text = prompt.text if prompt.text else ""
     uploaded_files = prompt.files if prompt.files else []
+    has_images = len(uploaded_files) > 0
 
-    # Store message
-    message_data = {
-        "role": "user",
-        "content": user_text,
-        "images": uploaded_files
-    }
-    st.session_state.messages.append(message_data)
+    # Build memory registers based on multimodal asset input flags
+    if has_images:
+        stored_content = [{"type": "text", "text": user_text}]
+        # Process data files immediately into image timeline registers
+        st.session_state.messages.append({
+            "role": "user",
+            "content": stored_content,
+            "images": uploaded_files
+        })
+    else:
+        st.session_state.messages.append({
+            "role": "user",
+            "content": user_text,
+            "images": []
+        })
 
     with st.spinner(""):
         try:
@@ -190,29 +214,22 @@ if prompt:
                 "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
             )
 
-            # Build messages for the API (text-only routing framework)
+            # Route straight to Llama 4 Scout for image parsing, or GPT-OSS for clean text variables
+            model = "meta-llama/llama-4-scout-17b-16e-instruct" if has_images else "openai/gpt-oss-120b"
+
             api_messages = [{"role": "system", "content": sys_content}]
-            for m in st.session_state.messages:
-                if m["role"] == "user":
-                    content = m["content"] if m["content"] else "(User sent an image)"
-                    api_messages.append({"role": "user", "content": content})
-                else:
-                    api_messages.append({"role": "assistant", "content": m["content"]})
-
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b", 
-                messages=api_messages, 
-                temperature=0.2, 
-                max_tokens=1000
-            )
-            # FIXED EXTRACTION LINE: Uses list indexing [0] to cleanly read the message array payload
-            reply = completion.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
             
-    st.rerun()
-
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
+            if has_images:
+                # INTEGRATED BASE64 MATRIX TRANSLATION LINK: Packs binary images into JSON arrays natively
+                content_list = [{"type": "text", "text": user_text}]
+                for file in uploaded_files:
+                    bytes_data = file.read()
+                    base64_image = base64.b64encode(bytes_data).decode("utf-8")
+                    content_list.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
+                    })
+                api_messages.append({"role": "user", "content": content_list})
+            else:
+                for m in st.session_state.messages:
+                    if m["role"] == "user":
