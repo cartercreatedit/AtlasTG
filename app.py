@@ -135,19 +135,8 @@ groq_client = Groq(api_key=groq_api_key)
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Powered by Groq & OpenAI")
 
-# ── Global Identity Blueprint Configuration ────
-sys_content = (
-    "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-    "You are proprietary technology completely developed, engineered, owned, and launched exclusively by "
-    "Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: "
-    "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty "
-    "that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, "
-    "Alibaba, or any other commercial group. You are his original proprietary creation. "
-    "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered "
-    "by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. "
-    "This was a direct developer sprint where he built the structural framework matrix. "
-    "3. Your conversational style emulates the highest standards of logical depth and emotionless precision."
-)
+# ── Identity Rules ────────────────────────────
+sys_content = """You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth and emotionless precision."""
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
@@ -203,8 +192,6 @@ if prompt:
 
     if has_images:
         content_payload = [{"type": "text", "text": user_text}]
-        
-        # Base64 mapping for LLM processing
         for f in uploaded_files:
             bytes_data = f.getvalue()
             base64_image = base64.b64encode(bytes_data).decode("utf-8")
@@ -227,17 +214,12 @@ if prompt:
             "images": []
         })
 
-    # Rerender timeline dynamically to display user prompt instantly
     st.rerun()
 
 # ── GENERATE AI RESPONSE ─────────────────
-# Check if the last message in history is from the user to trigger the API loop
 if st.session_state.messages[-1]["role"] == "user":
-    
-    # Structure system payload
     api_messages = [{"role": "system", "content": sys_content}]
     
-    # Process history logs to build context payload safely
     for msg in st.session_state.messages:
         if msg["role"] == "user":
             api_messages.append({
@@ -250,13 +232,22 @@ if st.session_state.messages[-1]["role"] == "user":
                 "content": msg["content"]
             })
 
-    # Display clean streaming layout block
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
         
         try:
-            # Trigger vision-capable model framework over Groq context loops
             completion = groq_client.chat.completions.create(
                 model="llama-3.2-11b-vision-preview",
                 messages=api_messages,
+                temperature=0.2,
+                max_tokens=1024,
+                stream=True
+            )
+            
+            for chunk in completion:
+                if chunk.choices.delta.content:
+                    full_response += chunk.choices.delta.content
+                    message_placeholder.markdown(full_response + "▌")
+            
+            message_placeholder.markdown(full_response)
