@@ -124,7 +124,7 @@ jarvis_frontend_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',')[1]; // Explicitly target only the clean base64 data payload track
+                        const base64String = reader.result.split(',');
                         window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
@@ -183,9 +183,10 @@ incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrol
 # ── BACK-END PROCESSING CORE ─────────────────────────────────────────
 if incoming_audio_payload:
     try:
-        # Secure unboxing checks extraction type protocols explicitly
-        if isinstance(incoming_audio_payload, list):
-            raw_b64 = incoming_audio_payload[0] if incoming_audio_payload else ""
+        if isinstance(incoming_audio_payload, list) and len(incoming_audio_payload) > 1:
+            raw_b64 = incoming_audio_payload[1]
+        elif isinstance(incoming_audio_payload, list) and len(incoming_audio_payload) == 1:
+            raw_b64 = incoming_audio_payload[0]
         else:
             raw_b64 = incoming_audio_payload
 
@@ -220,12 +221,12 @@ if incoming_audio_payload:
                 
                 if eleven_key and voice_id:
                     escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-                    st.session_state.audio_out = f"""
+                    
+                    # Clean triple-quote script without the 'f' prefix avoids variable bracket interpretation
+                    st.session_state.audio_out = """
                     <script>
-                        (async () => {{
-                            try {{
-                                const res = await fetch("https://elevenlabs.io{voice_id}", {{
+                        (async () => {
+                            try {
+                                const res = await fetch("https://elevenlabs.io", {
                                     method: "POST",
-                                    headers: {{ "xi-api-key": "{eleven_key}", "Content-Type": "application/json" }},
-                                    body: JSON.stringify({{ text: "{escaped_reply}", model_id: "eleven_monolingual_v1", voice_settings: {{ stability: 0.75, similarity_boost: 0.85 }} }})
-                                }});
+                                    headers: { "xi-api-key": "ELEVEN_KEY", "Content-Type": "application/json" },
