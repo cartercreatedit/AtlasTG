@@ -139,7 +139,7 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
-            # IDENTITY MATRIX: Strict formatting parameters injected directly into system scope
+            # IDENTITY MATRIX: Formatting rules cleanly applied to system parameters
             system_instruction = {
                 "role": "system", 
                 "content": (
@@ -160,11 +160,12 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 for m in st.session_state.messages
             ]
             
+            # SWAPPED: Connected to active high-capacity production text node
             completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="llama-3.1-70b-versatile",
                 messages=api_messages,
                 temperature=0.7,
-                max_tokens=1000, # Increased max tokens to allow for much longer, deeper answers
+                max_tokens=1000,
             )
             reply = completion.choices.message.content
         except Exception as e:
