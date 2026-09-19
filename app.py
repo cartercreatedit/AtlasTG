@@ -147,24 +147,23 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
-            if isinstance(content, str) and content:
-                st.markdown(f'''
-                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
-                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                        {content}
-                    </div>
-                </div>
-                ''', unsafe_allow_html=True)
+            # FIXED: Added support to read raw text strings as well as structured payloads
+            display_text = ""
+            if isinstance(content, str):
+                display_text = content
             elif isinstance(content, list):
                 for part in content:
                     if part["type"] == "text":
-                        st.markdown(f'''
-                        <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
-                            <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                                {part["text"]}
-                            </div>
-                        </div>
-                        ''', unsafe_allow_html=True)
+                        display_text = part["text"]
+
+            if display_text:
+                st.markdown(f'''
+                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
+                    <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
+                        {display_text}
+                    </div>
+                </div>
+                ''', unsafe_allow_html=True)
             
             if "images" in msg and msg["images"]:
                 for img_bytes in msg["images"]:
@@ -235,7 +234,6 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
-        # Using gpt-4o-mini to perfectly handle streaming + multi-modal image structures natively
         completion = ai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=api_messages,
@@ -245,8 +243,10 @@ if st.session_state.messages[-1]["role"] == "user":
         )
         
         for chunk in completion:
-            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                full_response += chunk.choices[0].delta.content
+            if chunk.choices and chunk.choices.delta and chunk.choices.delta.content:
+                full_response += chunk.choices.delta.content
                 message_placeholder.markdown(full_response + "▌")
         
         message_placeholder.markdown(full_response)
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+        st.rerun()
