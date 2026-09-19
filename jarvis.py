@@ -1,5 +1,8 @@
 import streamlit as st
-import streamlit.components.v1 as components
+from groq import Groq
+import os
+import base64
+import requests
 
 st.set_page_config(
     page_title="J.A.R.V.I.S. Core",
@@ -8,34 +11,195 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Pull secure api keys from your workspace dashboard registers safely
-groq_key = st.secrets.get("GROQ_API_KEY") or ""
-eleven_key = st.secrets.get("ELEVEN_API_KEY") or ""
+# ── Multi-Vendor Secure Server API Keys ──────────────────────────────
+groq_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY") or ""
+eleven_key = st.secrets.get("ELEVEN_API_KEY") or os.getenv("ELEVEN_API_KEY") or ""
 voice_id = st.secrets.get("ELEVEN_VOICE_ID") or "bfGb7JTLUnZebZRiFYyq"
 
-# ── SINGLE-LINE INTERFACE ARRAY TO BANISH PARSING FAULTS PERMANENTLY ──
-html_data = []
-html_data.append('<!DOCTYPE html><html><head><meta charset="utf-8"><style>')
-html_data.append('body,html{background-color:#000000!important;margin:0;padding:0;width:100vw;height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}')
-html_data.append('.mainframe-container{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100vw;height:100vh;}')
-html_data.append('.jarvis-sphere{width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(0,242,254,0.15) 0%,rgba(0,242,254,0) 70%);border:2px solid #00f2fe;box-shadow:0 0 30px rgba(0,242,254,0.4),inset 0 0 20px rgba(0,242,254,0.2);cursor:pointer;transition:transform 0.05s ease,border-color 0.3s ease,box-shadow 0.3s ease;display:flex;justify-content:center;align-items:center;}')
-html_data.append('.jarvis-sphere.recording{border-color:#ff416c;background:radial-gradient(circle,rgba(255,65,108,0.2) 0%,rgba(255,65,108,0) 70%);box-shadow:0 0 40px rgba(255,65,108,0.6),inset 0 0 25px rgba(255,65,108,0.3);}')
-html_data.append('.status-indicator{margin-top:32px;color:#00f2fe;font-size:0.8rem;letter-spacing:2px;text-transform:uppercase;opacity:0.6;transition:color 0.3s ease;}')
-html_data.append('.recording-text{color:#ff416c!important;opacity:1!important;}')
-html_data.append('</style></head><body>')
-html_data.append('<div class="mainframe-container"><div class="jarvis-sphere" id="coreWidget"><span id="coreIcon" style="color:#00f2fe;font-size:1.5rem;transition:color 0.3s;">✦</span></div><div class="status-indicator" id="statusLabel">// TAP ONCE TO AWAKEN SYSTEM PROTOCOLS</div></div>')
-html_data.append('<script>')
-html_data.append(f'const gK = "{groq_key}"; const eK = "{eleven_key}"; const vI = "{voice_id}";')
-html_data.append('let memoryHistory = [{"role":"system","content":"You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system built exclusively by Carter Forester Robinson. You address him as sir or Mr. Robinson with deep loyalty. Your tone is sharp, logical, professional, and sophisticated. PROTOCOLS: Keep responses conversational, short, and punchy, 1-3 sentences max, so they sound like natural spoken speech. Never use markdown, bold tags, or lists."}];')
-html_data.append('let mediaRecorder; let audioChunks = []; let isRecording = false; let audioContext; let analyser; let dataArray; let bufferLength; let streamRef; let silenceStart = null; const SILENCE_THRESHOLD = 8; const SILENCE_DURATION = 1500;')
-html_data.append('const sphereBtn = document.getElementById("coreWidget"); const statusLabel = document.getElementById("statusLabel"); const coreIcon = document.getElementById("coreIcon");')
-html_data.append('sphereBtn.onclick = async () => { if (!isRecording) { startListeningSystem(); } else { stopListeningSystem(); } };')
-html_data.append('async function startListeningSystem() { audioChunks = []; statusLabel.innerText = "// INITIALIZING SYSTEM CONSOLE..."; try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); streamRef = stream; mediaRecorder = new MediaRecorder(stream); mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); }; mediaRecorder.onstop = async () => { statusLabel.innerText = "// CONVERTING SPEECH ARCHITECTURE..."; const audioBlob = new Blob(audioChunks, { type: "audio/wav" }); await processVoiceCommand(audioBlob); }; audioContext = new (window.AudioContext || window.webkitAudioContext)(); analyser = audioContext.createAnalyser(); const source = audioContext.createMediaStreamSource(stream); source.connect(analyser); analyser.fftSize = 256; bufferLength = analyser.frequencyBinCount; dataArray = new Uint8Array(bufferLength); statusLabel.innerText = "// LISTENING CORE ONLINE..."; statusLabel.classList.add("recording-text"); sphereBtn.classList.add("recording"); coreIcon.style.color = "#ff416c"; isRecording = true; silenceStart = Date.now(); mediaRecorder.start(); requestAnimationFrame(monitorAudioStreamLoop); } catch (err) { statusLabel.innerText = "// HARDWARE ERROR: MIC EXCEPTION"; console.error(err); } }')
-html_data.append('function stopListeningSystem() { if (!isRecording) return; isRecording = false; if (mediaRecorder && mediaRecorder.state === "recording") { mediaRecorder.stop(); } if (streamRef) { streamRef.getTracks().forEach(track => track.stop()); } if (audioContext) { audioContext.close(); } sphereBtn.style.transform = "scale(1)"; sphereBtn.classList.remove("recording"); statusLabel.classList.remove("recording-text"); coreIcon.style.color = "#00f2fe"; }')
-html_data.append('function monitorAudioStreamLoop() { if (!isRecording) return; analyser.getByteFrequencyData(dataArray); let sum = 0; for (let i = 0; i < bufferLength; i++) { sum += dataArray[i]; } let average = sum / bufferLength; let scaleValue = 1 + (average / 120); if (scaleValue > 1.45) scaleValue = 1.45; sphereBtn.style.transform = "scale(" + scaleValue + ")"; if (average < SILENCE_THRESHOLD) { if (silenceStart === null) { silenceStart = Date.now(); } else if (Date.now() - silenceStart > SILENCE_DURATION) { stopListeningSystem(); return; } } else { silenceStart = null; } requestAnimationFrame(monitorAudioStreamLoop); }')
-html_data.append('async function processVoiceCommand(blob) { try { statusLabel.innerText = "// TRANSLATING AUDIO CHANNELS..."; const formData = new FormData(); formData.append("file", blob, "audio.wav"); formData.append("model", "whisper-large-v3-turbo"); formData.append("response_format", "text"); const whisperRes = await fetch("https://groq.com", { method: "POST", headers: { "Authorization": "Bearer " + gK }, body: formData }); const userText = (await whisperRes.text()).trim(); if (!userText) { statusLabel.innerText = "// TAP CORE TO COMMUNICATE, SIR"; return; } memoryHistory.push({ "role": "user", "content": userText }); if (memoryHistory.length > 8) { memoryHistory = [memoryHistory].concat(memoryHistory.slice(-6)); } statusLabel.innerText = "// COMPUTING RESPONSE CODES..."; const completionRes = await fetch("https://groq.com", { method: "POST", headers: { "Authorization": "Bearer " + gK, "Content-Type": "application/json" }, body: JSON.stringify({ model: "llama-3.3-70b-specdec", messages: memoryHistory, temperature: 0.3, max_tokens: 200 }) }); const completionJson = await completionRes.json(); const replyText = completionJson.choices.message.content; memoryHistory.push({ "role": "assistant", "content": replyText }); statusLabel.innerText = "// INITIALIZING REPLICA HARMONICS..."; const ttsRes = await fetch("https://elevenlabs.io" + vI, { method: "POST", headers: { "xi-api-key": eK, "Content-Type": "application/json" }, body: JSON.stringify({ text: replyText, model_id: "eleven_monolingual_v1", voice_settings: { stability: 0.75, similarity_boost: 0.85 } }) }); if (ttsRes.status === 200) { const audioBuffer = await ttsRes.arrayBuffer(); const audioBlob = new Blob([audioBuffer], { type: "audio/mp3" }); const audioUrl = URL.createObjectURL(audioBlob); const audio = new Audio(audioUrl); audio.onplay = () => { statusLabel.innerText = "// J.A.R.V.I.S. TRANSMITTING..."; }; audio.onended = () => { statusLabel.innerText = "// TAP CORE TO COMMUNICATE, SIR"; startListeningSystem(); }; await audio.play(); } else { statusLabel.innerText = "// HARMONIC CONNECT REFUSED"; setTimeout(() => { statusLabel.innerText = "// TAP CORE TO COMMUNICATE, SIR"; }, 2000); } } catch (err) { statusLabel.innerText = "// FRAMEWORK ROUTING EXCEPTION"; console.error(err); setTimeout(() => { statusLabel.innerText = "// TAP CORE TO COMMUNICATE, SIR"; }, 2000); } }')
-html_data.append('</script></body></html>')
+if not groq_key:
+    st.error("Missing GROQ_API_KEY inside Secrets registers.")
+    st.stop()
+if not eleven_key or not voice_id:
+    st.error("Missing ElevenLabs credentials inside Secrets registers.")
+    st.stop()
 
-# Compile everything cleanly down into a secure web component view
-compiled_mainframe = "".join(html_data)
-components.html(compiled_mainframe, height=700, scrolling=False)
+client = Groq(api_key=groq_key)
+
+# ── Session State Registers ──────────────────────────────────────────
+if "vox_history" not in st.session_state:
+    st.session_state.vox_history = [
+        {"role": "assistant", "content": "Mainframe channels active, sir. Standing by for command directive parameters."}
+    ]
+if "audio_out" not in st.session_state:
+    st.session_state.audio_out = None
+
+# Instantly trigger audio playback via native browser cache arrays
+if st.session_state.audio_out:
+    st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
+    st.session_state.audio_out = None
+
+# ── ORIGINAL STYLING CONFIGURATIONS (ZERO TEXT-CLUTTER BAGGAGE) ──────
+st.markdown("""
+<style>
+.stApp {
+    background-color: #000000;
+    color: #e8e8e8;
+}
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 160px !important;
+    max-width: 760px;
+    min-height: 100vh;
+}
+#MainMenu, footer, header, .stDeployButton {
+    visibility: hidden;
+}
+h1 {
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    font-size: 1.75rem !important;
+}
+
+/* Clear default Streamlit padding baggage */
+div[data-testid="stChatMessage"] {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0px !important;
+}
+
+/* Force clean text behavior inside all markdown elements */
+div[data-testid="stMarkdownContainer"] p {
+    color: #00f2fe !important;
+    font-family: monospace !important;
+    font-size: 15.5px !important;
+    line-height: 1.6 !important;
+}
+
+/* User pointed layout bubbles re-established */
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin: 16px 0 !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
+    background-color: #111116 !important;
+    border: 1px solid #1a1a24 !important;
+    padding: 12px 18px !important;
+    border-radius: 18px !important;
+    border-top-right-radius: 2px !important;
+    max-width: 80% !important;
+    display: inline-block !important;
+    box-shadow: 0 4px 15px rgba(0,242,254,0.1) !important;
+}
+
+/* Assistant hidden text plain layout rules */
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
+    display: flex !important;
+    justify-content: flex-start !important;
+    margin: 16px 0 !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 4px 0px !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+}
+
+/* Premium borderless input tray console dock */
+div[data-testid="stChatInput"] {
+    position: fixed !important;
+    bottom: 32px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(760px, 92vw) !important;
+    z-index: 999 !important;
+}
+.stChatInput {
+    background-color: #09090d !important;
+    border: 1px solid #14141f !important; 
+    border-radius: 32px !important;
+    box-shadow: 0 4px 30px rgba(0,242,254,0.15) !important;
+    padding: 6px 12px 6px 20px !important; 
+}
+div[data-testid="stChatInput"] *,
+.stChatInput div[data-baseweb="textarea"],
+.stChatInput div[data-baseweb="base-input"],
+.stChatInput textarea {
+    border: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.stChatInput textarea {
+    color: #ffffff !important;
+    font-size: 15.5px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Mainframe Header ─────────────────────────────────────────────────
+st.markdown("<h1 style='font-family:monospace; font-weight:normal;'>✦ J.A.R.V.I.S. Core</h1>", unsafe_allow_html=True)
+st.markdown("<p style='color:#8b8b8b; font-size:0.8rem; letter-spacing:1px; font-family:monospace;'>SYSTEM BLUEPRINTS LIVE · ARCHITECT: CARTER FORESTER ROBINSON</p>", unsafe_allow_html=True)
+st.markdown("<hr style='border-color: #14141f; margin-bottom: 2rem;'>", unsafe_allow_html=True)
+
+# ── Render Message Timeline ──────────────────────────────────────────
+for msg in st.session_state.vox_history:
+    with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "👤"):
+        st.markdown(msg["content"])
+
+# ── SINGLE INPUT CONSOLE COMMAND TRAYS ───────────────────────────────
+user_command = st.chat_input("Input mainframe command directive, sir...")
+
+if user_command:
+    st.session_state.vox_history.append({"role": "user", "content": user_command})
+    
+    with st.spinner(""):
+        sys_content = (
+            "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. "
+            "You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. "
+            "You address him exclusively as 'sir' or 'Mr. Robinson' with absolute loyalty and respect. "
+            "Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal—resembling Tony Stark's assistant Jarvis. "
+            "CRITICAL PROTOCOLS: Keep your responses highly conversational, short, and punchy (1-3 sentences max) so they sound like natural spoken speech. Never use markdown symbols, headers, bold tags, or lists."
+        )
+        api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.vox_history[-6:]]
+        
+        # Fire text directly to Groq's secure server backend nodes safely
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-specdec", 
+            messages=api_messages, 
+            temperature=0.3, 
+            max_tokens=200
+        )
+        reply = completion.choices.message.content
+        st.session_state.vox_history.append({"role": "assistant", "content": reply})
+        
+        # Execute direct server-side endpoint pass to ElevenLabs (CORS blocks are impossible)
+        try:
+            tts_url = f"https://elevenlabs.io{voice_id}"
+            headers = {
+                "xi-api-key": eleven_key,
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "text": reply,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": 0.75,
+                    "similarity_boost": 0.85
+                }
+            }
+            response = requests.post(tts_url, json=payload, headers=headers)
+            
+            if response.status_code == 200:
+                b64_audio = base64.b64encode(response.content).decode("utf-8")
+                st.session_state.audio_out = f"""
+                <audio autoplay style="display:none;">
+                    <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+                </audio>
+                """
+        except Exception:
+            pass
+            
+    st.rerun()
