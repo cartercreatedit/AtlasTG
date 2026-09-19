@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── STEALTH BLACK HOLOGRAPHIC JARVIS CORE INTERFACE ──────────────────
+# ── STEALTH AUDIO-PULSING JARVIS CORE INTERFACE ──────────────────
 st.markdown("""
 <style>
 /* Wipes out all default system styling banners and spaces */
@@ -50,27 +50,21 @@ st.markdown("""
     border: 2px solid #00f2fe;
     box-shadow: 0 0 30px rgba(0, 242, 254, 0.4), inset 0 0 20px rgba(0, 242, 254, 0.2);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.05s ease, border-color 0.3s ease, box-shadow 0.3s ease; /* Fast transform transition maps your voice levels instantly */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* Pulsing loop animations mimic active processing matrix links */
+/* Base style overrides when audio capturing arrays are triggered */
 .jarvis-sphere.recording {
     border-color: #ff416c;
     background: radial-gradient(circle, rgba(255,65,108,0.2) 0%, rgba(255,65,108,0) 70%);
     box-shadow: 0 0 40px rgba(255, 65, 108, 0.6), inset 0 0 25px rgba(255, 65, 108, 0.3);
-    animation: corePulse 1.2s infinite alternate ease-in-out;
-}
-
-@keyframes corePulse {
-    0% { transform: scale(1); box-shadow: 0 0 30px rgba(255,65,108,0.5); }
-    100% { transform: scale(1.06); box-shadow: 0 0 50px rgba(255,65,108,0.8); }
 }
 
 .status-indicator {
-    margin-top: 24px;
+    margin-top: 32px;
     color: #00f2fe;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 0.8rem;
@@ -107,38 +101,46 @@ if st.session_state.audio_response_script:
     st.session_state.audio_response_script = None 
 
 # ── THE VOX CORE MAINFRAME DISPLAY GRAPHIC ───────────────────
-# Renders only the custom graphic sphere and status string, hiding all raw site data baggage
 is_active_recording = st.session_state.incoming_bytes is not None
 
 st.markdown(f'''
 <div class="mainframe-container">
     <div class="jarvis-sphere {"recording" if is_active_recording else ""}" id="coreWidget">
-        <span style="color: {"#ff416c" if is_active_recording else "#00f2fe"}; font-size: 1.5rem;">✦</span>
+        <span style="color: {"#ff416c" if is_active_recording else "#00f2fe"}; font-size: 1.5rem;" id="coreIcon">✦</span>
     </div>
-    <div class="status-indicator {"recording-text" if is_active_recording else ""}">
-        {"// Core transmitting..." if is_active_recording else "// Tap core to communicate, sir"}
+    <div class="status-indicator" id="statusLabel">
+        // TAP CORE TO COMMUNICATE, SIR
     </div>
 </div>
 ''', unsafe_allow_html=True)
 
-# ── 🎙️ CONTINUOUS STREAMING AUDIO MIC DRIVER 🎙️ ──
-# Bypasses the clunky text bars and links browser mic arrays straight into the sphere widget
+# ── 🎙️ DYNAMIC AUDIO REAL-TIME PULSING MIC DRIVER 🎙️ ──
+# Hooks directly into your browser's audio registers to animate the circle scale via live amplitude analysis
 custom_vox_html = """
 <script>
     let mediaRecorder;
     let audioChunks = [];
     let isRecording = false;
+    let audioContext;
+    let analyser;
+    let javascriptNode;
+    let streamReference;
 
-    // Search and lock onto parent container elements safely
     setTimeout(() => {
         const sphereBtn = window.parent.document.getElementById('coreWidget');
+        const statusLabel = window.parent.document.getElementById('statusLabel');
+        const coreIcon = window.parent.document.getElementById('coreIcon');
         if (!sphereBtn) return;
 
         sphereBtn.onclick = async () => {
             if (!isRecording) {
                 audioChunks = [];
+                statusLabel.innerText = "// INITIALIZING CORE ARRAYS...";
+                
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                streamReference = stream;
                 mediaRecorder = new MediaRecorder(stream);
+                
                 mediaRecorder.ondataavailable = e => {
                     if (e.data.size > 0) audioChunks.push(e.data);
                 };
@@ -148,23 +150,72 @@ custom_vox_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',')[1];
+                        const base64String = reader.result.split(',');
                         window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
                 };
+
+                // ── REAL-TIME VOLUME WAVEFORM MONITORING MATRIX ──
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
                 
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                
+                statusLabel.innerText = "// CORE CAPTURING AMPLITUDE...";
+                statusLabel.classList.add("recording-text");
+                sphereBtn.classList.add("recording");
+                if(coreIcon) { coreIcon.style.color = "#ff416c"; }
+
+                function animateSphere() {
+                    if (!isRecording) {
+                        sphereBtn.style.transform = "scale(1)";
+                        return;
+                    }
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < bufferLength; i++) {
+                        sum += dataArray[i];
+                    }
+                    let average = sum / bufferLength;
+                    
+                    // Maps microphone volume calculations straight into CSS transform scaling properties
+                    let scaleValue = 1 + (average / 130); 
+                    if (scaleValue > 1.4) scaleValue = 1.4; // Safe hard cap protects layout bounds
+                    sphereBtn.style.transform = "scale(" + scaleValue + ")";
+                    
+                    requestAnimationFrame(animateSphere);
+                }
+
                 mediaRecorder.start();
                 isRecording = true;
+                requestAnimationFrame(animateSphere);
+                
             } else {
-                mediaRecorder.stop();
+                statusLabel.innerText = "// DISPATCHING TRANSMISSION CHANNEL...";
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                }
+                if (streamReference) {
+                    streamReference.getTracks().forEach(track => track.stop());
+                }
+                if (audioContext) {
+                    audioContext.close();
+                }
+                sphereBtn.style.transform = "scale(1)";
+                sphereBtn.classList.remove("recording");
+                statusLabel.classList.remove("recording-text");
+                if(coreIcon) { coreIcon.style.color = "#00f2fe"; }
                 isRecording = false;
             }
         };
-    }, 200);
+    }, 400);
 </script>
 """
-# Embeds the communication capture script safely into backend processing tracks
 raw_mic_stream = components.html(custom_vox_html, height=0, width=0)
 
 # ── PROCESS INCOMING AUDIO MATRIX FREQUENCIES ────────────────
@@ -172,12 +223,10 @@ if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
     st.session_state.incoming_bytes = raw_mic_stream
     
     try:
-        # Decode the raw audio bytes stream directly in system memory
         audio_data_bytes = base64.b64decode(raw_mic_stream)
         with open("jarvis_temp_input.wav", "wb") as f:
             f.write(audio_data_bytes)
         
-        # Fire bytes straight through Groq's high-speed transcription matrix node
         with open("jarvis_temp_input.wav", "rb") as audio_file:
             transcription = client.audio.transcriptions.create(
                 model="whisper-large-v3-turbo", 
@@ -192,9 +241,8 @@ if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
         if user_spoken_prompt:
             st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
             
-            # Setup J.A.R.V.I.S. strict personality constraints directly inside the text loop
             sys_content = (
-                "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. "
+                "You are J.A.RV.I.S., a hyper-advanced artificial intelligence system. "
                 "You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. "
                 "You address him exclusively as 'sir' or 'Mr. Robinson' with absolute loyalty and respect. "
                 "Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal—resembling Tony Stark's assistant Jarvis. "
@@ -202,32 +250,3 @@ if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
             )
             api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.vox_history[-6:]]
             
-            # Fire history payload straight to Groq's active high-speed text engine node
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b", 
-                messages=api_messages, 
-                temperature=0.3, 
-                max_tokens=200
-            )
-            reply = completion.choices.message.content
-            st.session_state.vox_history.append({"role": "assistant", "content": reply})
-            
-            # 🎙️ BROWSER-NATIVE VOICE SPEAKER PIPELINE 🎙️
-            escaped_reply = reply.replace("'", "\\'").replace("\n", " ").replace("\r", " ")
-            st.session_state.audio_response_script = f"""
-            <script>
-                const synth = window.parent.speechSynthesis;
-                if (synth) {{
-                    synth.cancel();
-                    const utterance = new parent.SpeechSynthesisUtterance('{escaped_reply}');
-                    utterance.rate = 1.05; 
-                    utterance.pitch = 0.85; // Low vocal registry tint mimics Jarvis movie acoustics perfectly
-                    synth.speak(utterance);
-                }}
-            </script>
-            """
-    except Exception as e:
-        pass
-    finally:
-        st.session_state.incoming_bytes = None
-        st.rerun()
