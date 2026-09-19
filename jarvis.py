@@ -29,7 +29,7 @@ client = Groq(api_key=groq_key)
 # ── Session State Memory Registers ───────────────────────────────────
 if "vox_history" not in st.session_state:
     st.session_state.vox_history = [
-        {"role": "system", "content": "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system built exclusively by Carter Forester Robinson. You address him exclusively as sir or Mr. Robinson with deep loyalty. Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal. Keep your responses short and punchy, 1 to 3 sentences max, so they sound like natural speech. Never use markdown symbols, headers, bold tags, or lists."}
+        {"role": "system", "content": "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system built exclusively by your creator, Carter Forester Robinson. You address him exclusively as sir or Mr. Robinson with absolute loyalty and respect. Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal. Keep your responses short and punchy, 1 to 3 sentences max, so they sound like natural speech. Never use markdown symbols, headers, bold tags, or lists."}
     ]
 if "audio_tag" not in st.session_state:
     st.session_state.audio_tag = None
@@ -126,9 +126,11 @@ jarvis_frontend_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        // FIXED AUDIO EXTLECTION: Explicitly targets index 1 to isolate pure base64 text chunks
-                        const base64String = reader.result.split(',')[1];
-                        window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
+                        const base64Parts = reader.result.split(',');
+                        // FIXED DATA TETHER: Explicitly sends only the pure data segment text string to Python
+                        if (base64Parts.length > 1) {
+                            window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64Parts[1] }, '*');
+                        }
                     };
                     stream.getTracks().forEach(track => track.stop());
                 };
@@ -183,50 +185,46 @@ jarvis_frontend_html = """
 
 incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING MACHINE (100% UNWRAPPED DATA HANDSHAKE) ──────
+# ── BACK-END PROCESSING MACHINE (100% SECURE UNBOXING BRIDGE) ─────────
 if incoming_audio_payload and incoming_audio_payload != "":
-    # Safe fallback parsing layers verify clean text conversions
+    # Server-side validation extracts flat string format safely
     if isinstance(incoming_audio_payload, list):
-        raw_b64 = incoming_audio_payload[1] if len(incoming_audio_payload) > 1 else incoming_audio_payload[0]
+        raw_b64 = incoming_audio_payload[0] if len(incoming_audio_payload) > 0 else ""
     else:
         raw_b64 = incoming_audio_payload
 
-    audio_data = base64.b64decode(raw_b64)
-    with open("jarvis_temp.wav", "wb") as f:
-        f.write(audio_data)
-        
-    with open("jarvis_temp.wav", "rb") as audio_file:
-        transcription = client.audio.transcriptions.create(
-            model="whisper-large-v3-turbo", 
-            file=audio_file, 
-            response_format="text"
-        )
-        
-    user_text = str(transcription).strip()
-    if os.path.exists("jarvis_temp.wav"):
-        os.remove("jarvis_temp.wav")
+    if raw_b64:
+        audio_data = base64.b64decode(raw_b64)
+        with open("jarvis_temp.wav", "wb") as f:
+            f.write(audio_data)
+            
+        with open("jarvis_temp.wav", "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                model="whisper-large-v3-turbo", 
+                file=audio_file, 
+                response_format="text"
+            )
+            
+        user_text = str(transcription).strip()
+        if os.path.exists("jarvis_temp.wav"):
+            os.remove("jarvis_temp.wav")
 
-    if user_text:
-        st.session_state.vox_history.append({"role": "user", "content": user_text})
-        
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-specdec", 
-            messages=st.session_state.vox_history[-6:], 
-            temperature=0.3, 
-            max_tokens=200
-        )
-        reply = completion.choices.message.content
-        st.session_state.vox_history.append({"role": "assistant", "content": reply})
-        
-        # Safe text-to-speech engine passthrough
-        tts_url = "https://elevenlabs.io" + voice_id
-        headers = {"xi-api-key": eleven_key, "Content-Type": "application/json"}
-        payload = {"text": reply, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.75, "similarity_boost": 0.85}}
-        
-        response = requests.post(tts_url, json=payload, headers=headers)
-        
-        if response.status_code == 200:
-            b64_audio = base64.b64encode(response.content).decode("utf-8")
-            st.session_state.audio_tag = '<audio autoplay style="display:none;"><source src="data:audio/mp3;base64,' + b64_audio + '" type="audio/mp3"></audio>'
-
-    st.rerun()
+        if user_text:
+            st.session_state.vox_history.append({"role": "user", "content": user_text})
+            
+            completion = client.chat.completions.create(
+                model="llama-3.3-70b-specdec", 
+                messages=st.session_state.vox_history[-6:], 
+                temperature=0.3, 
+                max_tokens=200
+            )
+            reply = completion.choices.message.content
+            st.session_state.vox_history.append({"role": "assistant", "content": reply})
+            
+            # Secure server-to-server post pass to ElevenLabs
+            if eleven_key and voice_id:
+                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+                tts_url = "https://elevenlabs.io" + voice_id
+                headers = {"xi-api-key": eleven_key, "Content-Type": "application/json"}
+                payload = {"text": reply, "model_id": "eleven_monolingual_v1", "voice_settings": {"stability": 0.75, "similarity_boost": 0.85}}
+                
