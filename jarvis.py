@@ -33,7 +33,7 @@ if "vox_history" not in st.session_state:
 if "audio_out" not in st.session_state:
     st.session_state.audio_out = None
 
-# Inject hidden enterprise audio player when voice bytes stream back
+# Inject hidden audio player when voice bytes stream back
 if st.session_state.audio_out:
     st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
     st.session_state.audio_out = None
@@ -54,7 +54,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── FRONT-END CHATGPT VOX INDICATOR ENGINE ───────────────────────────
+# ── FRONT-END INTERACTION ENGINE ─────────────────────────────────────
 jarvis_frontend_html = """
 <!DOCTYPE html>
 <html>
@@ -180,46 +180,42 @@ jarvis_frontend_html = """
 
 incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END PROCESSING CORE ─────────────────────────────────────────
-if incoming_audio_payload:
-    try:
-        # Secure array unwrapping extracts base64 token layers
-        raw_b64 = incoming_audio_payload[0] if isinstance(incoming_audio_payload, list) else incoming_audio_payload
+# ── BACK-END PROCESSING CORE (FLATTENED LAYOUT - NO NESTED TRY LOGIC) ──
+if incoming_audio_payload and isinstance(incoming_audio_payload, str) and incoming_audio_payload.strip() != "":
+    audio_data = base64.b64decode(incoming_audio_payload)
+    with open("jarvis_temp.wav", "wb") as f:
+        f.write(audio_data)
         
-        audio_data = base64.b64decode(raw_b64)
-        with open("jarvis_temp.wav", "wb") as f:
-            f.write(audio_data)
-            
-        with open("jarvis_temp.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file, 
-                response_format="text"
-            )
-            
-        user_text = str(transcription).strip()
-        if os.path.exists("jarvis_temp.wav"):
-            os.remove("jarvis_temp.wav")
+    with open("jarvis_temp.wav", "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-large-v3-turbo", 
+            file=audio_file, 
+            response_format="text"
+        )
+        
+    user_text = str(transcription).strip()
+    if os.path.exists("jarvis_temp.wav"):
+        os.remove("jarvis_temp.wav")
 
-        if user_text:
-            st.session_state.vox_history.append({"role": "user", "content": user_text})
+    if user_text:
+        st.session_state.vox_history.append({"role": "user", "content": user_text})
+        
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-specdec", 
+            messages=st.session_state.vox_history[-6:], 
+            temperature=0.3, 
+            max_tokens=200
+        )
+        reply = completion.choices.message.content
+        st.session_state.vox_history.append({"role": "assistant", "content": reply})
+        
+        if eleven_key and voice_id:
+            escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
             
-            # SECURE BRACKET DISPATCH MATCHED PERFECTLY
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
-                messages=st.session_state.vox_history[-6:], 
-                temperature=0.3, 
-                max_tokens=200
-            )
-            reply = completion.choices.message.content
-            st.session_state.vox_history.append({"role": "assistant", "content": reply})
-            
-            if eleven_key and voice_id:
-                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
-                
-                # Flat string substitutions erase inner code bracket confusion completely
-                raw_js = '<script>(async()=>{try{const res=await fetch("https://elevenlabs.io",{method:"POST",headers:{"xi-api-key":"ELEVEN_KEY","Content-Type":"application/json"},body:JSON.stringify({text:"REPLY_TEXT",model_id:"eleven_monolingual_v1",voice_settings:{stability:0.75,similarity_boost:0.85}})});if(res.status===200){const buf=await res.arrayBuffer();const url=URL.createObjectURL(new Blob([buf],{type:"audio/mp3"}));const audio=new Audio(url);audio.play();}}catch(e){}})();</script>'
-                raw_js = raw_js.replace("VOICE_ID", voice_id)
-                raw_js = raw_js.replace("ELEVEN_KEY", eleven_key)
-                raw_js = raw_js.replace("REPLY_TEXT", escaped_reply)
-                st.session_state.audio_out = raw_js
+            raw_js = '<script>(async()=>{try{const res=await fetch("https://elevenlabs.io",{method:"POST",headers:{"xi-api-key":"ELEVEN_KEY","Content-Type":"application/json"},body:JSON.stringify({text:"REPLY_TEXT",model_id:"eleven_monolingual_v1",voice_settings:{stability:0.75,similarity_boost:0.85}})});if(res.status===200){const buf=await res.arrayBuffer();const url=URL.createObjectURL(new Blob([buf],{type:"audio/mp3"}));const audio=new Audio(url);audio.play();}}catch(e){}})();</script>'
+            raw_js = raw_js.replace("VOICE_ID", voice_id)
+            raw_js = raw_js.replace("ELEVEN_KEY", eleven_key)
+            raw_js = raw_js.replace("REPLY_TEXT", escaped_reply)
+            st.session_state.audio_out = raw_js
+
+    st.rerun()
