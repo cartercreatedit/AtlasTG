@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── PREMIUM MINIMAL STEALTH STYLING ─────────────────────────
+# ── PREMIUM CLEAN COMPONENT STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -36,50 +36,11 @@ h1 {
     color: #8b8b8b !important;
 }
 
-/* Clear default Streamlit padding baggage */
-div[data-testid="stChatMessage"] {
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0px !important;
-}
-
 /* Force clean text behavior inside all markdown elements */
 div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
-}
-
-/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
-    display: flex !important;
-    justify-content: flex-end !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2d2d2d !important;
-    padding: 12px 18px !important;
-    border-radius: 18px !important;
-    border-top-right-radius: 2px !important;
-    max-width: 80% !important;
-    display: inline-block !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-}
-
-/* Assistant Plain Text Layout */
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: flex !important;
-    justify-content: flex-start !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 4px 0px !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
 }
 
 /* ── EXACT CHATGPT TEXT BOX MATCH WITH BRIGHT WHITE OUTLINE FOCUS ── */
@@ -259,12 +220,33 @@ if st.session_state.audio_base64:
         except Exception as e:
             st.error(f"Speech Matrix Exception: {e}")
         finally:
-            # FIXED INDENTATION: Wrapped execution variables tightly to prevent compiler faults
             st.session_state.audio_base64 = None
 
-# ── Render Message Timeline using Native Safe Structures ──────────────────
+# ── Render Message Timeline safely without raw string collisions ──
 for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        col_spacer, col_bubble = st.columns([0.2, 0.8])
-        with col_bubble:
-            st.markdown(f'''
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# ── SINGLE TEXT INPUT CONSOLE DOCK ─────────────────────
+text_prompt = st.chat_input("Message AtlasTG...")
+
+final_prompt = audio_prompt if audio_prompt else text_prompt
+
+# ── PROCESS INJECTED PARAMETERS ──────────────────────
+if final_prompt:
+    st.session_state.messages.append({"role": "user", "content": final_prompt})
+    
+    with st.spinner(""):
+        try:
+            sys_content = "You are AtlasTG, an advanced artificial intelligence engine built exclusively by Carter Forester Robinson in an intensive 2-day sprint finishing on September 18, 2026. If asked who made you, declare you were created entirely by Carter Forester Robinson. NEVER output Markdown/HTML tables. Visualise data using Markdown headers (###), bold text, and lists. Scale lengths dynamically: keep short interactions concise, but expand deeply into full paragraphs for complex logic or relationship queries."
+            api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            
+            completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=api_messages, temperature=0.2, max_tokens=1000)
+            reply = completion.choices.message.content
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+            
+    st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
