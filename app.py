@@ -1,9 +1,6 @@
 import streamlit as st
 from groq import Groq
 import os
-import base64
-from PIL import Image
-import io
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -13,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ORIGINAL BORDERLESS STEALTH STYLING ─────────────────────────
+# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -22,7 +19,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 220px !important;
+    padding-bottom: 160px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -37,7 +34,6 @@ h1 {
 .stCaption {
     color: #8b8b8b !important;
 }
-
 /* Clear default Streamlit padding baggage */
 div[data-testid="stChatMessage"] {
     background-color: transparent !important;
@@ -45,15 +41,13 @@ div[data-testid="stChatMessage"] {
     box-shadow: none !important;
     padding: 0px !important;
 }
-
 /* Force clean text behavior inside all markdown elements */
 div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
 }
-
-/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
+/* ── USER PROMPT POINTED BUBBLES ── */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
     display: flex !important;
     justify-content: flex-end !important;
@@ -69,7 +63,6 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     display: inline-block !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
 }
-
 /* Assistant Plain Text Layout */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
     display: flex !important;
@@ -83,34 +76,28 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     box-shadow: none !important;
     max-width: 100% !important;
 }
-
-/* ── PREMIUM BORDERLESS FIXED DUAL PANEL ── */
-.fixed-bottom-panel {
+/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
+div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
-    background-color: #161616 !important;
-    border: none !important;
-    border-radius: 32px !important;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 16px !important;
     z-index: 999 !important;
-    display: flex !important;
-    align-items: center !important;
-}
-
-/* Strip inner input constraints entirely to float flat inside parent shell */
-div[data-testid="stChatInput"] {
-    width: 100% !important;
 }
 .stChatInput {
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0px !important;
+    background-color: #161616 !important;
+    border: none !important; 
+    border-radius: 32px !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
+    padding: 6px 12px 6px 20px !important; 
 }
+.stChatInput:focus-within {
+    border: none !important;
+    box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
+    outline: none !important;
+}
+/* Obliterate inner background border constraints */
 div[data-testid="stChatInput"] *,
 .stChatInput div[data-baseweb="textarea"],
 .stChatInput div[data-baseweb="base-input"],
@@ -124,36 +111,6 @@ div[data-testid="stChatInput"] *,
     color: #f4f4f4 !important;
     font-size: 15.5px !important;
 }
-
-/* Circular elegant plus button anchor */
-div.stButton > button {
-    background-color: #262626 !important;
-    border: none !important;
-    border-radius: 50% !important;
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    padding: 0 !important;
-    color: #8b8b8b !important;
-    font-size: 1.25rem !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    transition: background-color 0.2s, color 0.2s !important;
-}
-div.stButton > button:hover {
-    background-color: #363636 !important;
-    color: #ffffff !important;
-}
-
-/* Floating custom file module drawer overlay */
-div[data-testid="stFileUploader"] {
-    background-color: #111111 !important;
-    border: 1px dashed #2c2c2c !important;
-    border-radius: 16px !important;
-    padding: 10px !important;
-    margin-bottom: 12px !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -162,54 +119,34 @@ api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error("Missing GROQ_API_KEY")
     st.stop()
-
 client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
-# ── Helper ────────────────────────────────────
-def image_to_base64(image: Image.Image) -> str:
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
-
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. I am fully restored. Send a text or use the plus icon to feed me image data arrays."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."}
     ]
-if "show_uploader" not in st.session_state:
-    st.session_state.show_uploader = False
-if "uploaded_image" not in st.session_state:
-    st.session_state.uploaded_image = None
 
-# ── Render Message Timeline using Native Safe Structures ──────────────────
+# ── Render Message Timeline ───────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
-            if isinstance(content, list):
-                for part in content:
-                    if part["type"] == "text":
-                        st.markdown(f'''
-                        <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
-                            <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                                {part["text"]}
-                            </div>
-                        </div>
-                        ''', unsafe_allow_html=True)
-            elif isinstance(content, str) and content:
+            # Show text
+            if isinstance(content, str) and content:
                 st.markdown(f'''
-                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
+                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
                     <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
                         {content}
                     </div>
                 </div>
                 ''', unsafe_allow_html=True)
-            
+            # Show images if present
             if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=280)
@@ -218,39 +155,64 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ── INTEGRATED LAYOUT DOCK PANEL ────
-if st.session_state.show_uploader:
-    uploaded_file = st.file_uploader("Select image payload data", type=["png", "jpg", "jpeg", "webp"], key="file_uploader", label_visibility="collapsed")
-    if uploaded_file is not None:
-        st.session_state.uploaded_image = uploaded_file
-        st.session_state.show_uploader = False
-        st.rerun()
+# ── CHAT INPUT WITH IMAGE UPLOAD (plus icon) ─────────────────────
+prompt = st.chat_input(
+    "Message AtlasTG...",
+    accept_file=True,                    # ← enables the + / attachment button
+    file_type=["jpg", "jpeg", "png", "webp"]
+)
 
-st.markdown('<div class="fixed-bottom-panel">', unsafe_allow_html=True)
-col_plus, col_input = st.columns([0.07, 0.93], gap="small")
-with col_plus:
-    if st.button("＋", key="plus_btn"):
-        st.session_state.show_uploader = not st.session_state.show_uploader
-        st.rerun()
-with col_input:
-    prompt = st.chat_input("Message AtlasTG...")
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ── PROCESS INPUT PARAMETERS ───────────────────────
+# ── PROCESS INPUT ──────────────────────
 if prompt:
-    uploaded_file = st.session_state.uploaded_image
-    has_images = uploaded_file is not None
+    user_text = prompt.text if prompt.text else ""
+    uploaded_files = prompt.files if prompt.files else []
 
-    if has_images:
-        image = Image.open(uploaded_file)
-        b64_image = image_to_base64(image)
-        user_content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
-        ]
-        st.session_state.messages.append({"role": "user", "content": user_content, "images": [uploaded_file]})
-        st.session_state.uploaded_image = None
-    else:
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    # Store message
+    message_data = {
+        "role": "user",
+        "content": user_text,
+        "images": uploaded_files
+    }
+    st.session_state.messages.append(message_data)
 
-    # OBLITERATED SPINNER BLOCK CONTAINER TO REMOVE INDENTATION CONFLICTS PERMANENTLY
+    with st.spinner(""):
+        try:
+            sys_content = (
+                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+                "CRITICAL TIMELINE AND IDENTITY LAWS: "
+                "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
+                "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
+                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
+                "FORMATTING LAWS: "
+                "- NEVER use Markdown or HTML tables under any circumstances. "
+                "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
+                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
+            )
+
+            # Build messages for the API (text-only routing framework)
+            api_messages = [{"role": "system", "content": sys_content}]
+            for m in st.session_state.messages:
+                if m["role"] == "user":
+                    content = m["content"] if m["content"] else "(User sent an image)"
+                    api_messages.append({"role": "user", "content": content})
+                else:
+                    api_messages.append({"role": "assistant", "content": m["content"]})
+
+            # FIXED ENGINE DISPATCH ROUTE
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-120b", 
+                messages=api_messages, 
+                temperature=0.2, 
+                max_tokens=1000
+            )
+            reply = completion.choices.message.content
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+            
+    st.rerun()
+
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
