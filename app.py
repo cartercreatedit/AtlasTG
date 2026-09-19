@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── PREMIUM CLEAN COMPONENT STYLING ─────────────────────────
+# ── ULTIMATE CHATGPT-STYLE VOICE-TEXT DOCK INTERFACE ──────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -20,7 +20,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 160px !important;
+    padding-bottom: 220px !important; /* Made clear structural room for the floating box */
     max-width: 760px;
     min-height: 100vh;
 }
@@ -41,31 +41,49 @@ div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
+    margin: 0px !important;
 }
 
-/* ── EXACT CHATGPT TEXT BOX MATCH WITH BRIGHT WHITE OUTLINE FOCUS ── */
-div[data-testid="stChatInput"] {
+/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
+div[data-testid="stChatMessage"] {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0px !important;
+}
+
+/* ── 🤖 CHATGPT DUAL VOX INPUT OVERLAY TERMINAL 🤖 ── */
+.fixed-bottom-panel {
     position: fixed !important;
     bottom: 32px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
-    z-index: 999 !important;
-}
-.stChatInput {
     background-color: #161616 !important;
     border: 1px solid #2c2c2c !important;
     border-radius: 32px !important;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 20px !important; 
-    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;
+    padding: 6px 64px 6px 20px !important; /* Makes explicit structural room for the mic button on the right */
+    z-index: 999 !important;
+    display: flex !important;
+    align-items: center !important;
+    transition: border-color 0.2s ease !important;
 }
-.stChatInput:focus-within {
+.fixed-bottom-panel:focus-within {
     border-color: #ffffff !important;
-    box-shadow: 0 0 0 1px #ffffff, 0 4px 30px rgba(255,255,255,0.05) !important;
 }
 
-/* Obliterate inner background border constraints */
+/* Strip text input borders to blend perfectly into our custom shell box */
+div[data-testid="stChatInput"] {
+    width: 100% !important;
+    margin: 0px !important;
+}
+.stChatInput {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0px !important;
+}
 div[data-testid="stChatInput"] *,
 .stChatInput div[data-baseweb="textarea"],
 .stChatInput div[data-baseweb="base-input"],
@@ -80,15 +98,15 @@ div[data-testid="stChatInput"] *,
     font-size: 15.5px !important;
 }
 
-/* 🎙️ FUTURISTIC VOICE ACTIVATION OVERLAY PANEL 🎙️ */
-.voice-panel-box {
-    background-color: #0d0d11 !important;
-    border: 1px solid #252530 !important;
-    border-radius: 20px !important;
-    padding: 20px !important;
-    margin-bottom: 24px !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.7) !important;
-    text-align: center;
+/* 🎙️ HIDDEN FLOATING MIC CONTAINER OVERLAY 🎙️ */
+.mic-overlay-container {
+    position: absolute !important;
+    right: 14px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 36px !important;
+    height: 36px !important;
+    z-index: 1001 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -108,128 +126,108 @@ st.caption("High-Speed Audio-Text Intelligence Engine · Coded by C. F. Robinson
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Text intelligence is active below, or check the box to initialize the intelligent auto-stopping voice matrix."}
+        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. I am fully responsive across text and audio pathways. Type below or use the microphone button."}
     ]
-if "audio_base64" not in st.session_state:
-    st.session_state.audio_base64 = None
+if "audio_capture_data" not in st.session_state:
+    st.session_state.audio_capture_data = None
 
-# ── Header Dynamic Tab Switcher ──────────────────
-voice_mode_active = st.checkbox("🎙️ Initialize Intelligent Auto-Stop Voice Core", value=False)
+# ── Render Message Timeline Safely (Banish Robot Logo) ──────────────────
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        col_spacer, col_bubble = st.columns([0.2, 0.8])
+        with col_bubble:
+            st.markdown(f'''
+            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 16px 0;">
+                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
+                    {msg["content"]}
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+    else:
+        # Clean, borderless raw text rows ensure no cartoon robot avatars can ever spawn
+        st.markdown(f'''
+        <div style="margin: 20px 0; clear: both; text-align: left; font-size: 15.5px; line-height: 1.6; color: #e3e3e3; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+            {msg["content"]}
+        </div>
+        ''', unsafe_allow_html=True)
 
-audio_prompt = None
+# ── CONSOLIDATED FIXED BASE DOCK PANEL ────────────────
+st.markdown('<div class="fixed-bottom-panel">', unsafe_allow_html=True)
+text_prompt = st.chat_input("Message AtlasTG...")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ── 🎙️ CUSTOM AUTO-STOPPING JAVASCRIPT MICROPHONE 🎙️ ──
-if voice_mode_active and not st.session_state.audio_base64:
-    st.markdown('<div class="voice-panel-box">', unsafe_allow_html=True)
-    st.markdown('<p style="color:#00f2fe; font-size:0.85rem; letter-spacing:1px; margin-bottom:8px; font-weight:bold;">// AUTO-SENSING AUDIO CORE ACTIVE</p>', unsafe_allow_html=True)
-    st.markdown('<p style="color:#8b8b8b; font-size:0.75rem;">Speak normally. The engine will auto-detect silence and close the transmission stream immediately.</p>', unsafe_allow_html=True)
-    
-    custom_mic_html = """
-    <div style="display: flex; justify-content: center; align-items: center; padding: 10px;">
-        <button id="micBtn" style="background-color: #ff416c; border: none; color: white; padding: 10px 24px; font-family: monospace; border-radius: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(255, 65, 108, 0.4);">🎤 RECORDING...</button>
-    </div>
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
-        let audioContext;
-        let analyser;
-        let streamFile;
-        let silenceTimeout;
+# ── FLOATING JAVASCRIPT MICROPHONE BUTTON OVERLAY (Bug 1 & 2 Fix) ──
+st.markdown('<div class="mic-overlay-container">', unsafe_allow_html=True)
+custom_mic_html = """
+<div style="display: flex; justify-content: center; align-items: center; width: 36px; height: 36px;">
+    <button id="vBtn" style="background-color: #262626; border: none; color: #8b8b8b; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;">🎙️</button>
+</div>
+<script>
+    const btn = document.getElementById('vBtn');
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
 
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            streamFile = stream;
+    btn.addEventListener('click', async () => {
+        if (!isRecording) {
+            audioChunks = [];
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            mediaRecorder.ondataavailable = e => audioChunks.push(event.data);
             
             mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                 const reader = new FileReader();
                 reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
-                    const base64data = reader.result.split(',');
-                    window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64data }, '*');
+                    const base64String = reader.result.split(',')[1];
+                    // Secure cross-window handshake dispatches raw text strings straight into the parent script
+                    window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                 };
+                stream.getTracks().forEach(track => track.stop());
             };
-
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioContext.createAnalyser();
-            const source = audioContext.createMediaStreamSource(stream);
-            source.connect(analyser);
-            analyser.fftSize = 256;
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-
+            
             mediaRecorder.start();
+            btn.style.backgroundColor = '#ff416c';
+            btn.style.color = '#ffffff';
+            isRecording = true;
+        } else {
+            mediaRecorder.stop();
+            btn.style.backgroundColor = '#262626';
+            btn.style.color = '#8b8b8b';
+            isRecording = false;
+        }
+    });
+</script>
+"""
+# Embed the custom data component right into the fixed layout boundaries
+mic_response = components.html(custom_mic_html, height=36, width=36)
+st.markdown('</div>', unsafe_allow_html=True)
 
-            function checkSilence() {
-                analyser.getByteFrequencyData(dataArray);
-                let sum = 0;
-                for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
-                let average = sum / bufferLength;
-
-                if (average < 8) { 
-                    if (!silenceTimeout) {
-                        silenceTimeout = setTimeout(() => {
-                            if (mediaRecorder.state === "recording") {
-                                mediaRecorder.stop();
-                                streamFile.getTracks().forEach(track => track.stop());
-                                audioContext.close();
-                            }
-                        }, 1500); 
-                    }
-                } else {
-                    clearTimeout(silenceTimeout);
-                    silenceTimeout = null;
-                }
-                if (mediaRecorder.state === "recording") {
-                    requestAnimationFrame(checkSilence);
-                }
-            }
-            requestAnimationFrame(checkSilence);
-        }).catch(err => {
-            console.error("Microphone Access Blocked: " + err);
-        });
-    </script>
-    """
-    mic_value = components.html(custom_mic_html, height=100)
-    
-    if mic_value:
-        st.session_state.audio_base64 = mic_value
-        st.rerun()
-        
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# ── TRANSCRIBE RECEIVED BASE64 CHUNKS IMMEDIATELY ───────
-if st.session_state.audio_base64:
+# ── TRANSCRIBE RECEIVED VOICE HANDSHAKES IMMEDIATELY ──
+audio_prompt = None
+if mic_response and mic_response != st.session_state.audio_capture_data:
+    st.session_state.audio_capture_data = mic_response
     with st.spinner("Processing speech frequencies..."):
         try:
-            raw_data = base64.b64decode(st.session_state.audio_base64)
-            with open("temp_voice_input.wav", "wb") as f:
-                f.write(raw_data)
+            # Safely parse the verified incoming base64 data string
+            audio_bytes = base64.b64decode(mic_response)
+            with open("temp_vox.wav", "wb") as f:
+                f.write(audio_bytes)
             
-            with open("temp_voice_input.wav", "rb") as audio_file:
+            with open("temp_vox.wav", "rb") as audio_file:
                 transcription = client.audio.transcriptions.create(
                     model="whisper-large-v3-turbo", 
                     file=audio_file,
                     response_format="text"
                 )
             audio_prompt = str(transcription).strip()
-            
-            if os.path.exists("temp_voice_input.wav"):
-                os.remove("temp_voice_input.wav")
+            if os.path.exists("temp_vox.wav"):
+                os.remove("temp_vox.wav")
         except Exception as e:
             st.error(f"Speech Matrix Exception: {e}")
-        finally:
-            st.session_state.audio_base64 = None
 
-# ── Render Message Timeline safely without raw string collisions ──
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# ── SINGLE TEXT INPUT CONSOLE DOCK ─────────────────────
-text_prompt = st.chat_input("Message AtlasTG...")
-
+# Reconcile final prompt path parameters
 final_prompt = audio_prompt if audio_prompt else text_prompt
 
 # ── PROCESS INJECTED PARAMETERS ──────────────────────
@@ -245,8 +243,3 @@ if final_prompt:
             reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-            
-    st.rerun()
-
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
