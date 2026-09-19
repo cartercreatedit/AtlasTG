@@ -22,7 +22,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 220px !important; /* Explicit vertical space for the custom bottom panel layout */
+    padding-bottom: 220px !important;
     max-width: 760px;
     min-height: 100vh;
 }
@@ -64,7 +64,7 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     border: 1px solid #2d2d2d !important;
     padding: 12px 18px !important;
     border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Pointed sharp tail top right secured back */
+    border-top-right-radius: 2px !important;
     max-width: 80% !important;
     display: inline-block !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
@@ -84,7 +84,7 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     max-width: 100% !important;
 }
 
-/* ── PREMIUM BORDERLESS FIXED DUAL PANEL (HIDES ACCIDENT OVERLAYS) ── */
+/* ── PREMIUM BORDERLESS FIXED DUAL PANEL ── */
 .fixed-bottom-panel {
     position: fixed !important;
     bottom: 32px !important;
@@ -167,7 +167,7 @@ client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
+st.caption("High-Speed Intelligence Engine · Powered by Groq")
 
 # ── Helper ────────────────────────────────────
 def image_to_base64(image: Image.Image) -> str:
@@ -192,7 +192,6 @@ for msg in st.session_state.messages:
         with col_bubble:
             content = msg["content"]
             if isinstance(content, list):
-                # Unpack compound multimodal user text elements safely
                 for part in content:
                     if part["type"] == "text":
                         st.markdown(f'''
@@ -214,13 +213,12 @@ for msg in st.session_state.messages:
             if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=280)
-    else:
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-        st.markdown(msg["content"])
-        st.markdown('</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
+    st.markdown(msg["content"])
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ── INTEGRATED CHATGPT INTEGRATED LAYOUT DOCK PANEL ────
-# Locks the file box directly on top of the text frame so it never messes up your alignment tracking
+# ── INTEGRATED LAYOUT DOCK PANEL ────
 if st.session_state.show_uploader:
     uploaded_file = st.file_uploader("Select image payload data", type=["png", "jpg", "jpeg", "webp"], key="file_uploader", label_visibility="collapsed")
     if uploaded_file is not None:
@@ -250,18 +248,10 @@ if prompt:
             {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64_image}"}}
         ]
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_content,
-            "images": [uploaded_file]
-        })
+        st.session_state.messages.append({"role": "user", "content": user_content, "images": [uploaded_file]})
         st.session_state.uploaded_image = None
     else:
         st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.spinner(""):
         try:
-            sys_content = (
-                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                "CRITICAL TIMELINE AND IDENTITY LAWS: "
