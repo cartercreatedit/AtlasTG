@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from groq import Groq
 import os
 import base64
@@ -62,7 +63,6 @@ div[data-testid="stTextArea"] {
 """, unsafe_allow_html=True)
 
 # ── BACK-END COUPLING PASS ───────────────────────────────────────────
-# Establishes a permanent background communication bridge straight into your browser's frame
 incoming_audio = st.text_area("audio_bridge_stream", key="audio_bridge_stream")
 
 # ── FRONT-END CHATGPT VOX INDICATOR ENGINE ───────────────────────────
@@ -136,18 +136,12 @@ jarvis_frontend_html = """
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
                         const base64String = reader.result.split(',')[1];
-                        
-                        // Locates and links the background data text area bridge
                         const parentDoc = window.parent.document;
                         const textTrays = parentDoc.querySelectorAll('textarea[data-testid="stTextAreaRootElement"]');
-                        
                         if (textTrays.length > 0) {
-                            const activeTray = textTrays[0];
-                            activeTray.value = base64String;
-                            
-                            // Dispatches a native browser value event to instantly force Python to wake up
+                            textTrays[0].value = base64String;
                             const stateEvent = new Event('input', { bubbles: true });
-                            activeTray.dispatchEvent(stateEvent);
+                            textTrays[0].dispatchEvent(stateEvent);
                         }
                     };
                     stream.getTracks().forEach(track => track.stop());
@@ -197,40 +191,41 @@ jarvis_frontend_html = """
         requestAnimationFrame(monitorAudioStreamLoop);
     }
 </script>
+</script>
 </body>
 </html>
 """
 
 components.html(jarvis_frontend_html, height=700, scrolling=False)
 
-# ── BACK-END SECURE SERVER EXECUTION TRACK ───────────────────────────
+# ── BACK-END PROCESSING CORE (OBLITERATED UNMATCHED NESTED TRY BLOCKS) ──
 if incoming_audio and incoming_audio.strip() != "":
-    try:
-        # Decode the raw audio string payload directly in system storage
-        audio_data = base64.b64decode(incoming_audio)
+    audio_data = base64.b64decode(incoming_audio)
+    with open("jarvis_temp.wav", "wb") as f:
+        f.write(audio_data)
         
-        with open("jarvis_temp.wav", "wb") as f:
-            f.write(audio_data)
-            
-        with open("jarvis_temp.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file, 
-                response_format="text"
-            )
-            
-        user_text = str(transcription).strip()
-        if os.path.exists("jarvis_temp.wav"):
-            os.remove("jarvis_temp.wav")
+    with open("jarvis_temp.wav", "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-large-v3-turbo", 
+            file=audio_file, 
+            response_format="text"
+        )
+        
+    user_text = str(transcription).strip()
+    if os.path.exists("jarvis_temp.wav"):
+        os.remove("jarvis_temp.wav")
 
-        if user_text:
-            st.session_state.vox_history.append({"role": "user", "content": user_text})
-            
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-specdec", 
-                messages=st.session_state.vox_history[-6:], 
-                temperature=0.3, 
-                max_tokens=200
-            )
-            reply = completion.choices.message.content
-            st.session_state.vox_history.append({"role": "assistant", "content": reply})
+    if user_text:
+        st.session_state.vox_history.append({"role": "user", "content": user_text})
+        
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-specdec", 
+            messages=st.session_state.vox_history[-6:], 
+            temperature=0.3, 
+            max_tokens=200
+        )
+        reply = completion.choices.message.content
+        st.session_state.vox_history.append({"role": "assistant", "content": reply})
+        
+        if eleven_key and voice_id:
+            escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
