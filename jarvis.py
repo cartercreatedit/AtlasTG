@@ -14,7 +14,6 @@ eleven_key = st.secrets.get("ELEVEN_API_KEY") or ""
 voice_id = st.secrets.get("ELEVEN_VOICE_ID") or "bfGb7JTLUnZebZRiFYyq"
 
 # ── AUTO-SILENCE DETECTION VOICE MAIN-FRAMEWORK ──────────────────
-# Regular string encapsulation removes all variable syntax bracket clashing completely
 jarvis_mainframe_html = """
 <!DOCTYPE html>
 <html>
@@ -239,7 +238,7 @@ jarvis_mainframe_html = """
             memoryHistory.push({ "role": "user", "content": userText });
             
             if (memoryHistory.length > 8) {
-                memoryHistory = [memoryHistory[0]].concat(memoryHistory.slice(-6));
+                memoryHistory = [memoryHistory].concat(memoryHistory.slice(-6));
             }
 
             const completionRes = await fetch('https://groq.com', {
@@ -272,8 +271,9 @@ jarvis_mainframe_html = """
                     text: replyText,
                     model_id: "eleven_monolingual_v1",
                     voice_settings: { stability: 0.75, similarity_boost: 0.85 }
-                })
+                }
             });
 
             if (ttsRes.status === 200) {
                 const audioBuffer = await ttsRes.arrayBuffer();
+                const audioBlob = new Blob([audioBuffer], { type: 'audio/mp3' });
