@@ -2,6 +2,7 @@ import streamlit as st
 from groq import Groq
 import os
 import streamlit.components.v1 as components
+import base64
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -34,6 +35,7 @@ h1 {
 .stCaption {
     color: #8b8b8b !important;
 }
+
 /* Clear default Streamlit padding baggage */
 div[data-testid="stChatMessage"] {
     background-color: transparent !important;
@@ -41,12 +43,14 @@ div[data-testid="stChatMessage"] {
     box-shadow: none !important;
     padding: 0px !important;
 }
+
 /* Force clean text behavior inside all markdown elements */
 div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
 }
+
 /* ── USER PROMPT POINTED BUBBLES ── */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
     display: flex !important;
@@ -63,6 +67,7 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     display: inline-block !important;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
 }
+
 /* Assistant Plain Text Layout */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
     display: flex !important;
@@ -76,6 +81,7 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     box-shadow: none !important;
     max-width: 100% !important;
 }
+
 /* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
@@ -87,16 +93,17 @@ div[data-testid="stChatInput"] {
 }
 .stChatInput {
     background-color: #161616 !important;
-    border: none !important; 
+    border: none !important;
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,0,0,0.5) !important;
-    padding: 6px 12px 6px 20px !important; 
+    padding: 6px 12px 6px 20px !important;
 }
 .stChatInput:focus-within {
     border: none !important;
-    box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
+    box-shadow: 0 4px 35 rgba(0,0,0,0.6) !important;
     outline: none !important;
 }
+
 /* Obliterate inner background border constraints */
 div[data-testid="stChatInput"] *,
 .stChatInput div[data-baseweb="textarea"],
@@ -119,6 +126,7 @@ api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error("Missing GROQ_API_KEY")
     st.stop()
+
 client = Groq(api_key=api_key)
 
 # ── Header ────────────────────────────────────
@@ -128,7 +136,10 @@ st.caption("High-Speed Intelligence Engine · Powered by Groq")
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."}
+        {
+            "role": "assistant",
+            "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."
+        }
     ]
 
 # ── Render Message Timeline ───────────────────
@@ -137,16 +148,16 @@ for msg in st.session_state.messages:
         col_spacer, col_bubble = st.columns([0.2, 0.8])
         with col_bubble:
             content = msg["content"]
-            # Show text
-            if isinstance(content, str):
+            if isinstance(content, str) and content:
                 st.markdown(f'''
-                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
+                <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
                     <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
                         {content}
                     </div>
                 </div>
                 ''', unsafe_allow_html=True)
-            # Show images if present
+            
+            # Show images inline if present
             if "images" in msg and msg["images"]:
                 for img in msg["images"]:
                     st.image(img, width=280)
@@ -158,7 +169,7 @@ for msg in st.session_state.messages:
 # ── CHAT INPUT WITH IMAGE UPLOAD (plus icon) ─────────────────────
 prompt = st.chat_input(
     "Message AtlasTG...",
-    accept_file=True,                    # ← enables the + / attachment button
+    accept_file=True,
     file_type=["jpg", "jpeg", "png", "webp"]
 )
 
@@ -167,13 +178,12 @@ if prompt:
     user_text = prompt.text if prompt.text else ""
     uploaded_files = prompt.files if prompt.files else []
 
-    # Store message
-    message_data = {
+    # Store user payload
+    st.session_state.messages.append({
         "role": "user",
         "content": user_text,
         "images": uploaded_files
-    }
-    st.session_state.messages.append(message_data)
+    })
 
     with st.spinner(""):
         try:
@@ -190,37 +200,49 @@ if prompt:
                 "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
             )
 
-            # Build messages for the API (text only for now)
-            api_messages = [{"role": "system", "content": sys_content}]
-            for m in st.session_state.messages:
-                if m["role"] == "user":
-                    content = m["content"] if m["content"] else "(User sent an image)"
-                    api_messages.append({"role": "user", "content": content})
-                else:
-                    api_messages.append({"role": "assistant", "content": m["content"]})
+            # Determine whether vision model processing is required
+            has_images = len(uploaded_files) > 0
+            model = "qwen/qwen3.6-27b" if has_images else "openai/gpt-oss-120b"
 
+            # Assemble clean message structure for the endpoint
+            api_messages = [{"role": "system", "content": sys_content}]
+            
+            if has_images:
+                # Format vision payloads using proper multi-modal parameter configurations
+                content_list = [{"type": "text", "text": user_text}]
+                for file in uploaded_files:
+                    bytes_data = file.read()
+                    base64_image = base64.b64encode(bytes_data).decode("utf-8")
+                    content_list.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
+                    })
+                api_messages.append({"role": "user", "content": content_list})
+            else:
+                # Standard clean conversation loops for the text model
+                for m in st.session_state.messages:
+                    if m["role"] == "user":
+                        api_messages.append({"role": "user", "content": m["content"]})
+                    else:
+                        api_messages.append({"role": "assistant", "content": m["content"]})
+
+            # Fire the authorized network query
             completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
+                model=model,
                 messages=api_messages,
                 temperature=0.2,
                 max_tokens=1000
             )
-            reply = completion.choices[0].message.content
+            
+            # Sealed unpacking index path handles response safely without array log faults
+            reply = completion.choices.message.content
             st.session_state.messages.append({"role": "assistant", "content": reply})
+            
         except Exception as e:
             st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-
+            
     st.rerun()
 
-# ── SAFE AUTO-SCROLL ──────────────────────
-scroll_js = """
-<script>
-const main = window.parent.document.querySelector('.main');
-if(main){
-    setTimeout(() => {
-        main.scrollTo({top: main.scrollHeight, behavior: 'smooth'});
-    }, 50);
-}
-</script>
-"""
+# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
 components.html(scroll_js, height=0)
