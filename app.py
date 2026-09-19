@@ -82,11 +82,9 @@ div.stButton > button {
 </style>
 
 <script>
-// Function to scroll the Streamlit container, not the window
 function scrollToBottom() {
     const container = document.querySelector('div[data-testid="stMainBlockContainer"]');
     if (container) {
-        // Check if user is near the bottom (within 100px)
         const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 100;
         if (isNearBottom) {
             container.scrollTop = container.scrollHeight;
@@ -94,7 +92,6 @@ function scrollToBottom() {
     }
 }
 
-// Observe changes to the DOM and scroll if content is added
 const observer = new MutationObserver(scrollToBottom);
 const targetNode = document.querySelector('div[data-testid="stMainBlockContainer"]');
 
@@ -102,7 +99,6 @@ if (targetNode) {
     observer.observe(targetNode, { childList: true, subtree: true });
 }
 
-// Initial scroll
 setTimeout(scrollToBottom, 100);
 </script>
 """, unsafe_allow_html=True)
@@ -204,8 +200,9 @@ if st.session_state.messages[-1]["role"] == "user":
         message_placeholder = st.empty()
         full_response = ""
         
+        # Uses Groq's active vision identifier endpoint 
         completion = client.chat.completions.create(
-            model="llama-3.2-11b-vision-instruct",
+            model="llama-3.2-11b-vision-preview",
             messages=api_messages,
             temperature=0.2,
             max_tokens=1024,
