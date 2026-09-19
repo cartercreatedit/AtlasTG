@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── INTEGRATED CHATGPT-STYLE INPUT STYLING ─────────────────────────
+# ── PREMIUM FLOATING DOCK STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -20,7 +20,7 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 220px !important;
+    padding-bottom: 240px !important; /* Made clear structural padding room for the stack */
     max-width: 760px;
     min-height: 100vh;
 }
@@ -51,80 +51,70 @@ div[data-testid="stMarkdownContainer"] p {
     line-height: 1.6 !important;
 }
 
-/* ── 🤖 INTEGRATED CHATGPT INPUT OVERLAY BOX 🤖 ── */
+/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
+    display: flex !important;
+    justify-content: flex-end !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
+    background-color: #1a1a1a !important;
+    border: 1px solid #2d2d2d !important;
+    padding: 12px 18px !important;
+    border-radius: 18px !important;
+    border-top-right-radius: 2px !important; /* Pointed sharp tail top right locked back */
+    max-width: 80% !important;
+    display: inline-block !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+}
+
+/* Assistant Plain Text Layout */
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
+    display: flex !important;
+    justify-content: flex-start !important;
+}
+div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 4px 0px !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+}
+
+/* ── FIXED CONTROLS BOTTOM BASE SYSTEM DOCK ── */
 .fixed-bottom-panel {
     position: fixed !important;
-    bottom: 32px !important;
+    bottom: 24px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
-    background-color: #161616 !important;
-    border: 1px solid #222222 !important;
-    border-radius: 32px !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;
-    padding: 6px 48px 6px 16px !important; /* Makes explicit room for microphone button on the right */
     z-index: 999 !important;
-    display: flex !important;
-    align-items: center !important;
-    transition: border-color 0.2s ease !important;
-}
-.fixed-bottom-panel:focus-within {
-    border-color: #ffffff !important;
+    background-color: #0a0a0a !important;
 }
 
-/* Make text input area completely transparent inside our parent box */
+/* Clean borderless input box formatting rules */
 div[data-testid="stChatInput"] {
     width: 100% !important;
+    margin-top: 10px !important;
 }
 .stChatInput {
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0px !important;
-}
-div[data-testid="stChatInput"] *,
-.stChatInput div[data-baseweb="textarea"],
-.stChatInput div[data-baseweb="base-input"],
-.stChatInput textarea {
-    border: none !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
+    background-color: #161616 !important;
+    border: 1px solid #222222 !important;
+    border-radius: 24px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
 }
 .stChatInput textarea {
     color: #f4f4f4 !important;
     font-size: 15.5px !important;
 }
 
-/* ── MICROPHONE OVERLAY INJECTION ── */
-/* Shrinks and positions Streamlit's hardware audio bar neatly inside the text box right border */
+/* Premium Rounded Audio Module Panel styling */
 div[data-testid="stAudioInput"] {
-    position: absolute !important;
-    right: 12px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    background-color: transparent !important;
-    border: none !important;
-    padding: 0px !important;
-    margin: 0px !important;
-    overflow: hidden !important;
-    z-index: 1001 !important;
-}
-
-/* Shrinks the internal native button icon to match ChatGPT styling */
-div[data-testid="stAudioInput"] button {
-    width: 36px !important;
-    height: 36px !important;
-    background-color: #262626 !important;
-    border: none !important;
-    border-radius: 50% !important;
-    color: #ffffff !important;
-}
-div[data-testid="stAudioInput"] div {
-    display: none !important; /* Hides default progress wave bars to save space */
+    background-color: #111111 !important;
+    border: 1px solid #252525 !important;
+    border-radius: 24px !important;
+    padding: 6px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+    width: 100% !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -158,20 +148,8 @@ if st.session_state.play_audio:
 
 # ── Render Message Timeline using Native Safe Structures ──────────────────
 for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        col_spacer, col_bubble = st.columns([0.2, 0.8])
-        with col_bubble:
-            st.markdown(f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both; margin: 12px 0;">
-                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                    {msg["content"]}
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
+    with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        st.markdown('</div>', unsafe_allow_html=True)
 
 # ── CONSOLIDATED FIXED BASE USER CAPTURE PANEL ────────
 st.markdown('<div class="fixed-bottom-panel">', unsafe_allow_html=True)
