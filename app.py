@@ -139,7 +139,6 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
-            # IDENTITY MATRIX: Formatting rules cleanly applied to system parameters
             system_instruction = {
                 "role": "system", 
                 "content": (
@@ -160,14 +159,14 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
                 for m in st.session_state.messages
             ]
             
-            # SWAPPED: Connected to active high-capacity production text node
+            # UPDATED TARGET MODEL ID TO REFLECT ACTIVE SYSTEM MATRIX SPECIFICATIONS
             completion = client.chat.completions.create(
-                model="llama-3.1-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=api_messages,
                 temperature=0.7,
                 max_tokens=1000,
             )
-            reply = completion.choices.message.content
+            reply = completion.choices[0].message.content
         except Exception as e:
             reply = f"Error: {e}"
 
