@@ -28,7 +28,7 @@ client = Groq(api_key=groq_key)
 # ── Session State Registers ──────────────────────────────────────────
 if "vox_history" not in st.session_state:
     st.session_state.vox_history = [
-        {"role": "assistant", "content": "Mainframe channels active, sir. Standing by for command directive parameters."}
+        {"role": "assistant", "content": "Mainframe channels active, sir. Standing by for voice recording parameters."}
     ]
 if "audio_out" not in st.session_state:
     st.session_state.audio_out = None
@@ -38,7 +38,7 @@ if st.session_state.audio_out:
     st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
     st.session_state.audio_out = None
 
-# ── ORIGINAL STYLING CONFIGURATIONS (ZERO TEXT-CLUTTER BAGGAGE) ──────
+# ── STEALTH MIDNIGHT INTERFACE CONFIGURATIONS ───────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -47,12 +47,12 @@ st.markdown("""
 }
 .main .block-container {
     padding-top: 2rem;
-    padding-bottom: 160px !important;
+    padding-bottom: 220px !important;
     max-width: 760px;
     min-height: 100vh;
 }
 #MainMenu, footer, header, .stDeployButton {
-    visibility: hidden;
+    visibility: hidden !important;
 }
 h1 {
     color: #ffffff !important;
@@ -107,55 +107,58 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     max-width: 100% !important;
 }
 
-/* Premium borderless input tray console dock */
-div[data-testid="stChatInput"] {
+/* Fixed Bottom Voice Console Container */
+div[data-testid="stAudioInput"] {
     position: fixed !important;
     bottom: 32px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     width: min(760px, 92vw) !important;
     z-index: 999 !important;
-}
-.stChatInput {
     background-color: #09090d !important;
-    border: 1px solid #14141f !important; 
+    border: 1px solid #14141f !important;
     border-radius: 32px !important;
     box-shadow: 0 4px 30px rgba(0,242,254,0.15) !important;
-    padding: 6px 12px 6px 20px !important; 
-}
-div[data-testid="stChatInput"] *,
-.stChatInput div[data-baseweb="textarea"],
-.stChatInput div[data-baseweb="base-input"],
-.stChatInput textarea {
-    border: none !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-.stChatInput textarea {
-    color: #ffffff !important;
-    font-size: 15.5px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Mainframe Header ─────────────────────────────────────────────────
 st.markdown("<h1 style='font-family:monospace; font-weight:normal;'>✦ J.A.R.V.I.S. Core</h1>", unsafe_allow_html=True)
-st.markdown("<p style='color:#8b8b8b; font-size:0.8rem; letter-spacing:1px; font-family:monospace;'>SYSTEM BLUEPRINTS LIVE · ARCHITECT: CARTER FORESTER ROBINSON</p>", unsafe_allow_html=True)
+st.markdown("<p style='color:#8b8b8b; font-size:0.8rem; letter-spacing:1px; font-family:monospace;'>SPEECH-TO-TEXT ROUTING · ARCHITECT: CARTER FORESTER ROBINSON</p>", unsafe_allow_html=True)
 st.markdown("<hr style='border-color: #14141f; margin-bottom: 2rem;'>", unsafe_allow_html=True)
 
-# ── Render Message Timeline ──────────────────────────────────────────
+# ── Render Conversation Timeline ─────────────────────────────────────
 for msg in st.session_state.vox_history:
     with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "👤"):
         st.markdown(msg["content"])
 
-# ── SINGLE INPUT CONSOLE COMMAND TRAYS ───────────────────────────────
-user_command = st.chat_input("Input mainframe command directive, sir...")
+# ── NATIVE MICROPHONE INPUT BRIDGE (CORS-IMMUNE PROTOCOL) ───────────
+audio_recording = st.audio_input("Record voice command directive, sir...", label_visibility="collapsed")
 
-if user_command:
-    st.session_state.vox_history.append({"role": "user", "content": user_command})
+if audio_recording:
+    # Read the audio recording data payload cleanly on the secure server backend
+    audio_bytes = audio_recording.read()
     
-    with st.spinner(""):
+    with open("jarvis_backend_temp.wav", "wb") as f:
+        f.write(audio_bytes)
+        
+    # ── Step 1: Secure Speech-to-Text Transcription via Groq Whisper ──
+    with open("jarvis_backend_temp.wav", "rb") as audio_file:
+        transcription = client.audio.transcriptions.create(
+            model="whisper-large-v3-turbo", 
+            file=audio_file, 
+            response_format="text"
+        )
+        
+    user_text = str(transcription).strip()
+    if os.path.exists("jarvis_backend_temp.wav"):
+        os.remove("jarvis_backend_temp.wav")
+
+    if user_text:
+        st.session_state.vox_history.append({"role": "user", "content": user_text})
+        
+        # ── Step 2: Compute Logical Text Response via Llama ──
         sys_content = (
             "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. "
             "You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. "
@@ -165,7 +168,6 @@ if user_command:
         )
         api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.vox_history[-6:]]
         
-        # Fire text directly to Groq's secure server backend nodes safely
         completion = client.chat.completions.create(
             model="llama-3.3-70b-specdec", 
             messages=api_messages, 
@@ -175,31 +177,34 @@ if user_command:
         reply = completion.choices.message.content
         st.session_state.vox_history.append({"role": "assistant", "content": reply})
         
-        # Execute direct server-side endpoint pass to ElevenLabs (CORS blocks are impossible)
-        try:
-            tts_url = f"https://elevenlabs.io{voice_id}"
-            headers = {
-                "xi-api-key": eleven_key,
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "text": reply,
-                "model_id": "eleven_monolingual_v1",
-                "voice_settings": {
-                    "stability": 0.75,
-                    "similarity_boost": 0.85
+        # ── Step 3: Secure Text-to-Speech Conversion via ElevenLabs ──
+        if eleven_key and voice_id:
+            try:
+                escaped_reply = reply.replace("'", "\\'").replace('"', '\\"').replace("\n", " ")
+                
+                tts_url = f"https://elevenlabs.io{voice_id}"
+                headers = {
+                    "xi-api-key": eleven_key,
+                    "Content-Type": "application/json"
                 }
-            }
-            response = requests.post(tts_url, json=payload, headers=headers)
-            
-            if response.status_code == 200:
-                b64_audio = base64.b64encode(response.content).decode("utf-8")
-                st.session_state.audio_out = f"""
-                <audio autoplay style="display:none;">
-                    <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
-                </audio>
-                """
-        except Exception:
-            pass
-            
+                payload = {
+                    "text": reply,
+                    "model_id": "eleven_monolingual_v1",
+                    "voice_settings": {
+                        "stability": 0.75,
+                        "similarity_boost": 0.85
+                    }
+                }
+                response = requests.post(tts_url, json=payload, headers=headers)
+                
+                if response.status_code == 200:
+                    b64_audio = base64.b64encode(response.content).decode("utf-8")
+                    st.session_state.audio_out = f"""
+                    <audio autoplay style="display:none;">
+                        <source src="data:audio/mp3;base64,{b64_audio}" type="audio/mp3">
+                    </audio>
+                    """
+            except Exception:
+                pass
+                
     st.rerun()
