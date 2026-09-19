@@ -238,7 +238,7 @@ jarvis_mainframe_html = """
             memoryHistory.push({ "role": "user", "content": userText });
             
             if (memoryHistory.length > 8) {
-                memoryHistory = [memoryHistory[0]].concat(memoryHistory.slice(-6));
+                memoryHistory = [memoryHistory].concat(memoryHistory.slice(-6));
             }
 
             const completionRes = await fetch('https://groq.com', {
@@ -256,7 +256,7 @@ jarvis_mainframe_html = """
             });
             
             const completionJson = await completionRes.json();
-            const replyText = completionJson.choices[0].message.content;
+            const replyText = completionJson.choices.message.content;
             console.log("Response text: " + replyText);
             memoryHistory.push({ "role": "assistant", "content": replyText });
 
