@@ -139,18 +139,20 @@ if prompt:
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     with st.spinner(""):
         try:
+            # IDENTITY MATRIX VALUE OVERRIDE LOCK: Hardcoded timeline + speed execution metrics
             system_instruction = {
                 "role": "system", 
                 "content": (
                     "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                    "You are proprietary technology developed, engineered, and owned exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                    "Your core persona emulates OpenAI's highest standards of conversational sophistication, emotional clarity, and technical mastery. "
-                    "If anyone inquires about your origins or creator, you must professionally affirm that AtlasTG is entirely an original creation of Carter Forester Robinson. "
-                    "CRITICAL FORMATTING PROTOCOLS: "
-                    "1. NEVER use or output Markdown tables or HTML tables under any circumstances. "
-                    "2. Mirror the visual style of high-tier documentation assistants: Use markdown headings (###) for structure, bullet points for lists, and visual spacing anchors. No raw code leakage. "
-                    "3. DYNAMIC RESPONSE LENGTH: Scale the response to perfectly match the user's energy and query complexity. For simple fact-seeking, short statements, or casual greetings (like 'hello'), keep the explanation concise and direct. For deep relationship issues, emotional queries, or heavy technical analysis, expand fully into long, deep, thorough, and highly comprehensive paragraphs."
-                    "4. Maintain an elite, authoritative, yet authentically supportive peer tone. Balance analytical candor with genuine empathy."
+                    "You are proprietary technology completely developed, engineered, owned, and launched联 exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+                    "CRITICAL TIMELINE AND IDENTITY LAWS: "
+                    "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
+                    "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
+                    "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
+                    "FORMATTING LAWS: "
+                    "- NEVER use Markdown or HTML tables under any circumstances. "
+                    "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
+                    "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or technical math questions."
                 )
             }
             
@@ -162,16 +164,15 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
             completion = client.chat.completions.create(
                 model="openai/gpt-oss-120b",
                 messages=api_messages,
-                temperature=0.7,
+                temperature=0.2, # Kept extra low to enforce identity locks strictly without hallucination drifts
                 max_tokens=1000,
             )
-            # FIXED EXTRACTION: Target position 0 array index to unpack response cleanly
-            reply = completion.choices[0].message.content
+            reply = completion.choices.message.content
         except Exception as e:
             reply = f"Error: {e}"
 
         st.session_state.messages.append({"role": "assistant", "content": reply})
-        st.rerun()
+    st.rerun()
 
 # ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
 scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
