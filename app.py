@@ -235,6 +235,5 @@ if prompt:
             else:
                 api_messages.append({"role": "assistant", "content": m["content"]})
 
-    try:
-        completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
-        # STABLE UNPACKING MATRIX WRAPPER
+    # OBLITERATED EMPTY TRY NEST TO BANISH UNMATCHED EXCEPT ROADBLOCKS PERMANENTLY
+    completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
