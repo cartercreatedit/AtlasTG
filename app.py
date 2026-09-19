@@ -5,6 +5,7 @@ import base64
 from PIL import Image
 import io
 import streamlit.components.v1 as components
+import requests
 
 st.set_page_config(
     page_title="AtlasTG",
@@ -117,21 +118,27 @@ div[data-testid="stChatInput"] *,
 </style>
 """, unsafe_allow_html=True)
 
-# ── API Key Configuration ─────────────────────
-api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
-if not api_key:
-    st.error("Missing GROQ_API_KEY")
+# ── Multi-Vendor API Configurations ─────────────────────
+groq_api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+openai_api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+
+if not groq_api_key:
+    st.error("Missing GROQ_API_KEY inside workspace registers.")
     st.stop()
-client = Groq(api_key=api_key)
+if not openai_api_key:
+    st.error("Missing OPENAI_API_KEY inside workspace registers.")
+    st.stop()
+
+groq_client = Groq(api_key=groq_api_key)
 
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Powered by Groq")
+st.caption("High-Speed Intelligence Engine · Powered by Groq & OpenAI")
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images using the plus icon."}
+        {"role": "assistant", "content": "Hey. Ask me any text prompt or logic question and I will solve it instantly. You can also attach images."}
     ]
 
 # ── Render Message Timeline ───────────────────
@@ -196,44 +203,30 @@ if prompt:
 
     sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. CRITICAL TIMELINE AND IDENTITY LAWS: 1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. 2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. 3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. FORMATTING LAWS: - NEVER use Markdown or HTML tables under any circumstances. - Structure information visually using Markdown headers (###), bold tags, and bullet points. - Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
     
-    # ── Model selection ───────────────────────────
-    TEXT_MODEL = "openai/gpt-oss-120b"
-    VISION_MODELS = [
-        "qwen/qwen3.8-27b",
-        "qwen/qwen3.6-27b",
-        "meta-llama/llama-4-scout-17b-16e-instruct",
-        "meta-llama/llama-4-maverick-17b-128e-instruct",
-    ]
+    with st.spinner(""):
+        try:
+            if has_images:
+                model = "llama-3.2-11b-vision-preview"
+                api_messages = [{"role": "system", "content": sys_content}]
+                content_list = [{"type": "text", "text": user_text}]
+                for file in uploaded_files:
+                    bytes_data = file.read()
+                    base64_image = base64.b64encode(bytes_data).decode("utf-8")
+                    content_list.append({
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
+                    })
+                api_messages.append({"role": "user", "content": content_list})
 
-    if has_images:
-        model = None
-        for candidate in VISION_MODELS:
-            model = candidate
-            break
-        if model is None:
-            model = TEXT_MODEL
-    else:
-        model = TEXT_MODEL
-
-    api_messages = [{"role": "system", "content": sys_content}]
-    
-    if has_images:
-        content_list = [{"type": "text", "text": user_text}]
-        for file in uploaded_files:
-            bytes_data = file.read()
-            base64_image = base64.b64encode(bytes_data).decode("utf-8")
-            content_list.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{file.type};base64,{base64_image}"}
-            })
-        api_messages.append({"role": "user", "content": content_list})
-    else:
-        for m in st.session_state.messages:
-            if m["role"] == "user":
-                content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
-                api_messages.append({"role": "user", "content": content_data})
+                completion = groq_client.chat.completions.create(
+                    model=model, 
+                    messages=api_messages, 
+                    temperature=0.2, 
+                    max_tokens=1000
+                )
+                reply = completion.choices[0].message.content
             else:
-                api_messages.append({"role": "assistant", "content": m["content"]})
-
-    # OBLITERATED EMPTY TRY NEST TO BANISH UNMATCHED EXCEPT ROADBLOCKS PERMANENTLY
-    completion = client.chat.completions.create(model=model, messages=api_messages, temperature=0.2, max_tokens=1000)
+                api_messages = [{"role": "system", "content": sys_content}]
+                for m in st.session_state.messages:
+                    if m["role"] == "user":
+                        content_data = m["content"]["text"] if isinstance(m["content"], list) else m["content"]
