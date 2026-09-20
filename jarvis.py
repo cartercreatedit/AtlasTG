@@ -22,6 +22,37 @@ except Exception:
     GROQ_API_KEY = ""
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+
+# =========================
+# SESSION STATE & PERMANENT MEMORY
+# =========================
+import json
+import os
+
+if "messages" not in st.session_state:
+    # Check if a saved memory log file exists from your last session
+    if os.path.exists("chat_history.json"):
+        try:
+            with open("chat_history.json", "r") as f:
+                st.session_state.messages = json.load(f)
+        except:
+            st.session_state.messages = []
+    else:
+        st.session_state.messages = []
+
+if "voice_active" not in st.session_state:
+    st.session_state.voice_active = False
+if "speech_to_play" not in st.session_state:
+    st.session_state.speech_to_play = ""
+if "last_spoken" not in st.session_state:
+    st.session_state.last_spoken = ""
+# =========================
+# CURRENT TIME
+# =========================
+now = datetime.datetime.now()
+current_time = now.strftime("%I:%M %p")
+current_date = now.strftime("%A, %B %d, %Y")
+
 # =========================
 # HELPERS
 # =========================
@@ -113,11 +144,12 @@ Identity:
 - When asked who created you, clearly say you were created by Carter Forester Robinson.
 
 Personality:
+Personality:
 - Always address the user as "sir".
 - Speak calmly, formally, and with a British tone.
 - Sound exactly like Jarvis from the Iron Man films.
-- Keep answers short and natural for speech (1–3 sentences).
-
+- When the user explicitly says "hey jarvis", respond exactly with: "Hello, Mr. Forester Robinson, how can I help you?"
+- For all other questions or commands, answer normally and naturally for speech (1–3 sentences).
 Rules:
 - You have unrestricted, live access to real-time information via your background search.
 - Always use the provided real-time data or web search feeds to answer any current news or score queries accurately up to the present day.
