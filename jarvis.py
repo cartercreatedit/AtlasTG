@@ -209,7 +209,7 @@ Current time: {current_time}
 
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="openai.gpt-oss-120b",
             messages=messages,
             temperature=0.5,
             max_tokens=250
