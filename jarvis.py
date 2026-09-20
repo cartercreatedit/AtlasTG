@@ -478,12 +478,31 @@ component_data = {
 # =========================
 # J.A.R.V.I.S. AUTOMATED VISION FEED
 # =========================
-# J.A.R.V.I.S. AUTOMATED VISION FEED
+# J.A.R.V.I.S. OPTICAL LENS
 # =========================
-# This line completely hides the camera container box from your sight
-st.markdown("<style>div[data-testid='stCameraInput'] { display: none !important; }</style>", unsafe_allow_html=True)
+# Shrinks the camera box into a tiny, high-tech glowing circle
+st.markdown("""
+<style>
+    div[data-testid="stCameraInput"] {
+        width: 120px !important;
+        height: 120px !important;
+        border-radius: 50% !important;
+        overflow: hidden !important;
+        border: 2px solid #00d2ff !important;
+        box-shadow: 0 0 10px #00d2ff !important;
+        margin: 10px auto !important;
+    }
+    div[data-testid="stCameraInput"] video {
+        object-fit: cover !important;
+        width: 120px !important;
+        height: 120px !important;
+    }
+    /* Hides the text and clutter buttons */
+    div[data-testid="stCameraInput"] button { display: none !important; }
+</style>
+""", unsafe_allow_html=True)
 
-picture = st.camera_input("Optical Feed Active", label_visibility="collapsed")
+picture = st.camera_input("Lens", label_visibility="collapsed")
 
 if picture:
     st.session_state.visual_frame = base64.b64encode(picture.getvalue()).decode("utf-8")
