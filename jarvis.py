@@ -49,11 +49,11 @@ if "last_spoken" not in st.session_state:
 # =========================
 # CURRENT TIME
 # =========================
-now =
 import time
 now = datetime.datetime.utcfromtimestamp(time.time() + (8 * 3600))
 current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
+
 # =========================
 # J.A.R.V.I.S. AUTOMATED BRIEFING
 # =========================
