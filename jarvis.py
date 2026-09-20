@@ -105,9 +105,10 @@ def ask_jarvis(user_text: str) -> str:
         return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
 
     if "lock down the system" in user_text.lower() or "clean slate" in user_text.lower():
+          if "lock down the system" in user_text.lower() or "clean slate" in user_text.lower():
         st.session_state.system_unlocked = False
+        st.session_state.messages = [] # This completely clears his history memory
         return "Understood, sir. Engaging maximum security protocols. Perimeter locked down."
-
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
 
