@@ -170,7 +170,7 @@ Current time: {current_time}
             temperature=0.5,
             max_tokens=250
         )
-        answer = response.choices.message.content.strip()
+        answer = response.choices[0].message.content.strip()
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
