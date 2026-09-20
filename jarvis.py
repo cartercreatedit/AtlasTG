@@ -473,7 +473,10 @@ component_data = {
     "active": st.session_state.voice_active,
     "speak": st.session_state.speech_to_play
 }
-
+st.subheader("✦ J.A.R.V.I.S. Optical Stream")
+picture = st.camera_input("Hold an item to the scanner, sir", label_visibility="collapsed")
+if picture:
+    st.session_state.visual_frame = base64.b64encode(picture.getvalue()).decode("utf-8")
 result = voice_component(
     key="jarvis_comp",
     data=component_data,
