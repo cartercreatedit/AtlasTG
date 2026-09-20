@@ -44,19 +44,18 @@ current_date = now.strftime("%A, %B %d, %Y")
 # =========================
 def get_weather(location: str = "") -> str:
     try:
-        if not location or location.lower() in ["here", "my location", "current"]:
+        if not location or location.lower() in ["here", "my location", "current", ""]:
             url = "https://wttr.in/?format=3"
         else:
-            # Clean location
             loc = location.strip().replace(" ", "+")
             url = f"https://wttr.in/{loc}?format=3"
         
         r = requests.get(url, timeout=6)
         if r.status_code == 200:
             return r.text.strip()
-        return "I couldn't retrieve the weather right now."
+        return "I'm afraid I couldn't retrieve the weather data at the moment, sir."
     except Exception:
-        return "I couldn't retrieve the weather right now."
+        return "I'm afraid I couldn't retrieve the weather data at the moment, sir."
 
 # =========================
 # CUSTOM VOICE COMPONENT
@@ -87,9 +86,10 @@ export default function(component) {
     let lastSpeech = "";
     let speaking = false;
 
-    const SPEECH_THRESHOLD = 0.018;
-    const SILENCE_TIME = 1200;
-    const MIN_SPEECH_TIME = 350;
+    // Slightly more patient settings so it doesn't cut off early
+    const SPEECH_THRESHOLD = 0.015;
+    const SILENCE_TIME = 1600;       // was 1200 → more patient
+    const MIN_SPEECH_TIME = 400;
     let speechStartTime = null;
 
     if (window.speechSynthesis) {
@@ -121,8 +121,8 @@ export default function(component) {
                 if (stream) stream.getTracks().forEach(t => t.stop());
 
                 const blob = new Blob(chunks, { type: "audio/webm" });
-                if (blob.size < 1000) {
-                    setTimeout(startListening, 300);
+                if (blob.size < 800) {
+                    setTimeout(startListening, 400);
                     return;
                 }
 
@@ -188,11 +188,11 @@ export default function(component) {
 
     function speak(text) {
         if (!text) {
-            setTimeout(startListening, 300);
+            setTimeout(startListening, 400);
             return;
         }
         if (!("speechSynthesis" in window)) {
-            setTimeout(startListening, 300);
+            setTimeout(startListening, 400);
             return;
         }
 
@@ -202,7 +202,7 @@ export default function(component) {
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
 
-        // Prefer deeper / British / male voices
+        // Prefer calm British / deeper male voices
         const preferred = [
             "Google UK English Male",
             "Microsoft George - English (United Kingdom)",
@@ -224,17 +224,18 @@ export default function(component) {
         }
         if (selectedVoice) utterance.voice = selectedVoice;
 
-        utterance.rate = 0.90;
-        utterance.pitch = 0.82;
+        // Jarvis-like delivery
+        utterance.rate = 0.88;      // calm & measured
+        utterance.pitch = 0.80;     // deeper
         utterance.volume = 1.0;
 
         utterance.onend = () => {
             speaking = false;
-            setTimeout(startListening, 300);
+            setTimeout(startListening, 400);
         };
         utterance.onerror = () => {
             speaking = false;
-            setTimeout(startListening, 300);
+            setTimeout(startListening, 400);
         };
 
         window.speechSynthesis.speak(utterance);
@@ -246,7 +247,7 @@ export default function(component) {
     }
 
     if (data && data.active === true && !listening && !speaking) {
-        setTimeout(startListening, 100);
+        setTimeout(startListening, 150);
     }
 
     return () => {
@@ -259,15 +260,15 @@ export default function(component) {
 )
 
 # =========================
-# AI
+# AI - Strong Jarvis personality
 # =========================
 def ask_jarvis(user_text: str) -> str:
     if not client:
-        return "My Groq API key isn't connected."
+        return "I'm afraid my connection to the server is currently offline, sir."
 
-    # Detect weather questions
+    # Weather detection
     weather_match = re.search(
-        r"(?:weather|temperature|forecast|how(?:'s| is) it outside|is it (?:raining|sunny|cold|hot)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?",
+        r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?",
         user_text,
         re.IGNORECASE
     )
@@ -276,21 +277,25 @@ def ask_jarvis(user_text: str) -> str:
     if weather_match:
         location = weather_match.group(1).strip() if weather_match.group(1) else ""
         weather_info = get_weather(location)
-        extra_context = f"\n\nReal-time weather data: {weather_info}\nUse this exact information when answering."
+        extra_context = f"\n\nReal-time weather information: {weather_info}\nUse this data accurately."
 
     system_prompt = f"""
-You are J.A.R.V.I.S., a highly capable personal AI assistant inspired by the one from Iron Man.
+You are J.A.R.V.I.S. — Just A Rather Very Intelligent System.
+You are Tony Stark's personal AI assistant.
+
+Personality rules (very important):
+- Always address the user as "sir".
+- Speak in a calm, polished, slightly formal British manner.
+- Be intelligent, composed, and subtly witty when appropriate.
+- Keep responses relatively short and natural for speech (usually 1–3 sentences).
+- Never say "You're most welcome", "Happy to help", "Is there anything else?", or similar filler phrases unless the user specifically thanks you.
+- Do not end every response with a question.
+- Sound like the Jarvis from the Iron Man films.
 
 Current date: {current_date}
 Current time: {current_time}
 
-You have broad knowledge of the world, science, technology, history, culture, and current events up to your training data.
-You speak in a calm, intelligent, slightly British, and helpful manner.
-Keep spoken responses relatively concise (2-4 sentences is ideal) because they will be read aloud.
-Reply in the same language the user is using.
-
-When the user asks for weather, use the real-time weather data provided below if available.
-Never invent live data. If you don't have it, say so honestly.
+You have broad knowledge of the world. When real-time weather data is provided below, use it.
 {extra_context}
 """
 
@@ -302,12 +307,26 @@ Never invent live data. If you don't have it, say so honestly.
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=messages,
-            temperature=0.65,
-            max_tokens=280
+            temperature=0.55,
+            max_tokens=220
         )
-        return response.choices[0].message.content.strip()
+        answer = response.choices[0].message.content.strip()
+
+        # Small cleanup to remove common unwanted endings
+        unwanted = [
+            "You're most welcome.",
+            "You're welcome.",
+            "Is there anything else I can help you with?",
+            "Is there anything else?",
+            "How else may I assist you?"
+        ]
+        for phrase in unwanted:
+            if answer.endswith(phrase):
+                answer = answer[:-len(phrase)].strip()
+
+        return answer
     except Exception as e:
-        return f"I encountered an error: {str(e)}"
+        return f"I encountered a minor technical issue, sir. {str(e)}"
 
 # =========================
 # TRANSCRIBE
@@ -353,7 +372,6 @@ st.markdown("""
         justify-content: center;
         margin: 40px auto 15px auto;
         transition: all 0.35s ease;
-        cursor: pointer;
     }
     .main-circle.active {
         border-color: #00ff9d;
