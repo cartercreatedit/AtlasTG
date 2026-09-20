@@ -478,9 +478,11 @@ component_data = {
 # =========================
 # J.A.R.V.I.S. AUTOMATED VISION FEED
 # =========================
-# =========================
 # J.A.R.V.I.S. AUTOMATED VISION FEED
 # =========================
+# This line completely hides the camera container box from your sight
+st.markdown("<style>div[data-testid='stCameraInput'] { display: none !important; }</style>", unsafe_allow_html=True)
+
 picture = st.camera_input("Optical Feed Active", label_visibility="collapsed")
 
 if picture:
