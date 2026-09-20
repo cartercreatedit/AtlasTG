@@ -30,8 +30,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "voice_active" not in st.session_state:
     st.session_state.voice_active = False
-if "audio_b64_to_play" not in st.session_state:
-    st.session_state.audio_b64_to_play = ""
+if "speech_to_play" not in st.session_state:
+    st.session_state.speech_to_play = ""
 if "last_spoken" not in st.session_state:
     st.session_state.last_spoken = ""
 
@@ -78,23 +78,6 @@ def web_search(query: str, max_results: int = 4) -> str:
         return "\n".join(results) if results else "No relevant results found."
     except Exception as e:
         return f"Search failed: {str(e)}"
-
-def generate_jarvis_speech(text: str) -> str | None:
-    """Generate speech using Groq Orpheus TTS"""
-    if not client:
-        return None
-    try:
-        response = client.audio.speech.create(
-            model="canopylabs/orpheus-v1-english",
-            voice="troy",          # calm male voice – you can change this
-            input=text,
-            response_format="mp3"
-        )
-        audio_bytes = response.read()
-        return base64.b64encode(audio_bytes).decode("utf-8")
-    except Exception as e:
-        st.error(f"Groq TTS error: {e}")
-        return None
 
 def ask_jarvis(user_text: str) -> str:
     if not client:
@@ -181,10 +164,10 @@ def transcribe_audio(base64_audio: str) -> str | None:
             return None
 
 # =========================
-# VOICE COMPONENT
+# VOICE COMPONENT (Original style)
 # =========================
 voice_component = st.components.v2.component(
-    name="jarvis_continuous_v3",
+    name="jarvis_original",
     html="",
     css="#voice-ui { width: 100%; height: 1px; overflow: hidden; }",
     js="""
@@ -199,13 +182,17 @@ export default function(component) {
     let listening = false;
     let speechStarted = false;
     let silenceStart = null;
-    let lastAudio = "";
+    let lastSpeech = "";
     let speaking = false;
     let speechStartTime = null;
 
-    const SPEECH_THRESHOLD = 0.012;
-    const SILENCE_TIME = 1500;
-    const MIN_SPEECH_TIME = 350;
+    const SPEECH_THRESHOLD = 0.013;
+    const SILENCE_TIME = 1600;
+    const MIN_SPEECH_TIME = 400;
+
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+    }
 
     function getSupportedMimeType() {
         const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
@@ -237,13 +224,13 @@ export default function(component) {
                 if (stream) stream.getTracks().forEach(t => t.stop());
 
                 if (chunks.length === 0) {
-                    setTimeout(startListening, 400);
+                    setTimeout(startListening, 500);
                     return;
                 }
 
                 const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-                if (blob.size < 600) {
-                    setTimeout(startListening, 400);
+                if (blob.size < 700) {
+                    setTimeout(startListening, 500);
                     return;
                 }
 
@@ -256,7 +243,7 @@ export default function(component) {
                 setTriggerValue("audio", btoa(binary));
             };
 
-            recorder.start(250);
+            recorder.start(300);
             listening = true;
             speechStarted = false;
             silenceStart = null;
@@ -301,27 +288,55 @@ export default function(component) {
         }
     }
 
-    function playAudio(b64) {
-        if (!b64 || speaking) return;
+    function speak(text) {
+        if (!text || speaking) return;
+        if (!window.speechSynthesis) {
+            setTimeout(startListening, 500);
+            return;
+        }
+
         speaking = true;
-        const audio = new Audio("data:audio/mp3;base64," + b64);
-        audio.onended = () => {
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+
+        const preferred = [
+            "Google UK English Male",
+            "Microsoft George - English (United Kingdom)",
+            "Microsoft David - English (United States)",
+            "Daniel",
+            "Alex"
+        ];
+
+        let selected = null;
+        for (const name of preferred) {
+            selected = voices.find(v => v.name.includes(name));
+            if (selected) break;
+        }
+        if (!selected) selected = voices.find(v => v.lang && v.lang.startsWith("en-GB"));
+        if (!selected) selected = voices.find(v => v.lang && v.lang.startsWith("en"));
+        if (selected) utterance.voice = selected;
+
+        utterance.rate = 0.88;
+        utterance.pitch = 0.80;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => {
             speaking = false;
-            setTimeout(startListening, 500);
+            setTimeout(startListening, 600);
         };
-        audio.onerror = () => {
+        utterance.onerror = () => {
             speaking = false;
-            setTimeout(startListening, 500);
+            setTimeout(startListening, 600);
         };
-        audio.play().catch(() => {
-            speaking = false;
-            setTimeout(startListening, 500);
-        });
+
+        window.speechSynthesis.speak(utterance);
     }
 
-    if (data && data.audio_b64 && data.audio_b64 !== lastAudio && data.audio_b64.length > 100) {
-        lastAudio = data.audio_b64;
-        playAudio(data.audio_b64);
+    if (data && data.speak && data.speak !== lastSpeech && data.speak.length > 2) {
+        lastSpeech = data.speak;
+        speak(data.speak);
     }
 
     if (data && data.active === true && !listening && !speaking) {
@@ -332,6 +347,7 @@ export default function(component) {
         if (animationFrame) cancelAnimationFrame(animationFrame);
         if (stream) stream.getTracks().forEach(t => t.stop());
         if (audioContext) audioContext.close();
+        window.speechSynthesis.cancel();
     };
 }
 """
@@ -400,7 +416,7 @@ col1, col2, col3 = st.columns([1, 1.3, 1])
 with col2:
     if st.button(label, key="btn", use_container_width=True):
         st.session_state.voice_active = not st.session_state.voice_active
-        st.session_state.audio_b64_to_play = ""
+        st.session_state.speech_to_play = ""
         st.rerun()
 
 st.markdown(f'<div class="{circle_class}"><div class="circle-text">{label}</div></div>', unsafe_allow_html=True)
@@ -415,7 +431,7 @@ else:
 # =========================
 component_data = {
     "active": st.session_state.voice_active,
-    "audio_b64": st.session_state.audio_b64_to_play
+    "speak": st.session_state.speech_to_play
 }
 
 result = voice_component(
@@ -440,12 +456,7 @@ if audio_data and st.session_state.voice_active:
         answer = ask_jarvis(spoken)
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
-        st.write(f"**You said:** {spoken}")
-        st.write(f"**Jarvis:** {answer}")
-
-        audio_b64 = generate_jarvis_speech(answer)
-        if audio_b64:
-            st.session_state.audio_b64_to_play = audio_b64
+        st.session_state.speech_to_play = answer
         st.rerun()
 
 error = getattr(result, "error", None)
