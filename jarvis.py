@@ -5,8 +5,6 @@ import base64
 import requests
 import re
 from duckduckgo_search import DDGS
-from elevenlabs.client import ElevenLabs
-from elevenlabs import VoiceSettings
 
 st.set_page_config(
     page_title="J.A.R.V.I.S.",
@@ -16,22 +14,14 @@ st.set_page_config(
 )
 
 # =========================
-# API KEYS
+# GROQ
 # =========================
 try:
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 except Exception:
     GROQ_API_KEY = ""
 
-try:
-    ELEVENLABS_API_KEY = st.secrets["ELEVENLABS_API_KEY"]
-except Exception:
-    ELEVENLABS_API_KEY = ""
-
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-eleven_client = ElevenLabs(api_key=ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY else None
-
-JARVIS_VOICE_ID = "H538pP1BbhodCGiYVMKD"
 
 # =========================
 # SESSION STATE
@@ -90,26 +80,20 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def generate_jarvis_speech(text: str) -> str | None:
-    if not eleven_client:
+    """Generate speech using Groq Orpheus TTS"""
+    if not client:
         return None
     try:
-        audio_generator = eleven_client.text_to_speech.convert(
-            voice_id=JARVIS_VOICE_ID,
-            optimize_streaming_latency="0",
-            output_format="mp3_44100_128",
-            text=text,
-            model_id="eleven_multilingual_v2",
-            voice_settings=VoiceSettings(
-                stability=0.40,
-                similarity_boost=0.85,
-                style=0.30,
-                use_speaker_boost=True
-            )
+        response = client.audio.speech.create(
+            model="canopylabs/orpheus-v1-english",
+            voice="troy",          # calm male voice – you can change this
+            input=text,
+            response_format="mp3"
         )
-        audio_bytes = b"".join(audio_generator)
+        audio_bytes = response.read()
         return base64.b64encode(audio_bytes).decode("utf-8")
     except Exception as e:
-        st.error(f"ElevenLabs error: {e}")
+        st.error(f"Groq TTS error: {e}")
         return None
 
 def ask_jarvis(user_text: str) -> str:
@@ -200,7 +184,7 @@ def transcribe_audio(base64_audio: str) -> str | None:
 # VOICE COMPONENT
 # =========================
 voice_component = st.components.v2.component(
-    name="jarvis_continuous_v2",
+    name="jarvis_continuous_v3",
     html="",
     css="#voice-ui { width: 100%; height: 1px; overflow: hidden; }",
     js="""
@@ -442,7 +426,7 @@ result = voice_component(
 )
 
 # =========================
-# HANDLE AUDIO FROM MIC
+# HANDLE AUDIO
 # =========================
 audio_data = getattr(result, "audio", None)
 
@@ -456,7 +440,6 @@ if audio_data and st.session_state.voice_active:
         answer = ask_jarvis(spoken)
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
-        # Show what happened (debug)
         st.write(f"**You said:** {spoken}")
         st.write(f"**Jarvis:** {answer}")
 
