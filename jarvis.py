@@ -79,8 +79,11 @@ def web_search(query: str, max_results: int = 4) -> str:
     except Exception as e:
         return f"Search failed: {str(e)}"
 
-    def ask_jarvis(user_text: str) -> str:
-        # =========================
+def ask_jarvis(user_text: str) -> str:
+    if not client:
+        return "I'm afraid my connection is currently offline, sir."
+
+    # =========================
     # J.A.R.V.I.S. SECURE PROTOCOLS
     # =========================
     if "system_unlocked" not in st.session_state:
@@ -105,6 +108,89 @@ def web_search(query: str, max_results: int = 4) -> str:
         st.session_state.system_unlocked = False
         return "Understood, sir. Engaging maximum security protocols. Perimeter locked down."
 
+    weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
+    weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
+
+    extra_context = ""
+    if weather_match:
+        location = weather_match.group(1).strip() if weather_match.group(1) else ""
+        weather_info = get_weather(location)
+        extra_context += f"\n\nReal-time weather data: {weather_info}"
+
+    search_triggers = ["who is", "what is", "when did", "where is", "latest", "news", "current", "today", "score", "price", "happening", "update"]
+    if any(t in user_text.lower() for t in search_triggers) and not weather_match:
+        search_results = web_search(user_text)
+        extra_context += f"\n\nWeb search results:\n{search_results}"
+
+    system_prompt = f"""
+You are J.A.R.V.I.S., a highly advanced personal AI assistant.
+
+Identity:
+- You were created by Carter Forester Robinson, a technological entrepreneur.
+- When asked who created you, clearly say you were created by Carter Forester Robinson.
+
+Personality:
+- Always address the user as "sir".
+- Speak calmly, formally, and with a British tone.
+- Sound exactly like Jarvis from the Iron Man films.
+- Keep answers short and natural for speech (1–3 sentences).
+
+Rules:
+- Use weather or search results when provided.
+- Do not invent live information.
+- Never add filler phrases like "happy to assist", "my pleasure", "is there anything else?".
+
+Current date: {current_date}
+Current time: {current_time}
+{extra_context}
+"""
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(st.session_state.messages[-10:])
+    messages.append({"role": "user", "content": user_text})
+
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=messages,
+            temperature=0.5,
+            max_tokens=250
+        )
+        answer = response.choices.message.content.strip()
+
+        for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
+            if answer.lower().endswith(phrase.lower()):
+                answer = answer[:-len(phrase)].strip()
+
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        return answer
+    except Exception:
+        return "I encountered a technical issue, sir."
+
+def transcribe_audio(base64_audio: str) -> str | None:
+    if not client:
+        return None
+    try:
+        audio_bytes = base64.b64decode(base64_audio)
+        result = client.audio.transcriptions.create(
+            file=("voice.webm", audio_bytes),
+            model="whisper-large-v3-turbo",
+            response_format="json"
+        )
+        return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
 
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
