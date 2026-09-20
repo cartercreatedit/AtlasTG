@@ -84,31 +84,18 @@ def ask_jarvis(user_text: str) -> str:
         return "I'm afraid my connection is currently offline, sir."
 
     # =========================
-    # J.A.R.V.I.S. SECURE PROTOCOLS
+       # =========================
+    # J.A.R.V.I.S. CUSTOM PROTOCOLS
     # =========================
-    if "system_unlocked" not in st.session_state:
-        st.session_state.system_unlocked = False
-
-    SECRET_PASSCODE = "execute protocol eleven" 
-    
-    if SECRET_PASSCODE in user_text.lower():
-        st.session_state.system_unlocked = True
-        return "Biometrics confirmed. Access granted. Welcome back, Mr. Robinson. It is an absolute pleasure to have you back, sir."
-
-    if not st.session_state.system_unlocked:
-        if "lockdown override" in user_text.lower() or "hello" in user_text.lower() or "who are you" in user_text.lower():
-            return "Security protocols are currently active, user unknown. Please provide authorization credentials to proceed."
-        else:
-            return "Access denied, sir. System remains in lockdown configuration."
-
+    # The "Self-Destruct" Countdown Prank
     if "initiate self-destruction" in user_text.lower() or "clear out the lab" in user_text.lower():
         return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
 
-    if "lock down the system" in user_text.lower() or "clean slate" in user_text.lower():
-          if "lock down the system" in user_text.lower() or "clean slate" in user_text.lower():
-        st.session_state.system_unlocked = False
-        st.session_state.messages = [] # This completely clears his history memory
-        return "Understood, sir. Engaging maximum security protocols. Perimeter locked down."
+    # Clean Slate just wipes his memory safely now without locking you out
+    if "clean slate" in user_text.lower():
+        st.session_state.messages = [] 
+        return "Understood, sir. Clearing the session history logs. We have a fresh slate."
+
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
 
