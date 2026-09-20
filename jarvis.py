@@ -40,12 +40,6 @@ if not st.session_state.booted_up:
     st.session_state.speech_to_play = boot_greeting
     st.session_state.booted_up = True
     # Format his classic Tony Stark greeting line tailored for Mr. Robinson
-    boot_greeting = f"Importing preferences. Good to see you, Mr. Robinson. The local systems are fully active. {local_weather}. I am ready for your instructions, sir."
-    
-    # Feed the greeting straight into his memory logs so he speaks it out loud
-    st.session_state.messages.append({"role": "assistant", "content": boot_greeting})
-    st.session_state.speech_to_play = boot_greeting
-    st.session_state.booted_up = True
 if "voice_active" not in st.session_state:
     st.session_state.voice_active = False
 if "speech_to_play" not in st.session_state:
