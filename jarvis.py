@@ -14,7 +14,7 @@ st.set_page_config(
 # ── API Key Configuration ─────────────────────
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
-    st.error("Missing GROQ_API_KEY inside your Streamlit secrets dashboard panel.")
+    st.error("Missing GROQ_API_KEY inside your Streamlit secrets panel.")
     st.stop()
 
 client = Groq(api_key=api_key)
@@ -66,6 +66,7 @@ st.markdown(f'''
 .status-indicator {{
     margin-top: 32px; color: #00f2fe; font-family: monospace; font-size: 0.8rem;
     letter-spacing: 2px; text-transform: uppercase; opacity: 0.6;
+    text-align: center;
 }}
 </style>
 
@@ -88,7 +89,7 @@ custom_vox_html = """
 
     setTimeout(() => {
         const sphereBtn = window.parent.document.getElementById('coreWidget');
-        const statusLabel = document.getElementById('statusLabel');
+        const statusLabel = window.parent.document.getElementById('statusLabel');
         const coreIcon = window.parent.document.getElementById('coreIcon');
         if (!sphereBtn) return;
 
@@ -110,7 +111,7 @@ custom_vox_html = """
                     const reader = new FileReader();
                     reader.readAsDataURL(audioBlob);
                     reader.onloadend = () => {
-                        const base64String = reader.result.split(',')[1];
+                        const base64String = reader.result.split(',');
                         window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
                     stream.getTracks().forEach(track => track.stop());
@@ -154,7 +155,7 @@ if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
         
         user_spoken_prompt = str(transcription).strip()
         if os.path.exists("jarvis_temp_input.wav"):
-            os.remove("jarvis_temp.wav")
+            os.remove("jarvis_temp_input.wav")
 
         if user_spoken_prompt:
             st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
