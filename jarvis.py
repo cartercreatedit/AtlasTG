@@ -165,7 +165,7 @@ Current time: {current_time}
     messages.append({"role": "user", "content": user_text})
 
     try:
-    try:
+       try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
@@ -176,15 +176,11 @@ Current time: {current_time}
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
-              answer = response.choices.message.content.strip()
-              st.session_state.messages.append({"role": "assistant", "content": answer})
-              for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
-              if answer.lower().endswith(phrase.lower()):
+            if answer.lower().endswith(phrase.lower()):
                 answer = answer[:-len(phrase)].strip()
         return answer
     except Exception:
         return "I encountered a technical issue, sir."
-
 def transcribe_audio(base64_audio: str) -> str | None:
     if not client:
         return None
