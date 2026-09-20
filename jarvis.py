@@ -81,41 +81,30 @@ def web_search(query: str, max_results: int = 4) -> str:
 
     def ask_jarvis(user_text: str) -> str:
         # =========================
-       # =========================
     # J.A.R.V.I.S. SECURE PROTOCOLS
     # =========================
-    # Initialize lockdown tracking if it doesn't exist
     if "system_unlocked" not in st.session_state:
         st.session_state.system_unlocked = False
 
-    # 1. THE PASSCODE OVERRIDE (Change your passcode inside the quotes below!)
     SECRET_PASSCODE = "execute protocol eleven" 
     
     if SECRET_PASSCODE in user_text.lower():
         st.session_state.system_unlocked = True
         return "Biometrics confirmed. Access granted. Welcome back, Mr. Robinson. It is an absolute pleasure to have you back, sir."
 
-    # 2. THE LOCKDOWN CHECK (Blocks normal chatter until unlocked)
     if not st.session_state.system_unlocked:
-        # Allow checking the passcode, but block other conversational inputs
         if "lockdown override" in user_text.lower() or "hello" in user_text.lower() or "who are you" in user_text.lower():
             return "Security protocols are currently active, user unknown. Please provide authorization credentials to proceed."
         else:
             return "Access denied, sir. System remains in lockdown configuration."
 
-    # 3. THE "SELF-DESTRUCT" COUTNDOWN PRANK
     if "initiate self-destruction" in user_text.lower() or "clear out the lab" in user_text.lower():
-        import time
-        # This will create a dramatic text pause for speech
         return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
 
-    # 4. SYSTEM RE-LOCK COMMAND
     if "lock down the system" in user_text.lower() or "clean slate" in user_text.lower():
         st.session_state.system_unlocked = False
         return "Understood, sir. Engaging maximum security protocols. Perimeter locked down."
 
-    if not client:
-        return "I'm afraid my connection is currently offline, sir."
 
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
