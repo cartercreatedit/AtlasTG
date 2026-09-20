@@ -468,17 +468,11 @@ else:
 # COMPONENT
 # =========================
 component_data = {
-    "active": st.session_state.voice_active,
-    "speak": st.session_state.speech_to_play
+    "active": True,
+    "text_to_speak": st.session_state.speech_to_play
 }
 
-result = voice_component(
-    key="jarvis_comp",
-    data=component_data,
-    on_audio_change=lambda: None,
-    on_error_change=lambda: None,
-)
-
+voice_component(data=component_data, key="jarvis_voice_module")
 # =========================
 # HANDLE AUDIO
 # =========================
