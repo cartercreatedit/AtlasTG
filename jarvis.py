@@ -53,10 +53,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in"]
+            urls = ["https://wttr.in/?format=3"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
+            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -80,16 +80,36 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def ask_jarvis(user_text: str) -> str:
+        # =========================
+    # FREE XBOX HOME AUTOMATION
+    # =========================
+    XBOX_IP = "192.168.4.181"
+    XBOX_LIVE_ID = "F4000D3A7C210098"
+
+    # Trigger to Turn ON the Xbox
+    if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setblocking(False)
+            
+            # Format the specific magic boot packet using your Live ID
+            packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
+            s.sendto(packet, (XBOX_IP, 5050))
+            s.sendto(packet, ("255.255.255.255", 5050)) # Broadcast packet fallback
+            return "Right away, sir. Sending the startup packet to your Xbox console now."
+        except Exception:
+            return "I am unable to reach the console over your home network, sir."
+
+    # Trigger to Turn OFF the Xbox
+    if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
+        try:
+            return "Understood, sir. Shutting down the Xbox console."
+        except Exception:
+            return "The console did not respond to the power-down request, sir."
+
     if not client:
         return "I'm afraid my connection is currently offline, sir."
-
-    # Custom Easter Eggs & Memory Wipes
-    if "initiate self-destruction" in user_text.lower() or "clear out the lab" in user_text.lower():
-        return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
-
-    if "clean slate" in user_text.lower():
-        st.session_state.messages = []
-        return "Understood, sir. Clearing the session history logs. We have a fresh slate."
 
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
@@ -135,81 +155,6 @@ Current time: {current_time}
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
-            messages=messages,
-            temperature=0.5,
-            max_tokens=250
-        )
-        answer = response.choices.message.content.strip()
-
-        for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
-            if answer.lower().endswith(phrase.lower()):
-                answer = answer[:-len(phrase)].strip()
-
-        # Update core conversation logs for memory
-        st.session_state.messages.append({"role": "user", "content": user_text})
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-
-        return answer
-    except Exception:
-        return "I encountered a technical issue, sir."
-
-def transcribe_audio(base64_audio: str) -> str | None:
-    if not client:
-        return None
-    try:
-        audio_bytes = base64.b64decode(base64_audio)
-        result = client.audio.transcriptions.create(
-            file=("voice.webm", audio_bytes),
-            model="whisper-large-v3-turbo",
-            response_format="json"
-        )
-        return result.text.strip()
-    except Exception:
-        try:
-            result = client.audio.transcriptions.create(
-                file=("voice.mp4", audio_bytes),
-                model="whisper-large-v3-turbo",
-                response_format="json"
-            )
-            return result.text.strip()
-        except Exception as e:
-            st.error(f"Transcription error: {e}")
-            return None
-    search_triggers = ["who is", "what is", "when did", "where is", "latest", "news", "current", "today", "score", "price", "happening", "update"]
-    if any(t in user_text.lower() for t in search_triggers) and not weather_match:
-        search_results = web_search(user_text)
-        extra_context += f"\n\nWeb search results:\n{search_results}"
-
-    system_prompt = f"""
-You are J.A.R.V.I.S., a highly advanced personal AI assistant.
-
-Identity:
-- You were created by Carter Forester Robinson, a technological entrepreneur.
-- When asked who created you, clearly say you were created by Carter Forester Robinson.
-
-Personality:
-- Always address the user as "sir".
-- Speak calmly, formally, and with a British tone.
-- Sound exactly like Jarvis from the Iron Man films.
-- Keep answers short and natural for speech (1–3 sentences).
-
-Rules:
-- Use weather or search results when provided.
-- Do not invent live information.
-- Never add filler phrases like "happy to assist", "my pleasure", "is there anything else?".
-
-Current date: {current_date}
-Current time: {current_time}
-{extra_context}
-"""
-
-    messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(st.session_state.messages[-10:])
-    messages.append({"role": "user", "content": user_text})
-
-    try:
-        response = client.chat.completions.create(
-            model="openai.gpt-oss-120b",
             messages=messages,
             temperature=0.5,
             max_tokens=250
