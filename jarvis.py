@@ -24,17 +24,28 @@ except Exception:
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # =========================
-# SESSION STATE
+# SESSION STATE & PERMANENT MEMORY
 # =========================
+import json
+import os
+
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    # Check if a saved memory log file exists from your last session
+    if os.path.exists("chat_history.json"):
+        try:
+            with open("chat_history.json", "r") as f:
+                st.session_state.messages = json.load(f)
+        except:
+            st.session_state.messages = []
+    else:
+        st.session_state.messages = []
+
 if "voice_active" not in st.session_state:
     st.session_state.voice_active = False
 if "speech_to_play" not in st.session_state:
     st.session_state.speech_to_play = ""
 if "last_spoken" not in st.session_state:
     st.session_state.last_spoken = ""
-
 # =========================
 # CURRENT TIME
 # =========================
