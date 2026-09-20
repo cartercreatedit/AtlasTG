@@ -4,6 +4,3 @@ groq
 elevenlabs
 duckduckgo-search
 requests
-streamlit-webrtc
-opencv-python-headless
-pyav
