@@ -79,34 +79,40 @@ def web_search(query: str, max_results: int = 4) -> str:
     except Exception as e:
         return f"Search failed: {str(e)}"
 
-def ask_jarvis(user_text: str) -> str:
+    def ask_jarvis(user_text: str) -> str:
         # =========================
-    # FREE XBOX HOME AUTOMATION
+       # =========================
+    # J.A.R.V.I.S. SECURE PROTOCOLS
     # =========================
-    XBOX_IP = "192.168.4.181"
-    XBOX_LIVE_ID = "F4000D3A7C210098"
+    # Initialize lockdown tracking if it doesn't exist
+    if "system_unlocked" not in st.session_state:
+        st.session_state.system_unlocked = False
 
-    # Trigger to Turn ON the Xbox
-    if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
-        try:
-            import socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.setblocking(False)
-            
-            # Format the specific magic boot packet using your Live ID
-            packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
-            s.sendto(packet, (XBOX_IP, 5050))
-            s.sendto(packet, ("255.255.255.255", 5050)) # Broadcast packet fallback
-            return "Right away, sir. Sending the startup packet to your Xbox console now."
-        except Exception:
-            return "I am unable to reach the console over your home network, sir."
+    # 1. THE PASSCODE OVERRIDE (Change your passcode inside the quotes below!)
+    SECRET_PASSCODE = "execute protocol eleven" 
+    
+    if SECRET_PASSCODE in user_text.lower():
+        st.session_state.system_unlocked = True
+        return "Biometrics confirmed. Access granted. Welcome back, Mr. Robinson. It is an absolute pleasure to have you back, sir."
 
-    # Trigger to Turn OFF the Xbox
-    if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
-        try:
-            return "Understood, sir. Shutting down the Xbox console."
-        except Exception:
-            return "The console did not respond to the power-down request, sir."
+    # 2. THE LOCKDOWN CHECK (Blocks normal chatter until unlocked)
+    if not st.session_state.system_unlocked:
+        # Allow checking the passcode, but block other conversational inputs
+        if "lockdown override" in user_text.lower() or "hello" in user_text.lower() or "who are you" in user_text.lower():
+            return "Security protocols are currently active, user unknown. Please provide authorization credentials to proceed."
+        else:
+            return "Access denied, sir. System remains in lockdown configuration."
+
+    # 3. THE "SELF-DESTRUCT" COUTNDOWN PRANK
+    if "initiate self-destruction" in user_text.lower() or "clear out the lab" in user_text.lower():
+        import time
+        # This will create a dramatic text pause for speech
+        return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
+
+    # 4. SYSTEM RE-LOCK COMMAND
+    if "lock down the system" in user_text.lower() or "clean slate" in user_text.lower():
+        st.session_state.system_unlocked = False
+        return "Understood, sir. Engaging maximum security protocols. Perimeter locked down."
 
     if not client:
         return "I'm afraid my connection is currently offline, sir."
