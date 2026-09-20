@@ -342,9 +342,13 @@ export default function(component) {
 
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
-        let selectedVoice = voices.find(v => v.name.includes("Chrome OS UK 2")) || voices.find(v => v.lang.includes("en-GB")) || voices[0];
 
-        if (selectedVoice) utterance.voice = selectedVoice;
+        const preferred = [
+            "Google UK English Male",
+            "Microsoft George - English (United Kingdom)",
+            "Microsoft David - English (United States)",
+            "Daniel",
+            "Alex"
         ];
 
         let selected = null;
@@ -468,11 +472,17 @@ else:
 # COMPONENT
 # =========================
 component_data = {
-    "active": True,
-    "text_to_speak": st.session_state.speech_to_play
+    "active": st.session_state.voice_active,
+    "speak": st.session_state.speech_to_play
 }
 
-voice_component(data=component_data, key="jarvis_voice_module")
+result = voice_component(
+    key="jarvis_comp",
+    data=component_data,
+    on_audio_change=lambda: None,
+    on_error_change=lambda: None,
+)
+
 # =========================
 # HANDLE AUDIO
 # =========================
