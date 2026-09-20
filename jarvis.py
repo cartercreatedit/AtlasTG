@@ -165,11 +165,18 @@ Current time: {current_time}
     messages.append({"role": "user", "content": user_text})
 
     try:
+    try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0.5,
             max_tokens=250
+        )
+        answer = response.choices.message.content.strip()
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
+
         )
               answer = response.choices.message.content.strip()
               st.session_state.messages.append({"role": "assistant", "content": answer})
