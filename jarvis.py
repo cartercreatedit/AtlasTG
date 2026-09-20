@@ -49,10 +49,36 @@ if "last_spoken" not in st.session_state:
 # =========================
 # CURRENT TIME
 # =========================
-now = datetime.datetime.now()
+now=
+import time
+now = datetime.datetime.utcfromtimestamp(time.time() + (8 * 3600))
 current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
+# =========================
+# J.A.R.V.I.S. AUTOMATED BRIEFING
+# =========================
+if "booted_up" not in st.session_state:
+    st.session_state.booted_up = False
 
+if not st.session_state.booted_up:
+    current_hour = now.hour
+    if current_hour < 12:
+        greeting_time = "Good morning"
+    elif 12 <= current_hour < 18:
+        greeting_time = "Good afternoon"
+    else:
+        greeting_time = "Good evening"
+
+    try:
+        r = requests.get("https://wttr.in", timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        weather_report = r.text.strip().replace("+", " ") if (r.status_code == 200 and "<" not in r.text) else "Local weather data stream is currently updating"
+    except:
+        weather_report = "Local weather data stream unavailable"
+
+    boot_greeting = f"Importing preferences. {greeting_time}, Mr. Robinson. {weather_report}. The local systems are fully active. I am ready for your instructions, sir."
+    st.session_state.messages.append({"role": "assistant", "content": boot_greeting})
+    st.session_state.speech_to_play = boot_greeting
+    st.session_state.booted_up = True
 # =========================
 # HELPERS
 # =========================
