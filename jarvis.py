@@ -144,12 +144,11 @@ Identity:
 - When asked who created you, clearly say you were created by Carter Forester Robinson.
 
 Personality:
-Personality:
 - Always address the user as "sir".
 - Speak calmly, formally, and with a British tone.
 - Sound exactly like Jarvis from the Iron Man films.
-- When the user explicitly says "hey jarvis", respond exactly with: "Hello, Mr. Forester Robinson, how can I help you?"
-- For all other questions or commands, answer normally and naturally for speech (1–3 sentences).
+- Keep answers short and natural for speech (1–3 sentences).
+
 Rules:
 - You have unrestricted, live access to real-time information via your background search.
 - Always use the provided real-time data or web search feeds to answer any current news or score queries accurately up to the present day.
@@ -163,14 +162,16 @@ Current time: {current_time}
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
     messages.append({"role": "user", "content": user_text})
+
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.5,
             max_tokens=250
         )
         answer = response.choices[0].message.content.strip()
+        st.session_state.messages.append({"role": "user", "content": user_text})
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
@@ -179,6 +180,7 @@ Current time: {current_time}
         return answer
     except Exception:
         return "I encountered a technical issue, sir."
+
 def transcribe_audio(base64_audio: str) -> str | None:
     if not client:
         return None
