@@ -1,4 +1,6 @@
-groq
 streamlit
 pillow
+groq
+elevenlabs
 duckduckgo-search
+requests
