@@ -40,7 +40,7 @@ current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
 
 # =========================
-# WEATHER HELPER
+# WEATHER
 # =========================
 def get_weather(location: str = "") -> str:
     try:
@@ -49,7 +49,6 @@ def get_weather(location: str = "") -> str:
         else:
             loc = location.strip().replace(" ", "+")
             url = f"https://wttr.in/{loc}?format=3"
-        
         r = requests.get(url, timeout=6)
         if r.status_code == 200:
             return r.text.strip()
@@ -58,7 +57,7 @@ def get_weather(location: str = "") -> str:
         return "I'm afraid I couldn't retrieve the weather data at the moment, sir."
 
 # =========================
-# CUSTOM VOICE COMPONENT
+# VOICE COMPONENT (Mobile-friendly)
 # =========================
 voice_component = st.components.v2.component(
     name="jarvis_hands_free_voice",
@@ -73,7 +72,7 @@ voice_component = st.components.v2.component(
 """,
     js="""
 export default function(component) {
-    const { parentElement, data, setTriggerValue } = component;
+    const { data, setTriggerValue } = component;
 
     let stream = null;
     let recorder = null;
@@ -86,14 +85,34 @@ export default function(component) {
     let lastSpeech = "";
     let speaking = false;
 
-    // Slightly more patient settings so it doesn't cut off early
-    const SPEECH_THRESHOLD = 0.015;
-    const SILENCE_TIME = 1600;       // was 1200 → more patient
-    const MIN_SPEECH_TIME = 400;
+    const SPEECH_THRESHOLD = 0.014;
+    const SILENCE_TIME = 1500;
+    const MIN_SPEECH_TIME = 350;
     let speechStartTime = null;
 
+    // Force load voices
     if (window.speechSynthesis) {
         window.speechSynthesis.getVoices();
+    }
+
+    // =========================
+    // Get best supported mimeType (critical for iPhone)
+    // =========================
+    function getSupportedMimeType() {
+        const types = [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/mp4",
+            "audio/aac",
+            "audio/ogg;codecs=opus",
+            "audio/ogg"
+        ];
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                return type;
+            }
+        }
+        return ""; // browser default
     }
 
     async function startListening() {
@@ -108,20 +127,33 @@ export default function(component) {
                 }
             });
 
-            recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+            const mimeType = getSupportedMimeType();
+            const options = mimeType ? { mimeType } : {};
+
+            recorder = new MediaRecorder(stream, options);
             const chunks = [];
 
             recorder.ondataavailable = (event) => {
-                if (event.data.size > 0) chunks.push(event.data);
+                if (event.data && event.data.size > 0) {
+                    chunks.push(event.data);
+                }
             };
 
             recorder.onstop = async () => {
                 listening = false;
                 if (animationFrame) cancelAnimationFrame(animationFrame);
-                if (stream) stream.getTracks().forEach(t => t.stop());
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
 
-                const blob = new Blob(chunks, { type: "audio/webm" });
-                if (blob.size < 800) {
+                if (chunks.length === 0) {
+                    setTimeout(startListening, 400);
+                    return;
+                }
+
+                const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+
+                if (blob.size < 600) {
                     setTimeout(startListening, 400);
                     return;
                 }
@@ -138,7 +170,7 @@ export default function(component) {
                 setTriggerValue("audio", base64);
             };
 
-            recorder.start();
+            recorder.start(250); // collect data every 250ms (better on mobile)
             listening = true;
             speechStarted = false;
             silenceStart = null;
@@ -154,6 +186,7 @@ export default function(component) {
 
             function detectSpeech() {
                 if (!listening) return;
+
                 analyser.getByteTimeDomainData(dataArray);
                 let sum = 0;
                 for (let i = 0; i < dataArray.length; i++) {
@@ -171,16 +204,21 @@ export default function(component) {
                     silenceStart = null;
                 } else if (speechStarted) {
                     if (!silenceStart) silenceStart = now;
+
                     const speechDuration = now - speechStartTime;
                     const silenceDuration = now - silenceStart;
+
                     if (speechDuration >= MIN_SPEECH_TIME && silenceDuration >= SILENCE_TIME) {
-                        if (recorder && recorder.state === "recording") recorder.stop();
+                        if (recorder && recorder.state === "recording") {
+                            recorder.stop();
+                        }
                         return;
                     }
                 }
                 animationFrame = requestAnimationFrame(detectSpeech);
             }
             detectSpeech();
+
         } catch (error) {
             setTriggerValue("error", String(error));
         }
@@ -188,11 +226,11 @@ export default function(component) {
 
     function speak(text) {
         if (!text) {
-            setTimeout(startListening, 400);
+            setTimeout(startListening, 500);
             return;
         }
         if (!("speechSynthesis" in window)) {
-            setTimeout(startListening, 400);
+            setTimeout(startListening, 500);
             return;
         }
 
@@ -202,7 +240,6 @@ export default function(component) {
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
 
-        // Prefer calm British / deeper male voices
         const preferred = [
             "Google UK English Male",
             "Microsoft George - English (United Kingdom)",
@@ -217,37 +254,38 @@ export default function(component) {
             if (selectedVoice) break;
         }
         if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.startsWith("en-GB"));
+            selectedVoice = voices.find(v => v.lang && v.lang.startsWith("en-GB"));
         }
         if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.startsWith("en"));
+            selectedVoice = voices.find(v => v.lang && v.lang.startsWith("en"));
         }
         if (selectedVoice) utterance.voice = selectedVoice;
 
-        // Jarvis-like delivery
-        utterance.rate = 0.88;      // calm & measured
-        utterance.pitch = 0.80;     // deeper
+        utterance.rate = 0.88;
+        utterance.pitch = 0.80;
         utterance.volume = 1.0;
 
         utterance.onend = () => {
             speaking = false;
-            setTimeout(startListening, 400);
+            setTimeout(startListening, 500);
         };
         utterance.onerror = () => {
             speaking = false;
-            setTimeout(startListening, 400);
+            setTimeout(startListening, 500);
         };
 
         window.speechSynthesis.speak(utterance);
     }
 
+    // Python → JS
     if (data && data.speak && data.speak !== lastSpeech) {
         lastSpeech = data.speak;
         speak(data.speak);
     }
 
+    // Start listening when activated
     if (data && data.active === true && !listening && !speaking) {
-        setTimeout(startListening, 150);
+        setTimeout(startListening, 200);
     }
 
     return () => {
@@ -260,13 +298,12 @@ export default function(component) {
 )
 
 # =========================
-# AI - Strong Jarvis personality
+# AI
 # =========================
 def ask_jarvis(user_text: str) -> str:
     if not client:
-        return "I'm afraid my connection to the server is currently offline, sir."
+        return "I'm afraid my connection is currently offline, sir."
 
-    # Weather detection
     weather_match = re.search(
         r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?",
         user_text,
@@ -280,22 +317,17 @@ def ask_jarvis(user_text: str) -> str:
         extra_context = f"\n\nReal-time weather information: {weather_info}\nUse this data accurately."
 
     system_prompt = f"""
-You are J.A.R.V.I.S. — Just A Rather Very Intelligent System.
-You are Tony Stark's personal AI assistant.
+You are J.A.R.V.I.S., Tony Stark's personal AI assistant.
 
-Personality rules (very important):
+Rules:
 - Always address the user as "sir".
-- Speak in a calm, polished, slightly formal British manner.
-- Be intelligent, composed, and subtly witty when appropriate.
-- Keep responses relatively short and natural for speech (usually 1–3 sentences).
-- Never say "You're most welcome", "Happy to help", "Is there anything else?", or similar filler phrases unless the user specifically thanks you.
-- Do not end every response with a question.
+- Speak calmly, formally and with a British tone.
+- Keep responses short and natural for speech (1–3 sentences).
+- Do not say "You're most welcome", "Is there anything else?", or similar filler.
 - Sound like the Jarvis from the Iron Man films.
 
 Current date: {current_date}
 Current time: {current_time}
-
-You have broad knowledge of the world. When real-time weather data is provided below, use it.
 {extra_context}
 """
 
@@ -312,21 +344,14 @@ You have broad knowledge of the world. When real-time weather data is provided b
         )
         answer = response.choices[0].message.content.strip()
 
-        # Small cleanup to remove common unwanted endings
-        unwanted = [
-            "You're most welcome.",
-            "You're welcome.",
-            "Is there anything else I can help you with?",
-            "Is there anything else?",
-            "How else may I assist you?"
-        ]
-        for phrase in unwanted:
+        # Clean common unwanted endings
+        for phrase in ["You're most welcome.", "You're welcome.", "Is there anything else I can help you with?", "Is there anything else?"]:
             if answer.endswith(phrase):
                 answer = answer[:-len(phrase)].strip()
 
         return answer
     except Exception as e:
-        return f"I encountered a minor technical issue, sir. {str(e)}"
+        return f"I encountered a technical issue, sir. {str(e)}"
 
 # =========================
 # TRANSCRIBE
@@ -336,15 +361,24 @@ def transcribe_audio(base64_audio):
         return None
     try:
         audio_bytes = base64.b64decode(base64_audio)
+        # Try both possible filenames
         result = client.audio.transcriptions.create(
             file=("voice.webm", audio_bytes),
             model="whisper-large-v3-turbo",
             response_format="json"
         )
         return result.text.strip()
-    except Exception as e:
-        st.error(f"Voice recognition error: {e}")
-        return None
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Voice recognition error: {e}")
+            return None
 
 # =========================
 # STYLING
