@@ -61,7 +61,7 @@ if not st.session_state.booted_up:
 # =========================
 # CURRENT TIME
 # =========================
-now = datetime.now()
+now = datetime.datetime.now()
 current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
 
