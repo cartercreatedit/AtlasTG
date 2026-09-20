@@ -53,7 +53,7 @@ if not st.session_state.booted_up:
     try:
         import requests
         r = requests.get("https://wttr.in", timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-       weather_report = r.text.strip().replace("+", " ") if (r.status_code == 200 and "<" not in r.text) else "Local weather data stream is currently updating"
+        weather_report = r.text.strip().replace("+", " ") if (r.status_code == 200 and "<" not in r.text) else "Local weather data stream is currently updating"
     except:
         weather_report = "Local weather data stream unavailable"
 
