@@ -182,7 +182,7 @@ Current time: {current_time}
 
     try:
         response = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="gpt-4o-mini"
             messages=messages,
             temperature=0.5,
             max_tokens=250
