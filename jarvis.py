@@ -53,10 +53,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in/?format=3"]
+            urls = ["https://wttr.in"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
+            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -80,28 +80,25 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def ask_jarvis(user_text: str) -> str:
-        # =========================
+    # =========================
     # FREE XBOX HOME AUTOMATION
     # =========================
     XBOX_IP = "192.168.4.181"
     XBOX_LIVE_ID = "F4000D3A7C210098"
 
-    # Trigger to Turn ON the Xbox
     if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
         try:
             import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.setblocking(False)
             
-            # Format the specific magic boot packet using your Live ID
             packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
             s.sendto(packet, (XBOX_IP, 5050))
-            s.sendto(packet, ("255.255.255.255", 5050)) # Broadcast packet fallback
+            s.sendto(packet, ("255.255.255.255", 5050))
             return "Right away, sir. Sending the startup packet to your Xbox console now."
         except Exception:
             return "I am unable to reach the console over your home network, sir."
 
-    # Trigger to Turn OFF the Xbox
     if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
         try:
             return "Understood, sir. Shutting down the Xbox console."
@@ -150,7 +147,7 @@ Current time: {current_time}
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
-        # Check if a live camera snapshot is waiting to be processed
+    
     if "visual_frame" in st.session_state and st.session_state.visual_frame:
         messages.append({
             "role": "user",
@@ -159,12 +156,13 @@ Current time: {current_time}
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{st.session_state.visual_frame}"}}
             ]
         })
-        st.session_state.visual_frame = "" # Clear it so he doesn't stay stuck on it
+        st.session_state.visual_frame = ""
     else:
         messages.append({"role": "user", "content": user_text})
+        
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b-vision",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0.5,
             max_tokens=250
@@ -189,6 +187,19 @@ def transcribe_audio(base64_audio: str) -> str | None:
             file=("voice.webm", audio_bytes),
             model="whisper-large-v3-turbo",
             response_format="json"
+        )
+        return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
         )
         return result.text.strip()
     except Exception:
