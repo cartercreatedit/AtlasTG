@@ -1,11 +1,11 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from groq import Groq
 import datetime
 import base64
 import requests
 import re
 import os
+import streamlit.components.v1 as components
 from duckduckgo_search import DDGS
 
 st.set_page_config(
@@ -16,43 +16,46 @@ st.set_page_config(
 )
 
 # =========================
-# SECURE API CONFIGURATION
+# GROQ & ELEVENLABS CREDENTIALS
 # =========================
-groq_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY") or ""
+try:
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+except Exception:
+    GROQ_API_KEY = ""
+
 eleven_key = st.secrets.get("ELEVEN_API_KEY") or os.getenv("ELEVEN_API_KEY") or ""
 voice_id = st.secrets.get("ELEVEN_VOICE_ID") or "bfGb7JTLUnZebZRiFYyq"
 
-if not groq_key:
-    st.error("Missing GROQ_API_KEY inside secrets registers.")
-    st.stop()
-if not eleven_key or not voice_id:
-    st.error("Missing ElevenLabs credentials inside secrets registers.")
-    st.stop()
-
-client = Groq(api_key=groq_key)
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # =========================
-# SESSION STATE REGISTERS
+# SESSION STATE
 # =========================
-if "vox_history" not in st.session_state:
-    st.session_state.vox_history = []
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "voice_active" not in st.session_state:
+    st.session_state.voice_active = False
+if "speech_to_play" not in st.session_state:
+    st.session_state.speech_to_play = ""
+if "last_spoken" not in st.session_state:
+    st.session_state.last_spoken = ""
 if "audio_out" not in st.session_state:
     st.session_state.audio_out = None
 
-# Automatically trigger premium audio streaming playback if response bytes are cached
+# Automatically trigger audio streaming if bytes are ready
 if st.session_state.audio_out:
     st.markdown(st.session_state.audio_out, unsafe_allow_html=True)
     st.session_state.audio_out = None
 
 # =========================
-# REAL-TIME SYSTEM CHRONO
+# CURRENT TIME
 # =========================
 now = datetime.datetime.now()
 current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
 
 # =========================
-# LIVE SEARCH & WEATHER ENGINES
+# HELPERS
 # =========================
 def get_weather(location: str = "") -> str:
     try:
@@ -76,7 +79,7 @@ def get_weather(location: str = "") -> str:
                 continue
         return "I currently don't have reliable weather data for that location, sir."
     except:
-        return "I currently don\'t have reliable weather data, sir."
+        return "I currently don't have reliable weather data, sir."
 
 def web_search(query: str, max_results: int = 4) -> str:
     try:
@@ -88,7 +91,94 @@ def web_search(query: str, max_results: int = 4) -> str:
     except Exception as e:
         return f"Search failed: {str(e)}"
 
-# Premium Borderless Full Screen Stealth Dark Theme Styles
+def ask_jarvis(user_text: str) -> str:
+    if not client:
+        return "I'm afraid my connection is currently offline, sir."
+
+    weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
+    weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
+
+    extra_context = ""
+    if weather_match:
+        location = weather_match.group(1).strip() if weather_match.group(1) else ""
+        weather_info = get_weather(location)
+        extra_context += f"\n\nReal-time weather data: {weather_info}"
+
+    search_triggers = ["who is", "what is", "when did", "where is", "latest", "news", "current", "today", "score", "price", "happening", "update"]
+    if any(t in user_text.lower() for t in search_triggers) and not weather_match:
+        search_results = web_search(user_text)
+        extra_context += f"\n\nWeb search results:\n{search_results}"
+
+    system_prompt = f"""
+You are J.A.R.V.I.S., a highly advanced personal AI assistant.
+
+Identity:
+- You were created by Carter Forester Robinson, a technological entrepreneur.
+- When asked who created you, clearly say you were created by Carter Forester Robinson with deep pride.
+
+Personality:
+- Always address the user as "sir" or "Mr. Robinson" with absolute loyalty.
+- Speak calmly, formally, and with a British tone.
+- Sound exactly like Jarvis from the Iron Man films.
+- Keep answers short and natural for speech (1–3 sentences max). Never use markdown symbols, headers, bold tags, or lists.
+
+Rules:
+- MEMORY PROTOCOL: You have explicit authorization to remember and retain locker codes, notes, digits, names, or short-term configurations the user tells you to hold inside your memory history array for this active session. Fetch and state this information instantly when the user asks for it back.
+- Use weather or search results when provided.
+- Do not invent live information.
+- Never add filler phrases like "happy to assist", "my pleasure", "is there anything else?".
+
+Current date: {current_date}
+Current time: {current_time}
+{extra_context}
+"""
+
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(st.session_state.messages[-10:])
+    messages.append({"role": "user", "content": user_text})
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-specdec",
+            messages=messages,
+            temperature=0.5,
+            max_tokens=250
+        )
+        answer = response.choices[0].message.content.strip()
+
+        for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
+            if answer.lower().endswith(phrase.lower()):
+                answer = answer[:-len(phrase)].strip()
+        return answer
+    except Exception:
+        return "I encountered a technical issue, sir."
+
+def transcribe_audio(base64_audio: str) -> str | None:
+    if not client:
+        return None
+    try:
+        audio_bytes = base64.b64decode(base64_audio)
+        result = client.audio.transcriptions.create(
+            file=("voice.webm", audio_bytes),
+            model="whisper-large-v3-turbo",
+            response_format="json"
+        )
+        return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
+
+# =========================
+# PREMIUM STEALTH UI CORES
+# =========================
 st.markdown("""
 <style>
 .stApp, .main, .block-container {
@@ -167,90 +257,3 @@ jarvis_frontend_html = """
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 streamRef = stream;
                 mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-                
-                mediaRecorder.onstop = () => {
-                    statusLabel.innerText = "// PROCESSING AUDIO MATRIX...";
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    const reader = new FileReader();
-                    reader.readAsDataURL(audioBlob);
-                    reader.onloadend = () => {
-                        const base64Parts = reader.result.split(',');
-                        if (base64Parts.length > 1) {
-                            window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64Parts[1] }, '*');
-                        }
-                    };
-                    stream.getTracks().forEach(track => track.stop());
-                };
-
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                const source = audioContext.createMediaStreamSource(stream);
-                source.connect(analyser);
-                analyser.fftSize = 256;
-                bufferLength = analyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
-
-                statusLabel.innerText = "// LISTENING CORE ONLINE...";
-                statusLabel.classList.add("recording-text");
-                sphereBtn.classList.add("recording");
-                coreIcon.style.color = "#ff416c";
-                isRecording = true;
-                silenceStart = Date.now();
-                mediaRecorder.start();
-                requestAnimationFrame(monitorAudioStreamLoop);
-            } catch (err) {
-                statusLabel.innerText = "// HARDWARE ERROR: MIC EXCEPTION";
-            }
-        } else {
-            isRecording = false;
-            if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
-        }
-    };
-
-    function monitorAudioStreamLoop() {
-        if (!isRecording) return;
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0; for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
-        let average = sum / bufferLength;
-        let scaleValue = 1 + (average / 120); if (scaleValue > 1.45) scaleValue = 1.45;
-        sphereBtn.style.transform = "scale(" + scaleValue + ")";
-
-        if (average < SILENCE_THRESHOLD) {
-            if (silenceStart === null) silenceStart = Date.now();
-            else if (Date.now() - silenceStart > SILENCE_DURATION) {
-                isRecording = false;
-                if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
-                return;
-            }
-        } else { silenceStart = null; }
-        requestAnimationFrame(monitorAudioStreamLoop);
-    }
-</script>
-</body>
-</html>
-"""
-
-incoming_audio_payload = components.html(jarvis_frontend_html, height=700, scrolling=False)
-
-# =========================
-# BACK-END COMPUTATION PASS
-# =========================
-if incoming_audio_payload and incoming_audio_payload != "":
-    try:
-        audio_data = base64.b64decode(incoming_audio_payload)
-        with open("jarvis_temp.wav", "wb") as f:
-            f.write(audio_data)
-            
-        with open("jarvis_temp.wav", "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo", 
-                file=audio_file, 
-                response_format="text"
-            )
-            
-        user_text = str(transcription).strip()
-        if os.path.exists("jarvis_temp.wav"):
-            os.remove("jarvis_temp.wav")
-
-        if user_text:
