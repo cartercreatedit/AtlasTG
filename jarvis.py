@@ -475,14 +475,16 @@ component_data = {
 }
 # =========================
 # =========================
+# =========================
 # J.A.R.V.I.S. AUTOMATED VISION FEED
 # =========================
-# Built-in lightweight camera container that works instantly on Streamlit Cloud
 picture = st.camera_input("Optical Feed Active", label_visibility="collapsed")
 
 if picture:
-    # Silently pass the frame to his memory loop automatically
     st.session_state.visual_frame = base64.b64encode(picture.getvalue()).decode("utf-8")
+
+"""
+)
 voice_component(
 result = voice_component(
     key="jarvis_comp",
