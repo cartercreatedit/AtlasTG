@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI
+from groq import Groq
 import datetime
 import base64
 import requests
@@ -14,14 +14,14 @@ st.set_page_config(
 )
 
 # =========================
-# OPENAI CONNECTION
+# GROQ INTERFACE (Restored)
 # =========================
 try:
-    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 except Exception:
-    OPENAI_API_KEY = ""
+    GROQ_API_KEY = ""
 
-client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # =========================
 # SESSION STATE
@@ -160,12 +160,12 @@ Current time: {current_time}
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0.5,
             max_tokens=250
         )
-        answer = response.choices[0].message.content.strip()
+        answer = response.choices.message.content.strip()
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
             if answer.lower().endswith(phrase.lower()):
@@ -185,10 +185,21 @@ def transcribe_audio(base64_audio: str) -> str | None:
         audio_bytes = base64.b64decode(base64_audio)
         result = client.audio.transcriptions.create(
             file=("voice.webm", audio_bytes),
-            model="whisper-1",
+            model="whisper-large-v3-turbo",
             response_format="json"
         )
         return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
     except Exception:
         try:
             result = client.audio.transcriptions.create(
