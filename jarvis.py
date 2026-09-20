@@ -342,13 +342,9 @@ export default function(component) {
 
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
+        let selectedVoice = voices.find(v => v.name.includes("Chrome OS UK 2")) || voices.find(v => v.lang.includes("en-GB")) || voices[0];
 
-        const preferred = [
-            "Google UK English Male",
-            "Microsoft George - English (United Kingdom)",
-            "Microsoft David - English (United States)",
-            "Daniel",
-            "Alex"
+        if (selectedVoice) utterance.voice = selectedVoice;
         ];
 
         let selected = null;
