@@ -478,39 +478,10 @@ component_data = {
 # =========================
 # J.A.R.V.I.S. AUTOMATED VISION FEED
 # =========================
+# =========================
+# J.A.R.V.I.S. AUTOMATED VISION FEED
+# =========================
 picture = st.camera_input("Optical Feed Active", label_visibility="collapsed")
 
 if picture:
     st.session_state.visual_frame = base64.b64encode(picture.getvalue()).decode("utf-8")
-
-"""
-)
-voice_component(
-result = voice_component(
-    key="jarvis_comp",
-    data=component_data,
-    on_audio_change=lambda: None,
-    on_error_change=lambda: None,
-)
-
-# =========================
-# HANDLE AUDIO
-# =========================
-audio_data = getattr(result, "audio", None)
-
-if audio_data and st.session_state.voice_active:
-    spoken = transcribe_audio(audio_data)
-
-    if spoken and spoken != st.session_state.last_spoken:
-        st.session_state.last_spoken = spoken
-        st.session_state.messages.append({"role": "user", "content": spoken})
-
-        answer = ask_jarvis(spoken)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-
-        st.session_state.speech_to_play = answer
-        st.rerun()
-
-error = getattr(result, "error", None)
-if error:
-    st.error(f"Mic error: {error}")
