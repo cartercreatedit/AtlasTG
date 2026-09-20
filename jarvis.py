@@ -91,7 +91,6 @@ def ask_jarvis(user_text: str) -> str:
             import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.setblocking(False)
-            
             packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
             s.sendto(packet, (XBOX_IP, 5050))
             s.sendto(packet, ("255.255.255.255", 5050))
@@ -147,18 +146,7 @@ Current time: {current_time}
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
-    
-    if "visual_frame" in st.session_state and st.session_state.visual_frame:
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": user_text},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{st.session_state.visual_frame}"}}
-            ]
-        })
-        st.session_state.visual_frame = ""
-    else:
-        messages.append({"role": "user", "content": user_text})
+    messages.append({"role": "user", "content": user_text})
         
     try:
         response = client.chat.completions.create(
@@ -189,6 +177,103 @@ def transcribe_audio(base64_audio: str) -> str | None:
             response_format="json"
         )
         return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
+
+# =========================
+# VOICE COMPONENT (Original style)
+# =========================
+voice_component = st.components.v2.component(
+    name="jarvis_original",
+    html="",
+    css="#voice-ui { width: 100%; height: 1px; overflow: hidden; }",
+    js="""
+export default function(component) {
+    const { data, setTriggerValue } = component;
+
+    let stream = null;
+    let recorder = null;
+    let audioContext = null;
+    let analyser = null;
+    let animationFrame = null;
+    let listening = false;
+    let speechStarted = false;
+    let silenceStart = null;
+    let lastSpeech = "";
+    let speaking = false;
+    let speechStartTime = null;
+
+    const SPEECH_THRESHOLD = 0.013;
+    const SILENCE_TIME = 1600;
+    const MIN_SPEECH_TIME = 400;
+
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+    }
+
+    function getSupportedMimeType() {
+        const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+        for (const t of types) {
+            if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return "";
+    }
+
+    async function startListening() {
+        if (listening || speaking) return;
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
+
+            const mimeType = getSupportedMimeType();
+            recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
+
+            recorder.onstop = async () => {
+                listening = false;
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                if (chunks.length === 0) {
+                    setTimeout(startListening, 500);
+                    return;
+                }
+
+                const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+                if (blob.size < 700) {
+                    setTimeout(startListening, 500);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = () => {
+                    const base64data = reader.result.split(",")[1];
+                    setTriggerValue(base64data);
+                };
+            };
+
+            recorder.start();
+            listening = true;
+            speechStarted = false;
+            silenceStart = null;
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
     except Exception:
         try:
             result = client.audio.transcriptions.create(
