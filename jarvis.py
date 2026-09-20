@@ -2,6 +2,8 @@ import streamlit as st
 from groq import Groq
 import datetime
 import base64
+import requests
+import re
 
 st.set_page_config(
     page_title="J.A.R.V.I.S.",
@@ -38,6 +40,25 @@ current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
 
 # =========================
+# WEATHER HELPER
+# =========================
+def get_weather(location: str = "") -> str:
+    try:
+        if not location or location.lower() in ["here", "my location", "current"]:
+            url = "https://wttr.in/?format=3"
+        else:
+            # Clean location
+            loc = location.strip().replace(" ", "+")
+            url = f"https://wttr.in/{loc}?format=3"
+        
+        r = requests.get(url, timeout=6)
+        if r.status_code == 200:
+            return r.text.strip()
+        return "I couldn't retrieve the weather right now."
+    except Exception:
+        return "I couldn't retrieve the weather right now."
+
+# =========================
 # CUSTOM VOICE COMPONENT
 # =========================
 voice_component = st.components.v2.component(
@@ -53,11 +74,7 @@ voice_component = st.components.v2.component(
 """,
     js="""
 export default function(component) {
-    const {
-        parentElement,
-        data,
-        setTriggerValue
-    } = component;
+    const { parentElement, data, setTriggerValue } = component;
 
     let stream = null;
     let recorder = null;
@@ -75,14 +92,10 @@ export default function(component) {
     const MIN_SPEECH_TIME = 350;
     let speechStartTime = null;
 
-    // Force load voices
     if (window.speechSynthesis) {
         window.speechSynthesis.getVoices();
     }
 
-    // =========================
-    // START MICROPHONE
-    // =========================
     async function startListening() {
         if (listening || speaking) return;
 
@@ -95,25 +108,19 @@ export default function(component) {
                 }
             });
 
-            recorder = new MediaRecorder(stream, {
-                mimeType: "audio/webm"
-            });
-
+            recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
             const chunks = [];
 
             recorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunks.push(event.data);
-                }
+                if (event.data.size > 0) chunks.push(event.data);
             };
 
             recorder.onstop = async () => {
                 listening = false;
                 if (animationFrame) cancelAnimationFrame(animationFrame);
-                if (stream) stream.getTracks().forEach(track => track.stop());
+                if (stream) stream.getTracks().forEach(t => t.stop());
 
                 const blob = new Blob(chunks, { type: "audio/webm" });
-
                 if (blob.size < 1000) {
                     setTimeout(startListening, 300);
                     return;
@@ -123,12 +130,10 @@ export default function(component) {
                 const bytes = new Uint8Array(buffer);
                 let binary = "";
                 const chunkSize = 8192;
-
                 for (let i = 0; i < bytes.length; i += chunkSize) {
                     const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
                     binary += String.fromCharCode(...chunk);
                 }
-
                 const base64 = btoa(binary);
                 setTriggerValue("audio", base64);
             };
@@ -149,15 +154,12 @@ export default function(component) {
 
             function detectSpeech() {
                 if (!listening) return;
-
                 analyser.getByteTimeDomainData(dataArray);
                 let sum = 0;
-
                 for (let i = 0; i < dataArray.length; i++) {
                     const value = (dataArray[i] - 128) / 128;
                     sum += value * value;
                 }
-
                 const rms = Math.sqrt(sum / dataArray.length);
                 const now = Date.now();
 
@@ -169,36 +171,26 @@ export default function(component) {
                     silenceStart = null;
                 } else if (speechStarted) {
                     if (!silenceStart) silenceStart = now;
-
                     const speechDuration = now - speechStartTime;
                     const silenceDuration = now - silenceStart;
-
                     if (speechDuration >= MIN_SPEECH_TIME && silenceDuration >= SILENCE_TIME) {
-                        if (recorder && recorder.state === "recording") {
-                            recorder.stop();
-                        }
+                        if (recorder && recorder.state === "recording") recorder.stop();
                         return;
                     }
                 }
-
                 animationFrame = requestAnimationFrame(detectSpeech);
             }
-
             detectSpeech();
         } catch (error) {
             setTriggerValue("error", String(error));
         }
     }
 
-    // =========================
-    // SPEAK RESPONSE (Jarvis-like)
-    // =========================
     function speak(text) {
         if (!text) {
             setTimeout(startListening, 300);
             return;
         }
-
         if (!("speechSynthesis" in window)) {
             setTimeout(startListening, 300);
             return;
@@ -210,13 +202,13 @@ export default function(component) {
         const utterance = new SpeechSynthesisUtterance(text);
         const voices = window.speechSynthesis.getVoices();
 
+        // Prefer deeper / British / male voices
         const preferred = [
             "Google UK English Male",
             "Microsoft George - English (United Kingdom)",
             "Microsoft David - English (United States)",
             "Daniel",
-            "Alex",
-            "Google US English"
+            "Alex"
         ];
 
         let selectedVoice = null;
@@ -224,59 +216,42 @@ export default function(component) {
             selectedVoice = voices.find(v => v.name.includes(name));
             if (selectedVoice) break;
         }
-
         if (!selectedVoice) {
-            selectedVoice = voices.find(v =>
-                v.lang.startsWith("en-GB") && v.name.toLowerCase().includes("male")
-            );
+            selectedVoice = voices.find(v => v.lang.startsWith("en-GB"));
         }
-
         if (!selectedVoice) {
             selectedVoice = voices.find(v => v.lang.startsWith("en"));
         }
+        if (selectedVoice) utterance.voice = selectedVoice;
 
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-        }
-
-        utterance.rate = 0.92;
-        utterance.pitch = 0.85;
+        utterance.rate = 0.90;
+        utterance.pitch = 0.82;
         utterance.volume = 1.0;
 
         utterance.onend = () => {
             speaking = false;
-            setTimeout(startListening, 250);
+            setTimeout(startListening, 300);
         };
-
         utterance.onerror = () => {
             speaking = false;
-            setTimeout(startListening, 250);
+            setTimeout(startListening, 300);
         };
 
         window.speechSynthesis.speak(utterance);
     }
 
-    // =========================
-    // PYTHON → JAVASCRIPT
-    // =========================
     if (data && data.speak && data.speak !== lastSpeech) {
         lastSpeech = data.speak;
         speak(data.speak);
     }
 
-    // =========================
-    // START WHEN ACTIVATED
-    // =========================
     if (data && data.active === true && !listening && !speaking) {
         setTimeout(startListening, 100);
     }
 
-    // =========================
-    // CLEANUP
-    // =========================
     return () => {
         if (animationFrame) cancelAnimationFrame(animationFrame);
-        if (stream) stream.getTracks().forEach(track => track.stop());
+        if (stream) stream.getTracks().forEach(t => t.stop());
         if (audioContext) audioContext.close();
     };
 }
@@ -286,35 +261,51 @@ export default function(component) {
 # =========================
 # AI
 # =========================
-def ask_jarvis(user_text):
+def ask_jarvis(user_text: str) -> str:
     if not client:
         return "My Groq API key isn't connected."
 
+    # Detect weather questions
+    weather_match = re.search(
+        r"(?:weather|temperature|forecast|how(?:'s| is) it outside|is it (?:raining|sunny|cold|hot)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?",
+        user_text,
+        re.IGNORECASE
+    )
+
+    extra_context = ""
+    if weather_match:
+        location = weather_match.group(1).strip() if weather_match.group(1) else ""
+        weather_info = get_weather(location)
+        extra_context = f"\n\nReal-time weather data: {weather_info}\nUse this exact information when answering."
+
     system_prompt = f"""
-You are J.A.R.V.I.S., Tony Stark's personal AI assistant.
+You are J.A.R.V.I.S., a highly capable personal AI assistant inspired by the one from Iron Man.
+
 Current date: {current_date}
 Current time: {current_time}
 
-Speak naturally, calmly and with a slight British tone in your wording.
-Keep responses short and conversational because they will be spoken aloud.
-Reply in the same language the user uses.
-Do not use markdown or bullet points.
-Never invent real-time data (weather, news, stock prices, etc.).
-If the user asks for live information you cannot access, politely say you don't have access to that data right now.
+You have broad knowledge of the world, science, technology, history, culture, and current events up to your training data.
+You speak in a calm, intelligent, slightly British, and helpful manner.
+Keep spoken responses relatively concise (2-4 sentences is ideal) because they will be read aloud.
+Reply in the same language the user is using.
+
+When the user asks for weather, use the real-time weather data provided below if available.
+Never invent live data. If you don't have it, say so honestly.
+{extra_context}
 """
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(st.session_state.messages[-10:])
+    messages.extend(st.session_state.messages[-8:])
     messages.append({"role": "user", "content": user_text})
 
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=messages,
-            temperature=0.7,
-            max_tokens=250
+            temperature=0.65,
+            max_tokens=280
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"I encountered an error: {str(e)}"
 
@@ -341,100 +332,82 @@ def transcribe_audio(base64_audio):
 # =========================
 st.markdown("""
 <style>
-    .stApp {
-        background: #0a0a0a;
-    }
-    .main-circle {
-        width: 180px;
-        height: 180px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 30% 30%, #1a1a2e, #0f0f1a);
-        border: 3px solid #00d4ff;
-        box-shadow: 0 0 40px rgba(0, 212, 255, 0.4),
-                    inset 0 0 20px rgba(0, 212, 255, 0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 80px auto 20px auto;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        user-select: none;
-    }
-    .main-circle:hover {
-        box-shadow: 0 0 60px rgba(0, 212, 255, 0.7),
-                    inset 0 0 30px rgba(0, 212, 255, 0.2);
-        transform: scale(1.05);
-    }
-    .main-circle.active {
-        border-color: #00ff9d;
-        box-shadow: 0 0 50px rgba(0, 255, 157, 0.6),
-                    inset 0 0 25px rgba(0, 255, 157, 0.15);
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.5); }
-        50% { box-shadow: 0 0 70px rgba(0, 255, 157, 0.8); }
-        100% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.5); }
-    }
-    .circle-text {
-        color: #00d4ff;
-        font-size: 18px;
-        font-weight: 500;
-        letter-spacing: 2px;
-        text-align: center;
-    }
-    .active .circle-text {
-        color: #00ff9d;
-    }
-    .status-text {
-        text-align: center;
-        color: #666;
-        font-size: 14px;
-        margin-top: 10px;
-        letter-spacing: 1px;
-    }
+    .stApp { background: #050505; }
     .title {
         text-align: center;
         color: #00d4ff;
-        font-size: 28px;
-        letter-spacing: 8px;
-        margin-top: 40px;
-        font-weight: 300;
+        font-size: 32px;
+        letter-spacing: 10px;
+        margin: 50px 0 10px 0;
+        font-weight: 200;
+    }
+    .main-circle {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #111827, #030712);
+        border: 2px solid #00d4ff;
+        box-shadow: 0 0 50px rgba(0, 212, 255, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 40px auto 15px auto;
+        transition: all 0.35s ease;
+        cursor: pointer;
+    }
+    .main-circle.active {
+        border-color: #00ff9d;
+        box-shadow: 0 0 60px rgba(0, 255, 157, 0.55);
+        animation: pulse 2.2s infinite;
+    }
+    @keyframes pulse {
+        0%   { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+        50%  { box-shadow: 0 0 80px rgba(0, 255, 157, 0.7); }
+        100% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+    }
+    .circle-text {
+        color: #00d4ff;
+        font-size: 16px;
+        letter-spacing: 3px;
+        font-weight: 500;
+    }
+    .active .circle-text { color: #00ff9d; }
+    .status {
+        text-align: center;
+        color: #555;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        margin-bottom: 40px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # =========================
-# TITLE
+# UI
 # =========================
 st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
 
-# =========================
-# CIRCLE BUTTON
-# =========================
 circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
 label = "LISTENING" if st.session_state.voice_active else "START"
 
-# We use a normal Streamlit button but style it to look like the circle is clickable
-col1, col2, col3 = st.columns([1, 2, 1])
+col1, col2, col3 = st.columns([1, 1.4, 1])
 with col2:
-    if st.button(label, key="circle_btn", use_container_width=True):
+    if st.button(label, key="main_btn", use_container_width=True):
         st.session_state.voice_active = not st.session_state.voice_active
         if not st.session_state.voice_active:
             st.session_state.speech_to_play = ""
         st.rerun()
 
-# Visual circle (purely decorative)
-st.markdown(f"""
+st.markdown(f'''
 <div class="{circle_class}">
     <div class="circle-text">{label}</div>
 </div>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 if st.session_state.voice_active:
-    st.markdown('<div class="status-text">VOICE SYSTEM ACTIVE</div>', unsafe_allow_html=True)
+    st.markdown('<div class="status">VOICE SYSTEM ACTIVE • SPEAK NOW</div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div class="status-text">CLICK THE CIRCLE TO START</div>', unsafe_allow_html=True)
+    st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
 
 # =========================
 # VOICE COMPONENT
