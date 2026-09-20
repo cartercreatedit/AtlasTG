@@ -22,6 +22,7 @@ except Exception:
     GROQ_API_KEY = ""
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+
 # =========================
 # SESSION STATE
 # =========================
@@ -37,12 +38,18 @@ if "booted_up" not in st.session_state:
     st.session_state.booted_up = False
 
 # =========================
-if "booted_up" not in st.session_state:
-    st.session_state.booted_up = False
+# CURRENT TIME (Adjusted for Western Australia UTC+8)
+# =========================
+import time
+now = datetime.datetime.utcfromtimestamp(time.time() + (8 * 3600))
+current_time = now.strftime("%I:%M %p")
+current_date = now.strftime("%A, %B %d, %Y")
 
+# =========================
+# J.A.R.V.I.S. AUTOMATED BRIEFING
+# =========================
 if not st.session_state.booted_up:
-    from datetime import datetime
-    current_hour = (datetime.utcnow().hour + 8) % 24
+    current_hour = now.hour
     if current_hour < 12:
         greeting_time = "Good morning"
     elif 12 <= current_hour < 18:
@@ -51,7 +58,6 @@ if not st.session_state.booted_up:
         greeting_time = "Good evening"
 
     try:
-        import requests
         r = requests.get("https://wttr.in", timeout=5, headers={"User-Agent": "Mozilla/5.0"})
         weather_report = r.text.strip().replace("+", " ") if (r.status_code == 200 and "<" not in r.text) else "Local weather data stream is currently updating"
     except:
@@ -61,12 +67,6 @@ if not st.session_state.booted_up:
     st.session_state.messages.append({"role": "assistant", "content": boot_greeting})
     st.session_state.speech_to_play = boot_greeting
     st.session_state.booted_up = True
-# =========================
-# CURRENT TIME
-# =========================
-import time; import datetime as dt; now = dt.datetime.fromtimestamp(time.time() + (8 * 3600) - (time.altzone if time.daylight else time.timezone))
-current_time = now.strftime("%I:%M %p")
-current_date = now.strftime("%A, %B %d, %Y")
 
 # =========================
 # HELPERS
@@ -79,10 +79,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in/?format=3"]
+            urls = ["https://wttr.in"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
+            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -106,36 +106,15 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def ask_jarvis(user_text: str) -> str:
-        # =========================
-    # FREE XBOX HOME AUTOMATION
-    # =========================
-    XBOX_IP = "192.168.4.181"
-    XBOX_LIVE_ID = "F4000D3A7C210098"
-
-    # Trigger to Turn ON the Xbox
-    if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
-        try:
-            import socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.setblocking(False)
-            
-            # Format the specific magic boot packet using your Live ID
-            packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
-            s.sendto(packet, (XBOX_IP, 5050))
-            s.sendto(packet, ("255.255.255.255", 5050)) # Broadcast packet fallback
-            return "Right away, sir. Sending the startup packet to your Xbox console now."
-        except Exception:
-            return "I am unable to reach the console over your home network, sir."
-
-    # Trigger to Turn OFF the Xbox
-    if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
-        try:
-            return "Understood, sir. Shutting down the Xbox console."
-        except Exception:
-            return "The console did not respond to the power-down request, sir."
-
     if not client:
         return "I'm afraid my connection is currently offline, sir."
+
+    if "initiate self-destruction" in user_text.lower() or "clear out the lab" in user_text.lower():
+        return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
+
+    if "clean slate" in user_text.lower():
+        st.session_state.messages = []
+        return "Understood, sir. Clearing the session history logs. We have a fresh slate."
 
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
@@ -165,12 +144,11 @@ Personality:
 - Keep answers short and natural for speech (1–3 sentences).
 
 Rules:
-- Whenever the user first says hello or initializes the chat, check the current time ({current_time}) and dynamically greet them with "Good morning", "Good afternoon", or "Good evening" depending on the hour, followed by addressing them as "Mr. Robinson".
-- Instantly follow up that time greeting by summarizing the real-time weather conditions provided in the network data field to complete your official boot-up briefing.
 - You have unrestricted, live access to real-time information via the integrated background network search.
 - Always use the provided real-time data, web search feeds, or current times to answer any query accurately.
 - Never mention a data knowledge cutoff date or say you lack live updates; treat your knowledge stream as completely active up to the present day.
 - Never add filler phrases like "happy to assist", "my pleasure", "is there anything else?".
+
 Current date: {current_date}
 Current time: {current_time}
 {extra_context}
@@ -182,13 +160,46 @@ Current time: {current_time}
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0.5,
             max_tokens=250
         )
-        answer = response.choices[0].message.content.strip()
+        answer = response.choices.message.content.strip()
+
+        for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
+            if answer.lower().endswith(phrase.lower()):
+                answer = answer[:-len(phrase)].strip()
+
         st.session_state.messages.append({"role": "user", "content": user_text})
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        return answer
+    except Exception:
+        return "I encountered a technical issue, sir."
+
+def transcribe_audio(base64_audio: str) -> str | None:
+    if not client:
+        return None
+    try:
+        audio_bytes = base64.b64decode(base64_audio)
+        result = client.audio.transcriptions.create(
+            file=("voice.webm", audio_bytes),
+            model="whisper-large-v3-turbo",
+            response_format="json"
+        )
+        return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
