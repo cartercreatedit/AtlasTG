@@ -150,11 +150,21 @@ Current time: {current_time}
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
-    messages.append({"role": "user", "content": user_text})
-
+        # Check if a live camera snapshot is waiting to be processed
+    if "visual_frame" in st.session_state and st.session_state.visual_frame:
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": user_text},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{st.session_state.visual_frame}"}}
+            ]
+        })
+        st.session_state.visual_frame = "" # Clear it so he doesn't stay stuck on it
+    else:
+        messages.append({"role": "user", "content": user_text})
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="openai/gpt-oss-120b-vision"
             messages=messages,
             temperature=0.5,
             max_tokens=250
