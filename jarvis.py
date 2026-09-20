@@ -22,17 +22,20 @@ except Exception:
     GROQ_API_KEY = ""
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-
 # =========================
 # SESSION STATE
 # =========================
 if "messages" not in st.session_state:
     st.session_state.messages = []
- # =========================
-# J.A.R.V.I.S. CORE BOOT-UP SEQUENCE
-# =========================
-# =========================
-# J.A.R.V.I.S. AUTOMATED BRIEFING OVERRIDE
+if "voice_active" not in st.session_state:
+    st.session_state.voice_active = False
+if "speech_to_play" not in st.session_state:
+    st.session_state.speech_to_play = ""
+if "last_spoken" not in st.session_state:
+    st.session_state.last_spoken = ""
+if "booted_up" not in st.session_state:
+    st.session_state.booted_up = False
+
 # =========================
 if "booted_up" not in st.session_state:
     st.session_state.booted_up = False
