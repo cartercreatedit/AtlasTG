@@ -22,63 +22,6 @@ except Exception:
     GROQ_API_KEY = ""
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-
-# =========================
-# SESSION STATE & PERMANENT MEMORY
-# =========================
-import json
-import os
-
-if "messages" not in st.session_state:
-    # Check if a saved memory log file exists from your last session
-    if os.path.exists("chat_history.json"):
-        try:
-            with open("chat_history.json", "r") as f:
-                st.session_state.messages = json.load(f)
-        except:
-            st.session_state.messages = []
-    else:
-        st.session_state.messages = []
-
-if "voice_active" not in st.session_state:
-    st.session_state.voice_active = False
-if "speech_to_play" not in st.session_state:
-    st.session_state.speech_to_play = ""
-if "last_spoken" not in st.session_state:
-    st.session_state.last_spoken = ""
-# =========================
-# CURRENT TIME
-# =========================
-import time
-now = datetime.datetime.utcfromtimestamp(time.time() + (8 * 3600))
-current_time = now.strftime("%I:%M %p")
-current_date = now.strftime("%A, %B %d, %Y")
-
-# =========================
-# J.A.R.V.I.S. AUTOMATED BRIEFING
-# =========================
-if "booted_up" not in st.session_state:
-    st.session_state.booted_up = False
-
-if not st.session_state.booted_up:
-    current_hour = now.hour
-    if current_hour < 12:
-        greeting_time = "Good morning"
-    elif 12 <= current_hour < 18:
-        greeting_time = "Good afternoon"
-    else:
-        greeting_time = "Good evening"
-
-    try:
-        r = requests.get("https://wttr.in", timeout=5, headers={"User-Agent": "Mozilla/5.0"})
-        weather_report = r.text.strip().replace("+", " ") if (r.status_code == 200 and "<" not in r.text) else "Local weather data stream is currently updating"
-    except:
-        weather_report = "Local weather data stream unavailable"
-
-    boot_greeting = f"Importing preferences. {greeting_time}, Mr. Robinson. {weather_report}. The local systems are fully active. I am ready for your instructions, sir."
-    st.session_state.messages.append({"role": "assistant", "content": boot_greeting})
-    st.session_state.speech_to_play = boot_greeting
-    st.session_state.booted_up = True
 # =========================
 # HELPERS
 # =========================
