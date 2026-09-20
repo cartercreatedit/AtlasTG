@@ -64,7 +64,7 @@ if not st.session_state.booted_up:
 # =========================
 # CURRENT TIME
 # =========================
-now = datetime.fromtimestamp(datetime.utcnow().timestamp() + (8 * 3600))
+import time; now = datetime.fromtimestamp(time.time() + (8 * 3600)) if hasattr(datetime, 'fromtimestamp') else datetime.fromtimestamp(time.time())
 current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
 
