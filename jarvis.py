@@ -53,10 +53,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in"]
+            urls = ["https://wttr.in/?format=3"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
+            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -132,15 +132,12 @@ Current time: {current_time}
             max_tokens=250
         )
         answer = response.choices[0].message.content.strip()
+                st.session_state.messages.append({"role": "user", "content": user_text})
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
             if answer.lower().endswith(phrase.lower()):
                 answer = answer[:-len(phrase)].strip()
-
-        # Added Memory Tracking Lines Below:
-        st.session_state.messages.append({"role": "user", "content": user_text})
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-
         return answer
     except Exception:
         return "I encountered a technical issue, sir."
@@ -239,52 +236,231 @@ export default function(component) {
                     return;
                 }
 
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = () => {
-                    const base64data = reader.result.split(',')[1];
-                    setTriggerValue({ type: 'audio', data: base64data });
-                };
+                const buffer = await blob.arrayBuffer();
+                const bytes = new Uint8Array(buffer);
+                let binary = "";
+                for (let i = 0; i < bytes.length; i += 8192) {
+                    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 8192, bytes.length)));
+                }
+                setTriggerValue("audio", btoa(binary));
             };
+
+            recorder.start(300);
+            listening = true;
+            speechStarted = false;
+            silenceStart = null;
+            speechStartTime = null;
 
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createMediaStreamSource(stream);
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 512;
             source.connect(analyser);
+            const dataArray = new Uint8Array(analyser.fftSize);
 
-            recorder.start();
-            listening = true;
-            speechStarted = false;
-            silenceStart = null;
+            function detect() {
+                if (!listening) return;
+                analyser.getByteTimeDomainData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const v = (dataArray[i] - 128) / 128;
+                    sum += v * v;
+                }
+                const rms = Math.sqrt(sum / dataArray.length);
+                const now = Date.now();
 
-            checkAudio();
+                if (rms > SPEECH_THRESHOLD) {
+                    if (!speechStarted) {
+                        speechStarted = true;
+                        speechStartTime = now;
+                    }
+                    silenceStart = null;
+                } else if (speechStarted) {
+                    if (!silenceStart) silenceStart = now;
+                    if ((now - speechStartTime) >= MIN_SPEECH_TIME && (now - silenceStart) >= SILENCE_TIME) {
+                        if (recorder && recorder.state === "recording") recorder.stop();
+                        return;
+                    }
+                }
+                animationFrame = requestAnimationFrame(detect);
+            }
+            detect();
         } catch (err) {
-            console.error("Audio recording failed:", err);
-            setTriggerValue({ type: 'error', error: err.message });
+            setTriggerValue("error", String(err));
         }
     }
 
-    function checkAudio() {
-        if (!listening) return;
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(dataArray);
-
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
+    function speak(text) {
+        if (!text || speaking) return;
+        if (!window.speechSynthesis) {
+            setTimeout(startListening, 500);
+            return;
         }
-        const average = sum / dataArray.length / 255;
 
-        const now = Date.now();
+        speaking = true;
+        window.speechSynthesis.cancel();
 
-        if (average > SPEECH_THRESHOLD) {
-            if (!speechStarted) {
-                speechStarted = true;
-                speechStartTime = now;
-            }
-            silenceStart = null;
-        } else {
-            if (speechStarted) {
-                if (!silenceStart) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+
+        const preferred = [
+            "Google UK English Male",
+            "Microsoft George - English (United Kingdom)",
+            "Microsoft David - English (United States)",
+            "Daniel",
+            "Alex"
+        ];
+
+        let selected = null;
+        for (const name of preferred) {
+            selected = voices.find(v => v.name.includes(name));
+            if (selected) break;
+        }
+        if (!selected) selected = voices.find(v => v.lang && v.lang.startsWith("en-GB"));
+        if (!selected) selected = voices.find(v => v.lang && v.lang.startsWith("en"));
+        if (selected) utterance.voice = selected;
+
+        utterance.rate = 0.88;
+        utterance.pitch = 0.80;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => {
+            speaking = false;
+            setTimeout(startListening, 600);
+        };
+        utterance.onerror = () => {
+            speaking = false;
+            setTimeout(startListening, 600);
+        };
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    if (data && data.speak && data.speak !== lastSpeech && data.speak.length > 2) {
+        lastSpeech = data.speak;
+        speak(data.speak);
+    }
+
+    if (data && data.active === true && !listening && !speaking) {
+        setTimeout(startListening, 200);
+    }
+
+    return () => {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (audioContext) audioContext.close();
+        window.speechSynthesis.cancel();
+    };
+}
+"""
+)
+
+# =========================
+# STYLING
+# =========================
+st.markdown("""
+<style>
+    .stApp { background: #050505; }
+    .title {
+        text-align: center;
+        color: #00d4ff;
+        font-size: 32px;
+        letter-spacing: 10px;
+        margin: 40px 0 10px 0;
+        font-weight: 200;
+    }
+    .main-circle {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #111827, #030712);
+        border: 2px solid #00d4ff;
+        box-shadow: 0 0 40px rgba(0, 212, 255, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 30px auto 10px auto;
+    }
+    .main-circle.active {
+        border-color: #00ff9d;
+        box-shadow: 0 0 50px rgba(0, 255, 157, 0.5);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 30px rgba(0, 255, 157, 0.4); }
+        50% { box-shadow: 0 0 60px rgba(0, 255, 157, 0.7); }
+        100% { box-shadow: 0 0 30px rgba(0, 255, 157, 0.4); }
+    }
+    .circle-text {
+        color: #00d4ff;
+        font-size: 15px;
+        letter-spacing: 2px;
+    }
+    .active .circle-text { color: #00ff9d; }
+    .status {
+        text-align: center;
+        color: #666;
+        font-size: 13px;
+        margin-bottom: 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# UI
+# =========================
+st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
+
+circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
+label = "LISTENING" if st.session_state.voice_active else "START"
+
+col1, col2, col3 = st.columns([1, 1.3, 1])
+with col2:
+    if st.button(label, key="btn", use_container_width=True):
+        st.session_state.voice_active = not st.session_state.voice_active
+        st.session_state.speech_to_play = ""
+        st.rerun()
+
+st.markdown(f'<div class="{circle_class}"><div class="circle-text">{label}</div></div>', unsafe_allow_html=True)
+
+if st.session_state.voice_active:
+    st.markdown('<div class="status">VOICE SYSTEM ACTIVE • SPEAK NOW</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
+
+# =========================
+# COMPONENT
+# =========================
+component_data = {
+    "active": st.session_state.voice_active,
+    "speak": st.session_state.speech_to_play
+}
+
+result = voice_component(
+    key="jarvis_comp",
+    data=component_data,
+    on_audio_change=lambda: None,
+    on_error_change=lambda: None,
+)
+
+# =========================
+# HANDLE AUDIO
+# =========================
+audio_data = getattr(result, "audio", None)
+
+if audio_data and st.session_state.voice_active:
+    spoken = transcribe_audio(audio_data)
+
+    if spoken and spoken != st.session_state.last_spoken:
+        st.session_state.last_spoken = spoken
+        st.session_state.messages.append({"role": "user", "content": spoken})
+
+        answer = ask_jarvis(spoken)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        st.session_state.speech_to_play = answer
+        st.rerun()
+
+error = getattr(result, "error", None)
+if error:
+    st.error(f"Mic error: {error}")
