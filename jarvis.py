@@ -42,7 +42,7 @@ if "booted_up" not in st.session_state:
 
 if not st.session_state.booted_up:
     from datetime import datetime
-    current_hour = datetime.now().hour
+    current_hour = (datetime.utcnow().hour + 8) % 24
     if current_hour < 12:
         greeting_time = "Good morning"
     elif 12 <= current_hour < 18:
