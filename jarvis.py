@@ -150,21 +150,11 @@ Current time: {current_time}
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
-        # Check if a live camera snapshot is waiting to be processed
-    if "visual_frame" in st.session_state and st.session_state.visual_frame:
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": user_text},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{st.session_state.visual_frame}"}}
-            ]
-        })
-        st.session_state.visual_frame = "" # Clear it so he doesn't stay stuck on it
-    else:
-        messages.append({"role": "user", "content": user_text})
+    messages.append({"role": "user", "content": user_text})
+
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b-vision",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.5,
             max_tokens=250
@@ -473,17 +463,32 @@ component_data = {
     "active": st.session_state.voice_active,
     "speak": st.session_state.speech_to_play
 }
-# =========================
-# =========================
-# =========================
-# J.A.R.V.I.S. AUTOMATED VISION FEED
-# =========================
-# =========================
-# J.A.R.V.I.S. VOICE INTERFACE
-# =========================
-component_data = {
-    "active": st.session_state.voice_active,
-    "text_to_speak": st.session_state.speech_to_play
-}
 
-voice_component(data=component_data)
+result = voice_component(
+    key="jarvis_comp",
+    data=component_data,
+    on_audio_change=lambda: None,
+    on_error_change=lambda: None,
+)
+
+# =========================
+# HANDLE AUDIO
+# =========================
+audio_data = getattr(result, "audio", None)
+
+if audio_data and st.session_state.voice_active:
+    spoken = transcribe_audio(audio_data)
+
+    if spoken and spoken != st.session_state.last_spoken:
+        st.session_state.last_spoken = spoken
+        st.session_state.messages.append({"role": "user", "content": spoken})
+
+        answer = ask_jarvis(spoken)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        st.session_state.speech_to_play = answer
+        st.rerun()
+
+error = getattr(result, "error", None)
+if error:
+    st.error(f"Mic error: {error}")
