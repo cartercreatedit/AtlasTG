@@ -4,6 +4,7 @@ import datetime
 import base64
 import requests
 import re
+from duckduckgo_search import DDGS
 
 st.set_page_config(
     page_title="J.A.R.V.I.S.",
@@ -44,17 +45,51 @@ current_date = now.strftime("%A, %B %d, %Y")
 # =========================
 def get_weather(location: str = "") -> str:
     try:
-        if not location or location.lower() in ["here", "my location", "current", ""]:
-            url = "https://wttr.in/?format=3"
+        location = location.strip() if location else ""
+        for word in ["the", "city", "of", "weather", "in", "at", "for", "please", "current"]:
+            location = re.sub(rf"\b{word}\b", "", location, flags=re.IGNORECASE).strip()
+        location = re.sub(r"\s+", " ", location).strip()
+
+        if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
+            urls = ["https://wttr.in/?format=3", "https://wttr.in/?format=%l:+%c+%t"]
         else:
-            loc = location.strip().replace(" ", "+")
-            url = f"https://wttr.in/{loc}?format=3"
-        r = requests.get(url, timeout=6)
-        if r.status_code == 200:
-            return r.text.strip()
-        return "I'm afraid I couldn't retrieve the weather data at the moment, sir."
+            clean = location.replace(" ", "+")
+            urls = [
+                f"https://wttr.in/{clean}?format=3",
+                f"https://wttr.in/{clean}?format=%l:+%c+%t",
+                f"https://wttr.in/~{clean}?format=3",
+            ]
+
+        for url in urls:
+            try:
+                r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+                if r.status_code == 200:
+                    text = r.text.strip()
+                    if text and "Unknown location" not in text and len(text) > 4:
+                        return text.replace("+", " ").strip()
+            except Exception:
+                continue
+        return "I currently don't have reliable weather data for that location, sir."
     except Exception:
-        return "I'm afraid I couldn't retrieve the weather data at the moment, sir."
+        return "I currently don't have reliable weather data, sir."
+
+# =========================
+# WEB SEARCH
+# =========================
+def web_search(query: str, max_results: int = 4) -> str:
+    try:
+        results = []
+        with DDGS() as ddgs:
+            for r in ddgs.text(query, max_results=max_results):
+                title = r.get("title", "")
+                body = r.get("body", "")
+                href = r.get("href", "")
+                results.append(f"- {title}: {body} ({href})")
+        if results:
+            return "\n".join(results)
+        return "No relevant results found."
+    except Exception as e:
+        return f"Search failed: {str(e)}"
 
 # =========================
 # VOICE COMPONENT
@@ -279,27 +314,44 @@ def ask_jarvis(user_text: str) -> str:
     if not client:
         return "I'm afraid my connection is currently offline, sir."
 
-    # Fixed regex - kept on one line
+    # Weather detection
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
 
     extra_context = ""
+
     if weather_match:
         location = weather_match.group(1).strip() if weather_match.group(1) else ""
         weather_info = get_weather(location)
-        extra_context = f"\n\nReal-time weather information: {weather_info}\nUse this data accurately and naturally."
+        extra_context += f"\n\nReal-time weather data: {weather_info}"
+
+    # Decide if we should search the web
+    search_triggers = [
+        "who is", "what is", "when did", "where is", "latest", "news", "current",
+        "today", "yesterday", "recent", "score", "price", "stock", "happening",
+        "update", "released", "announced", "search for", "look up", "find out"
+    ]
+
+    needs_search = any(trigger in user_text.lower() for trigger in search_triggers)
+
+    if needs_search and not weather_match:
+        search_results = web_search(user_text, max_results=4)
+        extra_context += f"\n\nWeb search results:\n{search_results}\n\nUse these results to answer accurately. Summarise naturally."
 
     system_prompt = f"""
-You are J.A.R.V.I.S.
+You are J.A.R.V.I.S., a highly capable personal AI assistant.
 
-Strict rules:
-- Always call the user "sir".
-- Speak in a calm, formal, British manner.
-- Keep answers short (1 to 3 sentences maximum).
-- NEVER add polite filler at the end such as:
-  "Happy to assist", "My pleasure", "You're welcome", "Is there anything else?", "How else may I help you?", etc.
-- Just give the information cleanly and stop.
-- Sound exactly like Jarvis from the Iron Man films.
+Personality:
+- Always address the user as "sir".
+- Speak calmly, formally, and with a British tone.
+- Sound like Jarvis from the Iron Man films.
+- Keep spoken answers concise (1–3 sentences preferred).
+
+Rules:
+- Use the real-time weather or web search results when provided.
+- Do not invent live information.
+- Never add filler phrases like "happy to assist", "my pleasure", "is there anything else?", etc.
+- Just answer clearly and stop.
 
 Current date: {current_date}
 Current time: {current_time}
@@ -307,43 +359,34 @@ Current time: {current_time}
 """
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(st.session_state.messages[-6:])
+    messages.extend(st.session_state.messages[-10:])
     messages.append({"role": "user", "content": user_text})
 
     try:
         response = client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=messages,
-            temperature=0.45,
-            max_tokens=180
+            temperature=0.5,
+            max_tokens=280
         )
         answer = response.choices[0].message.content.strip()
 
-        # Aggressive cleanup of unwanted endings
+        # Clean unwanted endings
         bad_endings = [
-            "Happy to assist.",
-            "Happy to assist, sir.",
-            "My pleasure.",
-            "My pleasure, sir.",
-            "You're welcome.",
-            "You're most welcome.",
-            "Is there anything else?",
-            "Is there anything else I can help you with?",
-            "How else may I assist you?",
-            "How else may I help you?",
-            "Let me know if you need anything else.",
-            "At your service."
+            "Happy to assist.", "Happy to assist, sir.",
+            "My pleasure.", "My pleasure, sir.",
+            "You're welcome.", "You're most welcome.",
+            "Is there anything else?", "Is there anything else I can help you with?",
+            "How else may I assist you?", "At your service."
         ]
-
         for phrase in bad_endings:
             if answer.lower().endswith(phrase.lower()):
                 answer = answer[:-len(phrase)].strip()
-            if phrase.lower() in answer.lower()[-60:]:
+            if phrase.lower() in answer.lower()[-70:]:
                 answer = re.sub(re.escape(phrase), "", answer, flags=re.IGNORECASE).strip()
 
-        answer = answer.rstrip(" ,.-")
-        return answer
-    except Exception as e:
+        return answer.rstrip(" ,.-")
+    except Exception:
         return "I encountered a technical issue, sir."
 
 # =========================
@@ -373,7 +416,7 @@ def transcribe_audio(base64_audio):
             return None
 
 # =========================
-# STYLING
+# STYLING + UI (same as before)
 # =========================
 st.markdown("""
 <style>
@@ -426,9 +469,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# UI
-# =========================
 st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
 
 circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
@@ -453,9 +493,6 @@ if st.session_state.voice_active:
 else:
     st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
 
-# =========================
-# VOICE COMPONENT
-# =========================
 component_data = {
     "active": st.session_state.voice_active,
     "speak": st.session_state.speech_to_play
@@ -468,9 +505,6 @@ voice_result = voice_component(
     on_error_change=lambda: None,
 )
 
-# =========================
-# RECEIVE AUDIO
-# =========================
 audio_data = getattr(voice_result, "audio", None)
 
 if audio_data:
@@ -484,9 +518,6 @@ if audio_data:
         st.session_state.speech_to_play = answer
         st.rerun()
 
-# =========================
-# ERROR
-# =========================
 component_error = getattr(voice_result, "error", None)
 if component_error:
     st.error(f"Microphone error: {component_error}")
