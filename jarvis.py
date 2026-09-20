@@ -472,6 +472,7 @@ else:
 component_data = {
     "active": st.session_state.voice_active,
     "speak": st.session_state.speech_to_play
+}
 # =========================
 # J.A.R.V.I.S. LIVE OPTICAL STREAM
 # =========================
