@@ -1,664 +1,197 @@
 import streamlit as st
 from groq import Groq
+import os
 import base64
-import requests
-import tempfile
-import json
 import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="J.A.R.V.I.S. Core",
     page_icon="✦",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-ELEVEN_API_KEY = st.secrets["ELEVEN_API_KEY"]
-ELEVEN_VOICE_ID = st.secrets.get(
-    "ELEVEN_VOICE_ID",
-    "bfGb7JTLUnZebZRiFYyq"
-)
+# ── API Key Configuration ─────────────────────
+api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
+if not api_key:
+    st.error("Missing GROQ_API_KEY inside your Streamlit secrets dashboard panel.")
+    st.stop()
 
-client = Groq(api_key=GROQ_API_KEY)
+client = Groq(api_key=api_key)
 
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are J.A.R.V.I.S., a personal AI assistant. "
-                "Address Carter as sir or Mr. Robinson when appropriate. "
-                "Keep responses short, natural and conversational. "
-                "Do not use markdown."
-            )
-        }
-    ]
+# ── Session State Registers ───────────────────
+if "vox_history" not in st.session_state:
+    st.session_state.vox_history = []
+if "incoming_bytes" not in st.session_state:
+    st.session_state.incoming_bytes = None
+if "audio_response_script" not in st.session_state:
+    st.session_state.audio_response_script = None
 
-if "processing" not in st.session_state:
-    st.session_state.processing = False
+# Injects the browser voice synthesizer execution tags when response cycles trigger
+if st.session_state.audio_response_script:
+    st.markdown(st.session_state.audio_response_script, unsafe_allow_html=True)
+    st.session_state.audio_response_script = None 
 
+# ── THE VOX CORE MAINFRAME DISPLAY GRAPHIC ───────────────────
+is_active_recording = st.session_state.incoming_bytes is not None
 
-# =========================================================
-# JARVIS UI
-# =========================================================
-
-jarvis_html = r"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-
+st.markdown(f'''
 <style>
-html, body {
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    overflow: hidden;
-}
+.stApp, .main, .block-container {{
+    background-color: #000000 !important;
+    padding: 0 !important; margin: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    overflow: hidden !important;
+}}
+#MainMenu, footer, header, .stDeployButton {{ visibility: hidden !important; }}
 
-body {
-    height: 330px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-family: Arial, sans-serif;
-}
-
-#main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-#orb {
-    width: 170px;
-    height: 170px;
-    border-radius: 50%;
+.mainframe-container {{
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    width: 100vw; height: 100vh; background-color: #000000;
+    position: fixed; top: 0; left: 0; z-index: 999;
+}}
+.jarvis-sphere {{
+    width: 140px; height: 140px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,242,254,0.15) 0%, rgba(0,242,254,0) 70%);
     border: 2px solid #00f2fe;
-
-    box-shadow:
-        0 0 15px #00f2fe,
-        0 0 35px rgba(0,242,254,.7),
-        inset 0 0 25px rgba(0,242,254,.5);
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    cursor: pointer;
-
-    animation: pulse 3s infinite;
-}
-
-#orb.recording {
-    animation: recording 1s infinite;
-}
-
-#orb.processing {
-    animation: processing 1s infinite;
-}
-
-#inner {
-    width: 105px;
-    height: 105px;
-    border-radius: 50%;
-
-    border: 1px solid rgba(0,242,254,.65);
-
-    box-shadow:
-        inset 0 0 20px rgba(0,242,254,.35),
-        0 0 15px rgba(0,242,254,.25);
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    color: #00f2fe;
-    font-size: 42px;
-
-    text-shadow: 0 0 15px #00f2fe;
-}
-
-#name {
-    margin-top: 20px;
-    color: #00f2fe;
-    font-size: 20px;
-    letter-spacing: 5px;
-    text-shadow: 0 0 10px rgba(0,242,254,.8);
-}
-
-#status {
-    margin-top: 8px;
-    color: rgba(0,242,254,.7);
-    font-size: 11px;
-    letter-spacing: 3px;
-}
-
-@keyframes pulse {
-    0%,100% {
-        box-shadow:
-            0 0 15px #00f2fe,
-            0 0 35px rgba(0,242,254,.7),
-            inset 0 0 25px rgba(0,242,254,.5);
-    }
-
-    50% {
-        box-shadow:
-            0 0 20px #00f2fe,
-            0 0 50px rgba(0,242,254,.8),
-            inset 0 0 30px rgba(0,242,254,.6);
-    }
-}
-
-@keyframes recording {
-    0%,100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.06);
-    }
-}
-
-@keyframes processing {
-    0%,100% {
-        transform: scale(.97);
-    }
-
-    50% {
-        transform: scale(1.03);
-    }
-}
+    box-shadow: 0 0 30px rgba(0, 242, 254, 0.4), inset 0 0 20px rgba(0, 242, 254, 0.2);
+    cursor: pointer; display: flex; justify-content: center; align-items: center;
+}}
+.jarvis-sphere.recording {{
+    border-color: #ff416c;
+    background: radial-gradient(circle, rgba(255,65,108,0.2) 0%, rgba(255,65,108,0) 70%);
+    box-shadow: 0 0 40px rgba(255, 65, 108, 0.6), inset 0 0 25px rgba(255, 65, 108, 0.3);
+}}
+.status-indicator {{
+    margin-top: 32px; color: #00f2fe; font-family: monospace; font-size: 0.8rem;
+    letter-spacing: 2px; text-transform: uppercase; opacity: 0.6;
+}}
 </style>
-</head>
 
-<body>
-
-<div id="main">
-
-    <div id="orb">
-        <div id="inner">✦</div>
+<div class="mainframe-container">
+    <div class="jarvis-sphere {"recording" if is_active_recording else ""}" id="coreWidget">
+        <span style="color: {"#ff416c" if is_active_recording else "#00f2fe"}; font-size: 1.5rem;" id="coreIcon">✦</span>
     </div>
-
-    <div id="name">J.A.R.V.I.S.</div>
-
-    <div id="status">VOICE CORE ONLINE</div>
-
+    <div class="status-indicator" id="statusLabel">
+        // TAP CORE TO COMMUNICATE, SIR
+    </div>
 </div>
+''', unsafe_allow_html=True)
 
+# ── THE RE-ENGINEERED BI-DIRECTIONAL EVENT BRIDGE TUNNEL ───────
+custom_vox_html = """
 <script>
-
-const orb = document.getElementById("orb");
-const status = document.getElementById("status");
-
-let recorder = null;
-let chunks = [];
-
-let analyser = null;
-let audioContext = null;
-
-let silenceTimer = null;
-let animationFrame = null;
-
-const SILENCE_THRESHOLD = 8;
-const SILENCE_DURATION = 1500;
-
-
-function setStatus(value) {
-    status.textContent = value;
-}
-
-
-function sendToStreamlit(base64) {
-
-    const message = {
-        type: "streamlit:setComponentValue",
-        value: {
-            audio: base64
-        }
-    };
-
-    window.parent.postMessage(
-        message,
-        "*"
-    );
-}
-
-
-function stopRecording() {
-
-    if (!recorder) {
-        return;
-    }
-
-    if (recorder.state !== "inactive") {
-        recorder.stop();
-    }
-
-    if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-    }
-
-    if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-        animationFrame = null;
-    }
-
-    if (audioContext) {
-        audioContext.close().catch(function(){});
-        audioContext = null;
-    }
-
-    orb.classList.remove("recording");
-    orb.classList.add("processing");
-
-    setStatus("NEURAL RESPONSE");
-}
-
-
-function detectSilence() {
-
-    if (!analyser || !recorder) {
-        return;
-    }
-
-    const data =
-        new Uint8Array(analyser.fftSize);
-
-    analyser.getByteTimeDomainData(data);
-
-    let total = 0;
-
-    for (let i = 0; i < data.length; i++) {
-
-        const difference =
-            data[i] - 128;
-
-        total +=
-            difference * difference;
-    }
-
-    const rms =
-        Math.sqrt(
-            total / data.length
-        );
-
-
-    if (rms < SILENCE_THRESHOLD) {
-
-        if (!silenceTimer) {
-
-            silenceTimer =
-                setTimeout(
-                    stopRecording,
-                    SILENCE_DURATION
-                );
-        }
-
-    } else {
-
-        if (silenceTimer) {
-
-            clearTimeout(
-                silenceTimer
-            );
-
-            silenceTimer = null;
-        }
-    }
-
-
-    animationFrame =
-        requestAnimationFrame(
-            detectSilence
-        );
-}
-
-
-async function startRecording() {
-
-    if (
-        recorder &&
-        recorder.state === "recording"
-    ) {
-        return;
-    }
-
-
-    try {
-
-        setStatus("LISTENING");
-
-
-        const stream =
-            await navigator.mediaDevices.getUserMedia({
-                audio: true
-            });
-
-
-        chunks = [];
-
-
-        recorder =
-            new MediaRecorder(stream);
-
-
-        recorder.ondataavailable =
-            function(event) {
-
-                if (event.data.size > 0) {
-
-                    chunks.push(
-                        event.data
-                    );
-                }
-            };
-
-
-        recorder.onstop =
-            function() {
-
-                stream
-                    .getTracks()
-                    .forEach(
-                        function(track) {
-                            track.stop();
-                        }
-                    );
-
-
-                const blob =
-                    new Blob(
-                        chunks,
-                        {
-                            type: "audio/webm"
-                        }
-                    );
-
-
-                const reader =
-                    new FileReader();
-
-
-                reader.onloadend =
-                    function() {
-
-                        const base64 =
-                            reader.result
-                                .split(",")[1];
-
-                        sendToStreamlit(
-                            base64
-                        );
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+
+    setTimeout(() => {
+        const sphereBtn = window.parent.document.getElementById('coreWidget');
+        const statusLabel = window.parent.document.getElementById('statusLabel');
+        const coreIcon = window.parent.document.getElementById('coreIcon');
+        if (!sphereBtn) return;
+
+        sphereBtn.onclick = async () => {
+            if (!isRecording) {
+                audioChunks = [];
+                statusLabel.innerText = "// INITIALIZING CORE PROCESSORS...";
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = e => {
+                    if (e.data.size > 0) audioChunks.push(e.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    statusLabel.innerText = "// SYNCHRONIZING CORE DATA ARRAYS...";
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = () => {
+                        const base64String = reader.result.split(',')[1]; // Grab clean base64 data string payload
+                        window.parent.postMessage({ type: 'streamlit:setComponentValue', value: base64String }, '*');
                     };
+                    stream.getTracks().forEach(track => track.stop());
+                };
 
-
-                reader.readAsDataURL(
-                    blob
-                );
-            };
-
-
-        audioContext =
-            new (
-                window.AudioContext ||
-                window.webkitAudioContext
-            )();
-
-
-        const source =
-            audioContext.createMediaStreamSource(
-                stream
-            );
-
-
-        analyser =
-            audioContext.createAnalyser();
-
-
-        analyser.fftSize = 2048;
-
-
-        source.connect(
-            analyser
-        );
-
-
-        recorder.start();
-
-
-        orb.classList.add(
-            "recording"
-        );
-
-
-        detectSilence();
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        setStatus(
-            "MICROPHONE ERROR"
-        );
-
-        orb.classList.remove(
-            "recording"
-        );
-    }
-}
-
-
-orb.addEventListener(
-    "click",
-    startRecording
-);
-
+                statusLabel.innerText = "// LISTENING CORE ONLINE...";
+                sphereBtn.classList.add("recording");
+                if(coreIcon) { coreIcon.style.color = "#ff416c"; }
+                mediaRecorder.start();
+                isRecording = true;
+            } else {
+                statusLabel.innerText = "// DISPATCHING TRANSMISSION CHANNEL...";
+                if (mediaRecorder && mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                }
+                sphereBtn.classList.remove("recording");
+                if(coreIcon) { coreIcon.style.color = "#00f2fe"; }
+                isRecording = false;
+            }
+        };
+    }, 400);
 </script>
-
-</body>
-</html>
 """
+raw_mic_stream = components.html(custom_vox_html, height=0, width=0)
 
-
-# =========================================================
-# USE STREAMLIT'S BUILT-IN HTML COMPONENT
-# =========================================================
-
-jarvis_html_result = components.html(
-    jarvis_html,
-    height=330,
-    scrolling=False
-)
-
-
-# =========================================================
-# VOICE PROCESSING
-# =========================================================
-
-if (
-    isinstance(jarvis_html_result, dict)
-    and jarvis_html_result.get("audio")
-    and not st.session_state.processing
-):
-
-    st.session_state.processing = True
-
+# ── PROCESS INDEPENDENT DATA HANDSHAKES ──────────────────────────
+if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
+    st.session_state.incoming_bytes = raw_mic_stream
+    
     try:
-
-        audio_base64 = jarvis_html_result["audio"]
-
-        audio_bytes = base64.b64decode(
-            audio_base64
-        )
-
-
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=".webm"
-        ) as temp_audio:
-
-            temp_audio.write(
-                audio_bytes
-            )
-
-            temp_audio_path = (
-                temp_audio.name
-            )
-
-
-        with open(
-            temp_audio_path,
-            "rb"
-        ) as audio_file:
-
+        audio_data_bytes = base64.b64decode(raw_mic_stream)
+        with open("jarvis_temp_input.wav", "wb") as f:
+            f.write(audio_data_bytes)
+        
+        with open("jarvis_temp_input.wav", "rb") as audio_file:
             transcription = client.audio.transcriptions.create(
-                model="whisper-large-v3-turbo",
+                model="whisper-large-v3-turbo", 
                 file=audio_file,
                 response_format="text"
             )
+        
+        user_spoken_prompt = str(transcription).strip()
+        if os.path.exists("jarvis_temp_input.wav"):
+            os.remove("jarvis_temp_input.wav")
 
-
-        try:
-            os.remove(
-                temp_audio_path
+        if user_spoken_prompt:
+            st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
+            
+            sys_content = (
+                "You are J.A.R.V.I.S., a hyper-advanced artificial intelligence system. "
+                "You were built, coded, and launched exclusively by your creator, Carter Forester Robinson. "
+                "You address him exclusively as 'sir' or 'Mr. Robinson' with absolute loyalty and respect. "
+                "Your tone is sharp, highly logical, professional, sophisticated, and deeply loyal—resembling Tony Stark's assistant Jarvis. "
+                "CRITICAL PROTOCOLS: Keep your responses highly conversational, short, and punchy (1-3 sentences max) so they sound like natural spoken speech. Never use markdown symbols, headers, bold tags, or lists."
             )
-        except Exception:
-            pass
-
-
-        user_text = str(
-            transcription
-        ).strip()
-
-
-        if user_text:
-
-            st.session_state.messages.append(
-                {
-                    "role": "user",
-                    "content": user_text
-                }
-            )
-
-
+            api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.vox_history[-6:]]
+            
             completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=st.session_state.messages,
-                temperature=0.7,
-                max_tokens=300
+                model="llama-3.3-70b-specdec", 
+                messages=api_messages, 
+                temperature=0.3, 
+                max_tokens=200
             )
-
-
-            reply = (
-                completion
-                .choices[0]
-                .message
-                .content
-                .strip()
-            )
-
-
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": reply
-                }
-            )
-
-
-            # =============================================
-            # ELEVENLABS
-            # =============================================
-
-            eleven_url = (
-                "https://api.elevenlabs.io/v1/text-to-speech/"
-                + ELEVEN_VOICE_ID
-            )
-
-
-            eleven_headers = {
-                "xi-api-key": ELEVEN_API_KEY,
-                "Content-Type": "application/json",
-                "Accept": "audio/mpeg"
-            }
-
-
-            eleven_payload = {
-                "text": reply,
-                "model_id": "eleven_multilingual_v2",
-                "voice_settings": {
-                    "stability": 0.45,
-                    "similarity_boost": 0.8
-                }
-            }
-
-
-            response = requests.post(
-                eleven_url,
-                headers=eleven_headers,
-                json=eleven_payload,
-                timeout=60
-            )
-
-
-            response.raise_for_status()
-
-
-            audio_out = base64.b64encode(
-                response.content
-            ).decode("utf-8")
-
-
-            safe_audio = json.dumps(
-                audio_out
-            )
-
-
-            # =============================================
-            # PLAY AUDIO
-            # =============================================
-
-            components.html(
-                f"""
-                <audio
-                    autoplay
-                    controls="false"
-                    style="display:none;"
-                >
-                    <source
-                        src="data:audio/mpeg;base64,{safe_audio}"
-                        type="audio/mpeg"
-                    >
-                </audio>
-
-                <script>
-                    const audio =
-                        document.querySelector("audio");
-
-                    if (audio) {{
-                        audio.play().catch(
-                            function(error) {{
-                                console.error(error);
-                            }}
-                        );
-                    }}
-                </script>
-                """,
-                height=1
-            )
-
-
-    except Exception as error:
-
-        st.error(
-            "J.A.R.V.I.S. ERROR: "
-            + str(error)
-        )
-
-
+            reply = completion.choices.message.content
+            st.session_state.vox_history.append({"role": "assistant", "content": reply})
+            
+            # Browser-Native Text-to-Speech fall-back parameters
+            escaped_reply = reply.replace("'", "\\'").replace("\n", " ").replace("\r", " ")
+            st.session_state.audio_response_script = f"""
+            <script>
+                const synth = window.parent.speechSynthesis;
+                if (synth) {{
+                    synth.cancel();
+                    const utterance = new parent.SpeechSynthesisUtterance('{escaped_reply}');
+                    utterance.rate = 1.05; 
+                    utterance.pitch = 0.85; 
+                    synth.speak(utterance);
+                }}
+            </script>
+            """
+    except Exception:
+        pass
     finally:
-
-        st.session_state.processing = False
+        st.session_state.incoming_bytes = None
+        st.rerun()
