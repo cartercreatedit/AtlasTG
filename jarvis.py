@@ -84,9 +84,8 @@ export default function(component) {
     // START MICROPHONE
     // =========================
     async function startListening() {
-        if (listening || speaking) {
-            return;
-        }
+        if (listening || speaking) return;
+
         try {
             stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
@@ -110,12 +109,8 @@ export default function(component) {
 
             recorder.onstop = async () => {
                 listening = false;
-                if (animationFrame) {
-                    cancelAnimationFrame(animationFrame);
-                }
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                }
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                if (stream) stream.getTracks().forEach(track => track.stop());
 
                 const blob = new Blob(chunks, { type: "audio/webm" });
 
@@ -173,9 +168,7 @@ export default function(component) {
                     }
                     silenceStart = null;
                 } else if (speechStarted) {
-                    if (!silenceStart) {
-                        silenceStart = now;
-                    }
+                    if (!silenceStart) silenceStart = now;
 
                     const speechDuration = now - speechStartTime;
                     const silenceDuration = now - silenceStart;
@@ -215,8 +208,6 @@ export default function(component) {
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-
-        // Try to pick a more Jarvis-like voice
         const voices = window.speechSynthesis.getVoices();
 
         const preferred = [
@@ -229,20 +220,17 @@ export default function(component) {
         ];
 
         let selectedVoice = null;
-
         for (const name of preferred) {
             selectedVoice = voices.find(v => v.name.includes(name));
             if (selectedVoice) break;
         }
 
-        // Fallback: any British English male voice
         if (!selectedVoice) {
             selectedVoice = voices.find(v =>
                 v.lang.startsWith("en-GB") && v.name.toLowerCase().includes("male")
             );
         }
 
-        // Final fallback: any English voice
         if (!selectedVoice) {
             selectedVoice = voices.find(v => v.lang.startsWith("en"));
         }
@@ -251,9 +239,8 @@ export default function(component) {
             utterance.voice = selectedVoice;
         }
 
-        // Jarvis-like settings
-        utterance.rate = 0.92;      // slightly slower / more measured
-        utterance.pitch = 0.85;     // slightly deeper
+        utterance.rate = 0.92;
+        utterance.pitch = 0.85;
         utterance.volume = 1.0;
 
         utterance.onend = () => {
@@ -288,15 +275,9 @@ export default function(component) {
     // CLEANUP
     // =========================
     return () => {
-        if (animationFrame) {
-            cancelAnimationFrame(animationFrame);
-        }
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        if (audioContext) {
-            audioContext.close();
-        }
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        if (stream) stream.getTracks().forEach(track => track.stop());
+        if (audioContext) audioContext.close();
     };
 }
 """
@@ -310,22 +291,20 @@ def ask_jarvis(user_text):
         return "My Groq API key isn't connected."
 
     system_prompt = f"""
-You are J.A.R.V.I.S., a personal AI assistant.
+You are J.A.R.V.I.S., Tony Stark's personal AI assistant.
 Current date: {current_date}
 Current time: {current_time}
 
-The user is speaking to you through a voice interface.
-Speak naturally and conversationally.
+Speak naturally, calmly and with a slight British tone in your wording.
+Keep responses short and conversational because they will be spoken aloud.
 Reply in the same language the user uses.
-Keep responses reasonably concise because your response will be spoken aloud.
-Do not use markdown.
-Do not use bullet points unless absolutely necessary.
-Do not describe your response as text.
-Never claim you performed a computer action unless the application actually performed it.
+Do not use markdown or bullet points.
+Never invent real-time data (weather, news, stock prices, etc.).
+If the user asks for live information you cannot access, politely say you don't have access to that data right now.
 """
 
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(st.session_state.messages[-12:])
+    messages.extend(st.session_state.messages[-10:])
     messages.append({"role": "user", "content": user_text})
 
     try:
@@ -333,11 +312,11 @@ Never claim you performed a computer action unless the application actually perf
             model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.7,
-            max_tokens=300
+            max_tokens=250
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"I encountered an error: {e}"
+        return f"I encountered an error: {str(e)}"
 
 # =========================
 # TRANSCRIBE
@@ -345,7 +324,6 @@ Never claim you performed a computer action unless the application actually perf
 def transcribe_audio(base64_audio):
     if not client:
         return None
-
     try:
         audio_bytes = base64.b64decode(base64_audio)
         result = client.audio.transcriptions.create(
@@ -359,34 +337,104 @@ def transcribe_audio(base64_audio):
         return None
 
 # =========================
-# HEADER
+# STYLING
 # =========================
-st.markdown("### J.A.R.V.I.S.")
-st.caption("PERSONAL AI SYSTEM")
+st.markdown("""
+<style>
+    .stApp {
+        background: #0a0a0a;
+    }
+    .main-circle {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #1a1a2e, #0f0f1a);
+        border: 3px solid #00d4ff;
+        box-shadow: 0 0 40px rgba(0, 212, 255, 0.4),
+                    inset 0 0 20px rgba(0, 212, 255, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 80px auto 20px auto;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+    }
+    .main-circle:hover {
+        box-shadow: 0 0 60px rgba(0, 212, 255, 0.7),
+                    inset 0 0 30px rgba(0, 212, 255, 0.2);
+        transform: scale(1.05);
+    }
+    .main-circle.active {
+        border-color: #00ff9d;
+        box-shadow: 0 0 50px rgba(0, 255, 157, 0.6),
+                    inset 0 0 25px rgba(0, 255, 157, 0.15);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.5); }
+        50% { box-shadow: 0 0 70px rgba(0, 255, 157, 0.8); }
+        100% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.5); }
+    }
+    .circle-text {
+        color: #00d4ff;
+        font-size: 18px;
+        font-weight: 500;
+        letter-spacing: 2px;
+        text-align: center;
+    }
+    .active .circle-text {
+        color: #00ff9d;
+    }
+    .status-text {
+        text-align: center;
+        color: #666;
+        font-size: 14px;
+        margin-top: 10px;
+        letter-spacing: 1px;
+    }
+    .title {
+        text-align: center;
+        color: #00d4ff;
+        font-size: 28px;
+        letter-spacing: 8px;
+        margin-top: 40px;
+        font-weight: 300;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
-# CONTROLS
+# TITLE
 # =========================
-col1, col2, col3 = st.columns(3)
+st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
 
-with col1:
-    if st.button("◉ ACTIVATE", use_container_width=True):
-        st.session_state.voice_active = True
-        st.rerun()
+# =========================
+# CIRCLE BUTTON
+# =========================
+circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
+label = "LISTENING" if st.session_state.voice_active else "START"
 
+# We use a normal Streamlit button but style it to look like the circle is clickable
+col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    if st.button("TIME", use_container_width=True):
-        answer = f"The current time is {current_time}."
-        st.session_state.messages.append({"role": "user", "content": "What time is it?"})
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-        st.session_state.speech_to_play = answer
+    if st.button(label, key="circle_btn", use_container_width=True):
+        st.session_state.voice_active = not st.session_state.voice_active
+        if not st.session_state.voice_active:
+            st.session_state.speech_to_play = ""
         st.rerun()
 
-with col3:
-    if st.button("CLEAR", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.speech_to_play = ""
-        st.rerun()
+# Visual circle (purely decorative)
+st.markdown(f"""
+<div class="{circle_class}">
+    <div class="circle-text">{label}</div>
+</div>
+""", unsafe_allow_html=True)
+
+if st.session_state.voice_active:
+    st.markdown('<div class="status-text">VOICE SYSTEM ACTIVE</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="status-text">CLICK THE CIRCLE TO START</div>', unsafe_allow_html=True)
 
 # =========================
 # VOICE COMPONENT
@@ -427,17 +475,7 @@ if component_error:
     st.error(f"Microphone error: {component_error}")
 
 # =========================
-# STATUS
-# =========================
-if st.session_state.voice_active:
-    st.success("VOICE SYSTEM ACTIVE • LISTENING")
-else:
-    st.info("PRESS ACTIVATE TO START")
-
-# =========================
 # CLEAR SPEECH FLAG
 # =========================
 if st.session_state.speech_to_play:
     st.session_state.speech_to_play = ""
-
-st.caption("GROQ • HANDS-FREE VOICE • MULTILINGUAL")
