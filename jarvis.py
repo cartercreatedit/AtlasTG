@@ -172,9 +172,9 @@ Current time: {current_time}
             max_tokens=250
         )
               answer = response.choices.message.content.strip()
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-        for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
-            if answer.lower().endswith(phrase.lower()):
+              st.session_state.messages.append({"role": "assistant", "content": answer})
+              for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
+              if answer.lower().endswith(phrase.lower()):
                 answer = answer[:-len(phrase)].strip()
         return answer
     except Exception:
