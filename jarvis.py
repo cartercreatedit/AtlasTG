@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # =========================
-# GROQ INTERFACE (Restored)
+# GROQ
 # =========================
 try:
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
@@ -58,7 +58,7 @@ if not st.session_state.booted_up:
         greeting_time = "Good evening"
 
     try:
-        r = requests.get("https://wttr.in", timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        r = requests.get("https://wttr.in/?format=3", timeout=5, headers={"User-Agent": "Mozilla/5.0"})
         weather_report = r.text.strip().replace("+", " ") if (r.status_code == 200 and "<" not in r.text) else "Local weather data stream is currently updating"
     except:
         weather_report = "Local weather data stream unavailable"
@@ -79,10 +79,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in"]
+            urls = ["https://wttr.in/?format=3"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
+            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -106,15 +106,32 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def ask_jarvis(user_text: str) -> str:
+    # =========================
+    # FREE XBOX HOME AUTOMATION
+    # =========================
+    XBOX_IP = "192.168.4.181"
+    XBOX_LIVE_ID = "F4000D3A7C210098"
+
+    if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setblocking(False)
+            packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
+            s.sendto(packet, (XBOX_IP, 5050))
+            s.sendto(packet, ("255.255.255.255", 5050))
+            return "Right away, sir. Sending the startup packet to your Xbox console now."
+        except Exception:
+            return "I am unable to reach the console over your home network, sir."
+
+    if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
+        try:
+            return "Understood, sir. Shutting down the Xbox console."
+        except Exception:
+            return "The console did not respond to the power-down request, sir."
+
     if not client:
         return "I'm afraid my connection is currently offline, sir."
-
-    if "initiate self-destruction" in user_text.lower() or "clear out the lab" in user_text.lower():
-        return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
-
-    if "clean slate" in user_text.lower():
-        st.session_state.messages = []
-        return "Understood, sir. Clearing the session history logs. We have a fresh slate."
 
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
     weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
@@ -156,7 +173,18 @@ Current time: {current_time}
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
-    messages.append({"role": "user", "content": user_text})
+
+    if "visual_frame" in st.session_state and st.session_state.visual_frame:
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": user_text},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{st.session_state.visual_frame}"}}
+            ]
+        })
+        st.session_state.visual_frame = ""
+    else:
+        messages.append({"role": "user", "content": user_text})
 
     try:
         response = client.chat.completions.create(
@@ -165,15 +193,13 @@ Current time: {current_time}
             temperature=0.5,
             max_tokens=250
         )
-        answer = response.choices.message.content.strip()
+        answer = response.choices[0].message.content.strip()
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
             if answer.lower().endswith(phrase.lower()):
                 answer = answer[:-len(phrase)].strip()
-
-        st.session_state.messages.append({"role": "user", "content": user_text})
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-
         return answer
     except Exception:
         return "I encountered a technical issue, sir."
@@ -189,6 +215,17 @@ def transcribe_audio(base64_audio: str) -> str | None:
             response_format="json"
         )
         return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
     except Exception:
         try:
             result = client.audio.transcriptions.create(
