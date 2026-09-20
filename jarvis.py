@@ -28,17 +28,17 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 # =========================
 if "messages" not in st.session_state:
     st.session_state.messages = []
-    # =========================
+ # =========================
 # J.A.R.V.I.S. CORE BOOT-UP SEQUENCE
 # =========================
 if "booted_up" not in st.session_state:
     st.session_state.booted_up = False
 
-# This triggers instantly when the website page first loads
 if not st.session_state.booted_up:
-    # Check the weather automatically for your greeting briefing
-    local_weather = get_weather("here")
-    
+    boot_greeting = "Importing preferences. Good to see you, Mr. Robinson. The local systems are fully active. I am ready for your instructions, sir."
+    st.session_state.messages.append({"role": "assistant", "content": boot_greeting})
+    st.session_state.speech_to_play = boot_greeting
+    st.session_state.booted_up = True
     # Format his classic Tony Stark greeting line tailored for Mr. Robinson
     boot_greeting = f"Importing preferences. Good to see you, Mr. Robinson. The local systems are fully active. {local_weather}. I am ready for your instructions, sir."
     
