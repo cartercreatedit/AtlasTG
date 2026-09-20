@@ -31,22 +31,33 @@ if "messages" not in st.session_state:
  # =========================
 # J.A.R.V.I.S. CORE BOOT-UP SEQUENCE
 # =========================
+# =========================
+# J.A.R.V.I.S. AUTOMATED BRIEFING OVERRIDE
+# =========================
 if "booted_up" not in st.session_state:
     st.session_state.booted_up = False
 
 if not st.session_state.booted_up:
-    boot_greeting = "Importing preferences. Good to see you, Mr. Robinson. The local systems are fully active. I am ready for your instructions, sir."
+    from datetime import datetime
+    current_hour = datetime.now().hour
+    if current_hour < 12:
+        greeting_time = "Good morning"
+    elif 12 <= current_hour < 18:
+        greeting_time = "Good afternoon"
+    else:
+        greeting_time = "Good evening"
+
+    try:
+        import requests
+        r = requests.get("https://wttr.in", timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+        weather_report = r.text.strip().replace("+", " ") if r.status_code == 200 else "Weather details offline"
+    except:
+        weather_report = "Local weather data stream unavailable"
+
+    boot_greeting = f"Importing preferences. {greeting_time}, Mr. Robinson. {weather_report}. The local systems are fully active. I am ready for your instructions, sir."
     st.session_state.messages.append({"role": "assistant", "content": boot_greeting})
     st.session_state.speech_to_play = boot_greeting
     st.session_state.booted_up = True
-    # Format his classic Tony Stark greeting line tailored for Mr. Robinson
-if "voice_active" not in st.session_state:
-    st.session_state.voice_active = False
-if "speech_to_play" not in st.session_state:
-    st.session_state.speech_to_play = ""
-if "last_spoken" not in st.session_state:
-    st.session_state.last_spoken = ""
-
 # =========================
 # CURRENT TIME
 # =========================
