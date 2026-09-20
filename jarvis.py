@@ -27,8 +27,8 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 # =========================
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "is_recording" not in st.session_state:
-    st.session_state.is_recording = False
+if "voice_active" not in st.session_state:
+    st.session_state.voice_active = False
 if "speech_to_play" not in st.session_state:
     st.session_state.speech_to_play = ""
 
@@ -57,6 +57,220 @@ def get_weather(location: str = "") -> str:
         return "I'm afraid I couldn't retrieve the weather data at the moment, sir."
 
 # =========================
+# VOICE COMPONENT
+# =========================
+voice_component = st.components.v2.component(
+    name="jarvis_hands_free_voice",
+    html="""
+""",
+    css="""
+#voice-ui {
+    width: 100%;
+    height: 1px;
+    overflow: hidden;
+}
+""",
+    js="""
+export default function(component) {
+    const { data, setTriggerValue } = component;
+
+    let stream = null;
+    let recorder = null;
+    let audioContext = null;
+    let analyser = null;
+    let animationFrame = null;
+    let listening = false;
+    let speechStarted = false;
+    let silenceStart = null;
+    let lastSpeech = "";
+    let speaking = false;
+
+    const SPEECH_THRESHOLD = 0.014;
+    const SILENCE_TIME = 1600;
+    const MIN_SPEECH_TIME = 400;
+    let speechStartTime = null;
+
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+    }
+
+    function getSupportedMimeType() {
+        const types = [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/mp4",
+            "audio/aac",
+            "audio/ogg;codecs=opus",
+            "audio/ogg"
+        ];
+        for (const type of types) {
+            if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) {
+                return type;
+            }
+        }
+        return "";
+    }
+
+    async function startListening() {
+        if (listening || speaking) return;
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
+
+            const mimeType = getSupportedMimeType();
+            const options = mimeType ? { mimeType } : {};
+            recorder = new MediaRecorder(stream, options);
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
+
+            recorder.onstop = async () => {
+                listening = false;
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                if (chunks.length === 0) {
+                    setTimeout(startListening, 500);
+                    return;
+                }
+
+                const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+                if (blob.size < 700) {
+                    setTimeout(startListening, 500);
+                    return;
+                }
+
+                const buffer = await blob.arrayBuffer();
+                const bytes = new Uint8Array(buffer);
+                let binary = "";
+                const chunkSize = 8192;
+                for (let i = 0; i < bytes.length; i += chunkSize) {
+                    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+                }
+                setTriggerValue("audio", btoa(binary));
+            };
+
+            recorder.start(300);
+            listening = true;
+            speechStarted = false;
+            silenceStart = null;
+            speechStartTime = null;
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            source.connect(analyser);
+            const dataArray = new Uint8Array(analyser.fftSize);
+
+            function detectSpeech() {
+                if (!listening) return;
+                analyser.getByteTimeDomainData(dataArray);
+                let sum = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const v = (dataArray[i] - 128) / 128;
+                    sum += v * v;
+                }
+                const rms = Math.sqrt(sum / dataArray.length);
+                const now = Date.now();
+
+                if (rms > SPEECH_THRESHOLD) {
+                    if (!speechStarted) {
+                        speechStarted = true;
+                        speechStartTime = now;
+                    }
+                    silenceStart = null;
+                } else if (speechStarted) {
+                    if (!silenceStart) silenceStart = now;
+                    if ((now - speechStartTime) >= MIN_SPEECH_TIME && (now - silenceStart) >= SILENCE_TIME) {
+                        if (recorder && recorder.state === "recording") recorder.stop();
+                        return;
+                    }
+                }
+                animationFrame = requestAnimationFrame(detectSpeech);
+            }
+            detectSpeech();
+        } catch (err) {
+            setTriggerValue("error", String(err));
+        }
+    }
+
+    function speak(text) {
+        if (!text) {
+            setTimeout(startListening, 500);
+            return;
+        }
+        if (!window.speechSynthesis) {
+            setTimeout(startListening, 500);
+            return;
+        }
+
+        speaking = true;
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+
+        const preferred = [
+            "Google UK English Male",
+            "Microsoft George - English (United Kingdom)",
+            "Microsoft David - English (United States)",
+            "Daniel",
+            "Alex"
+        ];
+
+        let selected = null;
+        for (const name of preferred) {
+            selected = voices.find(v => v.name.includes(name));
+            if (selected) break;
+        }
+        if (!selected) selected = voices.find(v => v.lang && v.lang.startsWith("en-GB"));
+        if (!selected) selected = voices.find(v => v.lang && v.lang.startsWith("en"));
+        if (selected) utterance.voice = selected;
+
+        utterance.rate = 0.88;
+        utterance.pitch = 0.80;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => {
+            speaking = false;
+            setTimeout(startListening, 500);
+        };
+        utterance.onerror = () => {
+            speaking = false;
+            setTimeout(startListening, 500);
+        };
+
+        window.speechSynthesis.speak(utterance);
+    }
+
+    if (data && data.speak && data.speak !== lastSpeech) {
+        lastSpeech = data.speak;
+        speak(data.speak);
+    }
+
+    if (data && data.active === true && !listening && !speaking) {
+        setTimeout(startListening, 200);
+    }
+
+    return () => {
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (audioContext) audioContext.close();
+    };
+}
+"""
+)
+
+# =========================
 # AI
 # =========================
 def ask_jarvis(user_text: str) -> str:
@@ -80,7 +294,7 @@ You are J.A.R.V.I.S., Tony Stark's personal AI assistant.
 
 Rules:
 - Always address the user as "sir".
-- Speak calmly, formally and with a British tone.
+- Speak calmly, formally, and with a British tone.
 - Keep responses short and natural for speech (1–3 sentences).
 - Do not say "You're most welcome", "Is there anything else?", or similar filler.
 - Sound like the Jarvis from the Iron Man films.
@@ -114,10 +328,11 @@ Current time: {current_time}
 # =========================
 # TRANSCRIBE
 # =========================
-def transcribe_audio(audio_bytes):
+def transcribe_audio(base64_audio):
     if not client:
         return None
     try:
+        audio_bytes = base64.b64decode(base64_audio)
         result = client.audio.transcriptions.create(
             file=("voice.webm", audio_bytes),
             model="whisper-large-v3-turbo",
@@ -150,12 +365,42 @@ st.markdown("""
         margin: 50px 0 10px 0;
         font-weight: 200;
     }
+    .main-circle {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #111827, #030712);
+        border: 2px solid #00d4ff;
+        box-shadow: 0 0 50px rgba(0, 212, 255, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 40px auto 15px auto;
+        transition: all 0.35s ease;
+    }
+    .main-circle.active {
+        border-color: #00ff9d;
+        box-shadow: 0 0 60px rgba(0, 255, 157, 0.55);
+        animation: pulse 2.2s infinite;
+    }
+    @keyframes pulse {
+        0%   { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+        50%  { box-shadow: 0 0 80px rgba(0, 255, 157, 0.7); }
+        100% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+    }
+    .circle-text {
+        color: #00d4ff;
+        font-size: 16px;
+        letter-spacing: 3px;
+        font-weight: 500;
+    }
+    .active .circle-text { color: #00ff9d; }
     .status {
         text-align: center;
-        color: #888;
-        font-size: 14px;
+        color: #555;
+        font-size: 13px;
         letter-spacing: 1.5px;
-        margin: 15px 0 30px 0;
+        margin-bottom: 40px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -165,52 +410,68 @@ st.markdown("""
 # =========================
 st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
 
-if st.session_state.is_recording:
-    st.markdown('<div class="status">RECORDING... TAP AGAIN TO STOP</div>', unsafe_allow_html=True)
+circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
+label = "LISTENING" if st.session_state.voice_active else "START"
+
+col1, col2, col3 = st.columns([1, 1.4, 1])
+with col2:
+    if st.button(label, key="main_btn", use_container_width=True):
+        st.session_state.voice_active = not st.session_state.voice_active
+        if not st.session_state.voice_active:
+            st.session_state.speech_to_play = ""
+        st.rerun()
+
+st.markdown(f'''
+<div class="{circle_class}">
+    <div class="circle-text">{label}</div>
+</div>
+''', unsafe_allow_html=True)
+
+if st.session_state.voice_active:
+    st.markdown('<div class="status">VOICE SYSTEM ACTIVE • SPEAK NOW</div>', unsafe_allow_html=True)
 else:
-    st.markdown('<div class="status">TAP TO SPEAK</div>', unsafe_allow_html=True)
+    st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
 
 # =========================
-# RECORDING BUTTON
+# VOICE COMPONENT
 # =========================
-audio_data = st.audio_input(
-    "Tap to speak",
-    key="jarvis_mic",
-    label_visibility="collapsed"
+component_data = {
+    "active": st.session_state.voice_active,
+    "speak": st.session_state.speech_to_play
+}
+
+voice_result = voice_component(
+    key="jarvis_voice",
+    data=component_data,
+    on_audio_change=lambda: None,
+    on_error_change=lambda: None,
 )
 
 # =========================
-# PROCESS AUDIO
+# RECEIVE AUDIO
 # =========================
-if audio_data is not None:
-    audio_bytes = audio_data.read()
+audio_data = getattr(voice_result, "audio", None)
 
-    with st.spinner("Processing..."):
-        spoken_text = transcribe_audio(audio_bytes)
+if audio_data:
+    st.session_state.voice_active = True
+    spoken_text = transcribe_audio(audio_data)
 
-        if spoken_text:
-            st.session_state.messages.append({"role": "user", "content": spoken_text})
-            answer = ask_jarvis(spoken_text)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
-            st.session_state.speech_to_play = answer
-
-            # Show what was said + reply
-            st.markdown(f"**You:** {spoken_text}")
-            st.markdown(f"**J.A.R.V.I.S.:** {answer}")
-
-            # Speak the reply using browser TTS
-            st.components.v1.html(f"""
-            <script>
-                const text = {repr(answer)};
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 0.88;
-                utterance.pitch = 0.80;
-                window.speechSynthesis.speak(utterance);
-            </script>
-            """, height=0)
+    if spoken_text:
+        st.session_state.messages.append({"role": "user", "content": spoken_text})
+        answer = ask_jarvis(spoken_text)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+        st.session_state.speech_to_play = answer
+        st.rerun()
 
 # =========================
-# CLEAR old speech
+# ERROR
+# =========================
+component_error = getattr(voice_result, "error", None)
+if component_error:
+    st.error(f"Microphone error: {component_error}")
+
+# =========================
+# CLEAR SPEECH FLAG
 # =========================
 if st.session_state.speech_to_play:
     st.session_state.speech_to_play = ""
