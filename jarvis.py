@@ -472,11 +472,29 @@ else:
 component_data = {
     "active": st.session_state.voice_active,
     "speak": st.session_state.speech_to_play
-}
-st.markdown("<style>div[data-testid='stCameraInput'] { display: none !important; }</style>", unsafe_allow_html=True)
-picture = st.camera_input("Hidden Feed", label_visibility="collapsed")
-if picture:
-    st.session_state.visual_frame = base64.b64encode(picture.getvalue()).decode("utf-8")
+# =========================
+# J.A.R.V.I.S. LIVE OPTICAL STREAM
+# =========================
+from streamlit_webrtc import streamlit_webrtc, WebRtcMode
+import av
+
+# Callback function that grabs live frames continuously from your webcam feed
+def video_frame_callback(frame: av.VideoFrame) -> av.VideoFrame:
+    img = frame.to_ndarray(format="bgr24")
+    # Silently convert the latest raw video frame into base64 for Jarvis
+    import cv2
+    _, buffer = cv2.imencode('.jpg', img)
+    st.session_state.visual_frame = base64.b64encode(buffer).decode("utf-8")
+    return frame
+
+# Renders a sleek, live streaming video processor component
+ctx = streamlit_webrtc(
+    key="jarvis-live-eyes",
+    mode=WebRtcMode.VIDEO_RECVONLY,
+    video_frame_callback=video_frame_callback,
+    media_stream_constraints={"video": True, "audio": False},
+    rtc_configuration={"iceServers": [{"urls": ["stun:://google.com"]}]}
+)
 result = voice_component(
     key="jarvis_comp",
     data=component_data,
