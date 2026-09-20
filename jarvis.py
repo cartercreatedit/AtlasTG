@@ -31,7 +31,6 @@ except Exception:
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 eleven_client = ElevenLabs(api_key=ELEVENLABS_API_KEY) if ELEVENLABS_API_KEY else None
 
-# Your chosen voice
 JARVIS_VOICE_ID = "H538pP1BbhodCGiYVMKD"
 
 # =========================
@@ -63,10 +62,7 @@ def get_weather(location: str = "") -> str:
             urls = ["https://wttr.in/?format=3"]
         else:
             clean = location.replace(" ", "+")
-            urls = [
-                f"https://wttr.in/{clean}?format=3",
-                f"https://wttr.in/~{clean}?format=3"
-            ]
+            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -134,10 +130,7 @@ def ask_jarvis(user_text: str) -> str:
         weather_info = get_weather(location)
         extra_context += f"\n\nReal-time weather data: {weather_info}"
 
-    search_triggers = [
-        "who is", "what is", "when did", "where is", "latest", "news", "current",
-        "today", "yesterday", "score", "price", "happening", "update", "released"
-    ]
+    search_triggers = ["who is", "what is", "when did", "where is", "latest", "news", "current", "today", "score", "price", "happening", "update"]
     if any(t in user_text.lower() for t in search_triggers) and not weather_match:
         search_results = web_search(user_text)
         extra_context += f"\n\nWeb search results:\n{search_results}"
@@ -178,7 +171,6 @@ Current time: {current_time}
         )
         answer = response.choices[0].message.content.strip()
 
-        # Remove common filler
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
             if answer.lower().endswith(phrase.lower()):
                 answer = answer[:-len(phrase)].strip()
@@ -213,7 +205,7 @@ def transcribe_audio(audio_bytes: bytes) -> str | None:
             return None
 
 # =========================
-# UI
+# STYLING (Original look restored)
 # =========================
 st.markdown("""
 <style>
@@ -221,27 +213,77 @@ st.markdown("""
     .title {
         text-align: center;
         color: #00d4ff;
-        font-size: 34px;
-        letter-spacing: 12px;
-        margin: 40px 0 30px 0;
+        font-size: 32px;
+        letter-spacing: 10px;
+        margin: 50px 0 10px 0;
         font-weight: 200;
+    }
+    .main-circle {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #111827, #030712);
+        border: 2px solid #00d4ff;
+        box-shadow: 0 0 50px rgba(0, 212, 255, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 40px auto 15px auto;
+        transition: all 0.35s ease;
+    }
+    .main-circle.active {
+        border-color: #00ff9d;
+        box-shadow: 0 0 60px rgba(0, 255, 157, 0.55);
+        animation: pulse 2.2s infinite;
+    }
+    @keyframes pulse {
+        0%   { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+        50%  { box-shadow: 0 0 80px rgba(0, 255, 157, 0.7); }
+        100% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+    }
+    .circle-text {
+        color: #00d4ff;
+        font-size: 16px;
+        letter-spacing: 3px;
+        font-weight: 500;
+    }
+    .active .circle-text { color: #00ff9d; }
+    .status {
+        text-align: center;
+        color: #555;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        margin-bottom: 30px;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# =========================
+# UI
+# =========================
 st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
 
-# Big activate button
-if st.button("◉  ACTIVATE / DEACTIVATE", use_container_width=True):
-    st.session_state.voice_active = not st.session_state.voice_active
-    st.rerun()
+circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
+label = "LISTENING" if st.session_state.voice_active else "START"
+
+col1, col2, col3 = st.columns([1, 1.4, 1])
+with col2:
+    if st.button(label, key="main_btn", use_container_width=True):
+        st.session_state.voice_active = not st.session_state.voice_active
+        st.rerun()
+
+st.markdown(f'''
+<div class="{circle_class}">
+    <div class="circle-text">{label}</div>
+</div>
+''', unsafe_allow_html=True)
 
 if st.session_state.voice_active:
-    st.success("VOICE SYSTEM ACTIVE — Speak now")
+    st.markdown('<div class="status">VOICE SYSTEM ACTIVE • SPEAK NOW</div>', unsafe_allow_html=True)
 else:
-    st.info("Click Activate to start listening")
+    st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
 
-# Audio input (most reliable on phone + desktop)
+# Audio input
 audio_file = st.audio_input("Tap to speak", label_visibility="collapsed")
 
 if audio_file is not None and st.session_state.voice_active:
@@ -258,9 +300,8 @@ if audio_file is not None and st.session_state.voice_active:
             st.markdown(f"**You:** {spoken_text}")
             st.markdown(f"**J.A.R.V.I.S.:** {answer}")
 
-            # Generate and play ElevenLabs voice
             audio_data = generate_jarvis_speech(answer)
             if audio_data:
                 st.audio(audio_data, format="audio/mp3")
             else:
-                st.warning("Could not generate voice. Check your ElevenLabs API key.")
+                st.warning("ElevenLabs voice could not be generated. Check your API key.")
