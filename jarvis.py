@@ -53,10 +53,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in/?format=3"]
+            urls = ["https://wttr.in"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
+            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -83,17 +83,12 @@ def ask_jarvis(user_text: str) -> str:
     if not client:
         return "I'm afraid my connection is currently offline, sir."
 
-    # =========================
-       # =========================
-    # J.A.R.V.I.S. CUSTOM PROTOCOLS
-    # =========================
-    # The "Self-Destruct" Countdown Prank
+    # Custom Easter Eggs & Memory Wipes
     if "initiate self-destruction" in user_text.lower() or "clear out the lab" in user_text.lower():
         return "Very well, sir. Self-destruction sequence initiated. Five. Four. Three. Two. One. ... Just kidding, sir. Should I alert the local fire department, or do you intend to survive this one?"
 
-    # Clean Slate just wipes his memory safely now without locking you out
     if "clean slate" in user_text.lower():
-        st.session_state.messages = [] 
+        st.session_state.messages = []
         return "Understood, sir. Clearing the session history logs. We have a fresh slate."
 
     weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
@@ -150,6 +145,7 @@ Current time: {current_time}
             if answer.lower().endswith(phrase.lower()):
                 answer = answer[:-len(phrase)].strip()
 
+        # Update core conversation logs for memory
         st.session_state.messages.append({"role": "user", "content": user_text})
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
@@ -180,15 +176,74 @@ def transcribe_audio(base64_audio: str) -> str | None:
             st.error(f"Transcription error: {e}")
             return None
 
-    weather_pattern = r"(?:weather|temperature|forecast|how's the weather|how is the weather|is it (?:raining|sunny|cold|hot|warm)).*?(?:in|at|for)?\s*([A-Za-z\s]+)?"
-    weather_match = re.search(weather_pattern, user_text, re.IGNORECASE)
+# =========================
+# VOICE COMPONENT (Original style)
+# =========================
+voice_component = st.components.v2.component(
+    name="jarvis_original",
+    html="",
+    css="#voice-ui { width: 100%; height: 1px; overflow: hidden; }",
+    js="""
+export default function(component) {
+    const { data, setTriggerValue } = component;
 
-    extra_context = ""
-    if weather_match:
-        location = weather_match.group(1).strip() if weather_match.group(1) else ""
-        weather_info = get_weather(location)
-        extra_context += f"\n\nReal-time weather data: {weather_info}"
+    let stream = null;
+    let recorder = null;
+    let audioContext = null;
+    let analyser = null;
+    let animationFrame = null;
+    let listening = false;
+    let speechStarted = false;
+    let silenceStart = null;
+    let lastSpeech = "";
+    let speaking = false;
+    let speechStartTime = null;
 
+    const SPEECH_THRESHOLD = 0.013;
+    const SILENCE_TIME = 1600;
+    const MIN_SPEECH_TIME = 400;
+
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+    }
+
+    function getSupportedMimeType() {
+        const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+        for (const t of types) {
+            if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return "";
+    }
+
+    async function startListening() {
+        if (listening || speaking) return;
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            });
+
+            const mimeType = getSupportedMimeType();
+            recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+            const chunks = [];
+
+            recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunks.push(e.data);
+            };
+
+            recorder.onstop = async () => {
+                listening = false;
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                if (stream) stream.getTracks().forEach(t => t.stop());
+
+                if (chunks.length === 0) {
+                    setTimeout(startListening, 500);
+                    return;
+                }
+
+                const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+                if (blob.size < 700) {
+                    setTimeout(startListening, 500);
     search_triggers = ["who is", "what is", "when did", "where is", "latest", "news", "current", "today", "score", "price", "happening", "update"]
     if any(t in user_text.lower() for t in search_triggers) and not weather_match:
         search_results = web_search(user_text)
