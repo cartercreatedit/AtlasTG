@@ -40,8 +40,6 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "voice_active" not in st.session_state:
     st.session_state.voice_active = False
-if "speech_to_play" not in st.session_state:
-    st.session_state.speech_to_play = ""
 if "audio_b64_to_play" not in st.session_state:
     st.session_state.audio_b64_to_play = ""
 
@@ -211,15 +209,12 @@ def transcribe_audio(base64_audio: str) -> str | None:
             return None
 
 # =========================
-# VOICE COMPONENT (Continuous + ElevenLabs)
+# VOICE COMPONENT
 # =========================
 voice_component = st.components.v2.component(
     name="jarvis_continuous",
-    html="""
-""",
-    css="""
-#voice-ui { width: 100%; height: 1px; overflow: hidden; }
-""",
+    html="",
+    css="#voice-ui { width: 100%; height: 1px; overflow: hidden; }",
     js="""
 export default function(component) {
     const { data, setTriggerValue } = component;
@@ -348,13 +343,11 @@ export default function(component) {
         audio.play();
     }
 
-    // Play new audio from Python
     if (data && data.audio_b64 && data.audio_b64 !== lastAudio) {
         lastAudio = data.audio_b64;
         playAudio(data.audio_b64);
     }
 
-    // Start listening when activated
     if (data && data.active === true && !listening && !speaking) {
         setTimeout(startListening, 300);
     }
@@ -393,3 +386,95 @@ st.markdown("""
         align-items: center;
         justify-content: center;
         margin: 40px auto 15px auto;
+        transition: all 0.35s ease;
+    }
+    .main-circle.active {
+        border-color: #00ff9d;
+        box-shadow: 0 0 60px rgba(0, 255, 157, 0.55);
+        animation: pulse 2.2s infinite;
+    }
+    @keyframes pulse {
+        0%   { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+        50%  { box-shadow: 0 0 80px rgba(0, 255, 157, 0.7); }
+        100% { box-shadow: 0 0 40px rgba(0, 255, 157, 0.4); }
+    }
+    .circle-text {
+        color: #00d4ff;
+        font-size: 16px;
+        letter-spacing: 3px;
+        font-weight: 500;
+    }
+    .active .circle-text { color: #00ff9d; }
+    .status {
+        text-align: center;
+        color: #555;
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        margin-bottom: 30px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# =========================
+# UI
+# =========================
+st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
+
+circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
+label = "LISTENING" if st.session_state.voice_active else "START"
+
+col1, col2, col3 = st.columns([1, 1.4, 1])
+with col2:
+    if st.button(label, key="main_btn", use_container_width=True):
+        st.session_state.voice_active = not st.session_state.voice_active
+        st.session_state.audio_b64_to_play = ""
+        st.rerun()
+
+st.markdown(f'''
+<div class="{circle_class}">
+    <div class="circle-text">{label}</div>
+</div>
+''', unsafe_allow_html=True)
+
+if st.session_state.voice_active:
+    st.markdown('<div class="status">VOICE SYSTEM ACTIVE • SPEAK NOW</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
+
+# =========================
+# COMPONENT
+# =========================
+component_data = {
+    "active": st.session_state.voice_active,
+    "audio_b64": st.session_state.audio_b64_to_play
+}
+
+voice_result = voice_component(
+    key="jarvis_voice",
+    data=component_data,
+    on_audio_change=lambda: None,
+    on_error_change=lambda: None,
+)
+
+# =========================
+# PROCESS AUDIO
+# =========================
+audio_data = getattr(voice_result, "audio", None)
+
+if audio_data:
+    st.session_state.voice_active = True
+    spoken_text = transcribe_audio(audio_data)
+
+    if spoken_text:
+        st.session_state.messages.append({"role": "user", "content": spoken_text})
+        answer = ask_jarvis(spoken_text)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        audio_b64 = generate_jarvis_speech(answer)
+        if audio_b64:
+            st.session_state.audio_b64_to_play = audio_b64
+        st.rerun()
+
+component_error = getattr(voice_result, "error", None)
+if component_error:
+    st.error(f"Microphone error: {component_error}")
