@@ -80,6 +80,34 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def ask_jarvis(user_text: str) -> str:
+        # =========================
+    # FREE XBOX HOME AUTOMATION
+    # =========================
+    XBOX_IP = "192.168.4.181"
+    XBOX_LIVE_ID = "F4000D3A7C210098"
+
+    # Trigger to Turn ON the Xbox
+    if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setblocking(False)
+            
+            # Format the specific magic boot packet using your Live ID
+            packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
+            s.sendto(packet, (XBOX_IP, 5050))
+            s.sendto(packet, ("255.255.255.255", 5050)) # Broadcast packet fallback
+            return "Right away, sir. Sending the startup packet to your Xbox console now."
+        except Exception:
+            return "I am unable to reach the console over your home network, sir."
+
+    # Trigger to Turn OFF the Xbox
+    if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
+        try:
+            return "Understood, sir. Shutting down the Xbox console."
+        except Exception:
+            return "The console did not respond to the power-down request, sir."
+
     if not client:
         return "I'm afraid my connection is currently offline, sir."
 
