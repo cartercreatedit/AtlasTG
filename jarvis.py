@@ -164,7 +164,7 @@ Current time: {current_time}
         messages.append({"role": "user", "content": user_text})
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b-vision"
+            model="openai/gpt-oss-120b-vision",
             messages=messages,
             temperature=0.5,
             max_tokens=250
