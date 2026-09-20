@@ -56,6 +56,7 @@ st.markdown(f'''
     border: 2px solid #00f2fe;
     box-shadow: 0 0 30px rgba(0, 242, 254, 0.4), inset 0 0 20px rgba(0, 242, 254, 0.2);
     cursor: pointer; display: flex; justify-content: center; align-items: center;
+    transition: transform 0.05s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }}
 .jarvis-sphere.recording {{
     border-color: #ff416c;
@@ -153,7 +154,7 @@ if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
         
         user_spoken_prompt = str(transcription).strip()
         if os.path.exists("jarvis_temp_input.wav"):
-            os.remove("jarvis_temp_input.wav")
+            os.remove("jarvis_temp.wav")
 
         if user_spoken_prompt:
             st.session_state.vox_history.append({"role": "user", "content": user_spoken_prompt})
@@ -187,6 +188,8 @@ if raw_mic_stream and raw_mic_stream != st.session_state.incoming_bytes:
                     utterance.pitch = 0.85; 
                     synth.speak(utterance);
                 }}
+                const label = window.parent.document.getElementById('statusLabel');
+                if (label) {{ label.innerText = "// TAP CORE TO COMMUNICATE, SIR"; }}
             </script>
             """
     except Exception:
