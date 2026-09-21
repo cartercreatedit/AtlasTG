@@ -164,22 +164,6 @@ def transcribe_audio(base64_audio: str) -> str | None:
         except Exception as e:
             st.error(f"Transcription error: {e}")
             return None
-            model="whisper-large-v3-turbo",
-            response_format="json"
-        )
-        return result.text.strip()
-    except Exception:
-        try:
-            result = client.audio.transcriptions.create(
-                file=("voice.mp4", audio_bytes),
-                model="whisper-large-v3-turbo",
-                response_format="json"
-            )
-            return result.text.strip()
-        except Exception as e:
-            st.error(f"Transcription error: {e}")
-            return None
-
 # =========================
 # VOICE COMPONENT (Original style)
 # =========================
