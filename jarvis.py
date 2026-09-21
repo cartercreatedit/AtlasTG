@@ -356,142 +356,177 @@ export default function(component) {
 
 # =========================
 # STYLING
+# ========================
 # =========================
-# =========================
-# LAYOUT & INTERACTION (3D HOLOGRAM CORE)
+# LAYOUT & INTERACTION (CINEMATIC COALITION CORE)
 # =========================
 st.markdown("""
 <style>
-    .stApp { background: #040406; }
+    /* Force canvas environment to blend cleanly into a deep Stark lab background */
+    .stApp { background: #030305; }
+    iframe { width: 100% !important; margin: 0 auto; display: block; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align: center; color: #ff5500; text-shadow: 0 0 20px #ff3300; font-weight: 100; letter-spacing: 8px; font-family: monospace;'>✦ J.A.R.V.I.S.</h1>", unsafe_allow_html=True)
+# Main Title Headers matching the digital heads-up display tracking style
+st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 20px rgba(255, 60, 0, 0.6); font-weight: 100; letter-spacing: 12px; font-family: monospace; font-size: 26px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #cc4400; font-family: monospace; font-size: 11px; letter-spacing: 4px; margin-bottom: -10px; opacity: 0.75;'>AI MAINFRAME HOLOGRAPHIC GEOMETRY</p>", unsafe_allow_html=True)
 
-# Injecting the dense movie-accurate vector interface
+# Injecting the scaled-up widescreen movie-accurate canvas simulation engine
 st.components.v1.html("""
-<div style="display: flex; justify-content: center; align-items: center; height: 280px; background: #040406;">
-    <canvas id="jarvisCoreCanvas" width="300" height="300" style="cursor: move;"></canvas>
+<div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 500px; background: #030305; overflow: hidden;">
+    <canvas id="movieJarvisCanvas" width="600" height="500"></canvas>
 </div>
 <script>
-    const canvas = document.getElementById('jarvisCoreCanvas');
+    const canvas = document.getElementById('movieJarvisCanvas');
     const ctx = canvas.getContext('2d');
     
-    let angleX = 0.4;
-    let angleY = 0.6;
-    let isDragging = false;
-    let prevMouse = { x: 0, y: 0 };
-    let pulseFactor = 0;
-
-    // Build the structural data framework matching the image rings & vertical links
-    const rings = [
-        { radius: 30, count: 40, type: 'dashed', speedX: 0.01, speedY: 0.005 },
-        { radius: 65, count: 60, type: 'solid', speedX: -0.005, speedY: 0.01 },
-        { radius: 95, count: 80, type: 'web', speedX: 0.003, speedY: -0.007 },
-        { radius: 120, count: 50, type: 'outer', speedX: 0.008, speedY: 0.002 }
-    ];
-
-    function project(x, y, z) {
-        // 3D Matrix Rotations
-        let cosX = Math.cos(angleX), sinX = Math.sin(angleX);
-        let cosY = Math.cos(angleY), sinY = Math.sin(angleY);
-        
-        let y1 = y * cosX - z * sinX;
-        let z1 = z * cosX + y * sinX;
-        
-        let x2 = x * cosY + z1 * sinY;
-        let z2 = z1 * cosY - x * sinY;
-        
-        let scale = 320 / (320 + z2);
-        return {
-            x: 150 + x2 * scale,
-            y: 150 + y1 * scale,
-            visible: z2 > -200
-        };
-    }
-
-    canvas.addEventListener('mousedown', (e) => { isDragging = true; prevMouse = { x: e.offsetX, y: e.offsetY }; });
-    window.addEventListener('mouseup', () => isDragging = false);
-    canvas.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-            angleY += (e.offsetX - prevMouse.x) * 0.01;
-            angleX += (e.offsetY - prevMouse.y) * 0.01;
-        }
-        prevMouse = { x: e.offsetX, y: e.offsetY };
-    });
-
-    function drawCore() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        pulseFactor += 0.04;
-        let coreGlow = Math.sin(pulseFactor) * 4 + 12;
-
-        // 1. Center Core Spark Orb
-        let center = project(0, 0, 0);
+    let time = 0;
+    
+    // Matrix tracking lines to populate the complex background wireframe grid from your image
+    function drawGrid(cx, cy) {
         ctx.beginPath();
-        ctx.arc(center.x, center.y, coreGlow / 3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 200, 100, 0.9)';
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = '#ff5500';
-        ctx.fill();
-        ctx.shadowBlur = 0; // Reset shadow for clean structural vectors
-
-        // 2. Render Rings and the Intersecting Vertical Data Links
-        rings.forEach((ring, rIdx) => {
-            let pts = [];
-            // Calculate rotational shift override
-            let timeShiftX = Date.now() * ring.speedX * 0.05;
-            let timeShiftY = Date.now() * ring.speedY * 0.05;
-
-            for (let i = 0; i < ring.count; i++) {
-                let pct = i / ring.count;
-                let theta = pct * Math.PI * 2;
-                
-                // Tilt various ring planes dynamically to match the sphere image matrix
-                let rx = Math.cos(theta) * ring.radius;
-                let ry = Math.sin(theta) * ring.radius;
-                let rz = 0;
-
-                if (ring.type === 'solid') { rz = rx * 0.3; rx *= 0.9; }
-                if (ring.type === 'web') { rz = ry * -0.4; }
-
-                let p = project(rx, ry, rz);
-                pts.push(p);
-            }
-
-            // Draw Vector Line Paths
-            ctx.beginPath();
-            ctx.strokeStyle = rIdx === 0 ? 'rgba(255, 130, 0, 0.8)' : 'rgba(255, 80, 0, 0.35)';
-            ctx.lineWidth = ring.type === 'dashed' ? 1.5 : 1;
-            
-            if (ring.type === 'dashed') ctx.setLineDash([4, 6]);
-            else ctx.setLineDash([]);
-
-            for (let i = 0; i < pts.length; i++) {
-                if (i === 0) ctx.moveTo(pts[i].x, pts[i].y);
-                else ctx.lineTo(pts[i].x, pts[i].y);
-            }
-            ctx.closePath();
-            ctx.stroke();
-
-            // 3. Connect Cross-Data Struts (the vertical wiring patterns from your image)
-            if (ring.type === 'web' && pts.length > 0) {
-                ctx.beginPath();
-                ctx.strokeStyle = 'rgba(255, 160, 0, 0.15)';
-                for (let k = 0; k < pts.length; k += 8) {
-                    let outerPt = project(Math.cos(k)*120, Math.sin(k)*120, Math.cos(k)*40);
-                    ctx.moveTo(pts[k].x, pts[k].y);
-                    ctx.lineTo(outerPt.x, outerPt.y);
-                    ctx.lineTo(center.x, center.y); // Tie back to central spark
-                }
-                ctx.stroke();
-            }
-        });
-
-        requestAnimationFrame(drawCore);
+        ctx.strokeStyle = 'rgba(255, 60, 0, 0.04)';
+        ctx.lineWidth = 1;
+        // Radiating technical compass background ticks
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(a) * 240, cy + Math.sin(a) * 240);
+        }
+        ctx.stroke();
     }
-    drawCore();
+
+    function renderMovieCore() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        time += 0.015;
+        
+        let cx = canvas.width / 2;
+        let cy = canvas.height / 2;
+        
+        // Render subtle radar grid layers first
+        drawGrid(cx, cy);
+
+        // 1. DENSE INNER CORE CORE ORB (The central engine glare from your picture)
+        let coreRadius = 14 + Math.sin(time * 3) * 2;
+        let coreGlow = ctx.createRadialGradient(cx, cy, 2, cx, cy, coreRadius * 1.8);
+        coreGlow.addColorStop(0, 'rgba(255, 235, 180, 1)');
+        coreGlow.addColorStop(0.3, 'rgba(255, 110, 0, 0.8)');
+        coreGlow.addColorStop(1, 'rgba(255, 40, 0, 0)');
+        
+        ctx.beginPath();
+        ctx.arc(cx, cy, coreRadius * 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = coreGlow;
+        ctx.fill();
+
+        // 2. RADIAL ENERGY SPIKES (The sharp laser strands reaching from center outwards)
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 130, 0, 0.25)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 24; i++) {
+            let angle = (i / 24) * Math.PI * 2 + (time * 0.1);
+            let offset = (i % 3 === 0) ? 190 : 130; // some long strands, some medium
+            if (i % 5 === 0) {
+                ctx.moveTo(cx + Math.cos(angle) * (coreRadius * 0.5), cy + Math.sin(angle) * (coreRadius * 0.5));
+                ctx.lineTo(cx + Math.cos(angle) * offset, cy + Math.sin(angle) * offset);
+            }
+        }
+        ctx.stroke();
+
+        // 3. ASYMMETRICAL MOVIE SHIELD ARCS (The broken layered mechanical rings)
+        // Layer A: Inner detailed tracking dial
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 90, 0, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.arc(cx, cy, 45, time, time + Math.PI * 0.8);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.arc(cx, cy, 45, time + Math.PI, time + Math.PI * 1.4);
+        ctx.stroke();
+
+        // Layer B: Main intersecting technical structural shield line loop
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(1.3, 0.75); // Warp geometry to match the tilted 3D oval look in your screenshot
+        ctx.rotate(time * 0.3);
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 120, 0, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.arc(0, 0, 95, 0, Math.PI * 1.5);
+        ctx.stroke();
+        
+        // Add tiny block marker notes on the ring
+        ctx.fillStyle = '#ff6a00';
+        ctx.fillRect(Math.cos(0)*95 - 2, Math.sin(0)*95 - 2, 4, 4);
+        ctx.fillRect(Math.cos(Math.PI*0.5)*95 - 2, Math.sin(Math.PI*0.5)*95 - 2, 4, 4);
+        ctx.restore();
+
+        // Layer C: Giant Outer Orbit Cage (The sprawling thin outer matrix shell)
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(1.45, 0.9);
+        ctx.rotate(-time * 0.15);
+        
+        // Draw the massive outer ring
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 60, 0, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.arc(0, 0, 140, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Draw cross lines slicing directly through the ring shell
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 100, 0, 0.12)';
+        for(let k=0; k<8; k++) {
+            let a1 = (k/8)*Math.PI*2;
+            let a2 = a1 + 0.4;
+            ctx.moveTo(Math.cos(a1)*110, Math.sin(a1)*110);
+            ctx.lineTo(Math.cos(a2)*140, Math.sin(a2)*140);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Layer D: The Dense Secondary Orbit Ring
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(0.85, 1.35); // Vertical tilt variant matching movie schematics
+        ctx.rotate(time * 0.25);
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 75, 0, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 8]); // Dashed readouts
+        ctx.arc(0, 0, 115, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // 4. FLOATING CIRCUIT CLUSTER NODES (The random technical dots along vector endpoints)
+        for (let j = 0; j < 12; j++) {
+            let seedAngle = (j * 4.3) + (time * 0.05);
+            let dist = 135 + Math.sin(time + j) * 8;
+            let fx = cx + Math.cos(seedAngle) * dist;
+            let fy = cy + Math.sin(seedAngle) * dist * 0.7;
+            
+            ctx.beginPath();
+            ctx.arc(fx, fy, 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 150, 0, 0.75)';
+            ctx.fill();
+            
+            // Draw a fine target connector tracking back down to center hub block
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 80, 0, 0.07)';
+            ctx.moveTo(fx, fy);
+            ctx.lineTo(cx, cy);
+            ctx.stroke();
+        }
+
+        requestAnimationFrame(renderMovieCore);
+    }
+    
+    // Fire up the matrix calculations immediately on boot execution
+    renderMovieCore();
 </script>
-""", height=290)
+""", height=510)
 
 if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
     raw_audio = st.session_state.jarvis_original_output
