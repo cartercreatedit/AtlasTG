@@ -419,7 +419,6 @@ st.components.v1.html(f"""
     const canvas = document.getElementById('denseNeuralCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Massive vector array allocation to match the extreme line density from your screenshot
     const numParticles = 380; 
     let particles = [];
     let time = 0;
@@ -434,8 +433,6 @@ st.components.v1.html(f"""
             let v = Math.random();
             let theta = u * 2.0 * Math.PI;
             let phi = Math.acos(2.0 * v - 1.0);
-            
-            // Cranked radius parameters up from 145 to 210 for an extra-large screen presence
             let radius = 210; 
             
             particles.push({{
@@ -530,7 +527,7 @@ st.components.v1.html(f"""
         }});
 
         requestAnimationFrame(renderDenseGrid);
-    }}
+    }
 
     window.addEventListener('message', (e) => {{
         if (e.data && e.data.type === 'jarvis_audio_state') {{
@@ -560,8 +557,9 @@ st.components.v1.html(f"""
 </script>
 """, height=1)
 
+# Forces microphone active flag to directly track python session state
 component_data = {
-    "active": True,
+    "active": st.session_state.voice_active,
     "text_to_speak": st.session_state.speech_to_play
 }
 
