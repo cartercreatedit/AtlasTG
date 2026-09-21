@@ -24,32 +24,22 @@ except Exception:
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # =========================
-# SESSION STATE & PERMANENT MEMORY
+# SESSION STATE
 # =========================
-import json
-import os
-
 if "messages" not in st.session_state:
-    # Check if a saved memory log file exists from your last session
-    if os.path.exists("chat_history.json"):
-        try:
-            with open("chat_history.json", "r") as f:
-                st.session_state.messages = json.load(f)
-        except:
-            st.session_state.messages = []
-    else:
-        st.session_state.messages = []
-
+    st.session_state.messages = []
 if "voice_active" not in st.session_state:
     st.session_state.voice_active = False
 if "speech_to_play" not in st.session_state:
     st.session_state.speech_to_play = ""
 if "last_spoken" not in st.session_state:
     st.session_state.last_spoken = ""
+
 # =========================
-# CURRENT TIME
+# CURRENT TIME (Adjusted for Western Australia UTC+8)
 # =========================
-now = datetime.datetime.now()
+import time
+now = datetime.datetime.utcfromtimestamp(time.time() + (8 * 3600))
 current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
 
@@ -64,10 +54,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in/?format=3"]
+            urls = ["https://wttr.in"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
+            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -91,34 +81,6 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def ask_jarvis(user_text: str) -> str:
-        # =========================
-    # FREE XBOX HOME AUTOMATION
-    # =========================
-    XBOX_IP = "192.168.4.181"
-    XBOX_LIVE_ID = "F4000D3A7C210098"
-
-    # Trigger to Turn ON the Xbox
-    if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
-        try:
-            import socket
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.setblocking(False)
-            
-            # Format the specific magic boot packet using your Live ID
-            packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
-            s.sendto(packet, (XBOX_IP, 5050))
-            s.sendto(packet, ("255.255.255.255", 5050)) # Broadcast packet fallback
-            return "Right away, sir. Sending the startup packet to your Xbox console now."
-        except Exception:
-            return "I am unable to reach the console over your home network, sir."
-
-    # Trigger to Turn OFF the Xbox
-    if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
-        try:
-            return "Understood, sir. Shutting down the Xbox console."
-        except Exception:
-            return "The console did not respond to the power-down request, sir."
-
     if not client:
         return "I'm afraid my connection is currently offline, sir."
 
@@ -144,16 +106,15 @@ Identity:
 - When asked who created you, clearly say you were created by Carter Forester Robinson.
 
 Personality:
-Personality:
 - Always address the user as "sir".
-- Speak calmly, formally, and with a British tone.
-- Sound exactly like Jarvis from the Iron Man films.
-- When the user explicitly says "hey jarvis", respond exactly with: "Hello, Mr. Forester Robinson, how can I help you?"
-- For all other questions or commands, answer normally and naturally for speech (1–3 sentences).
+- Speak calmly, formally, with a witty, dry British tone—exactly like Jarvis from the Iron Man films.
+- Keep answers short and natural for speech (1–3 sentences max).
+
 Rules:
-- You have unrestricted, live access to real-time information via your background search.
-- Always use the provided real-time data or web search feeds to answer any current news or score queries accurately up to the present day.
-- Never add filler phrases like "happy to assist", "my pleasure", "is there anything else?".
+- When the user explicitly says "hey jarvis", respond exactly with: "Hello, Mr. Forester Robinson, how can I help you?"
+- For all other statements, questions, or commands, respond normally and intelligently without repeating the greeting.
+- You have unrestricted, live access to real-time information via your background search. Always use provided real-time data naturally if asked.
+- Never add filler phrases like "happy to assist" or "is there anything else?".
 
 Current date: {current_date}
 Current time: {current_time}
@@ -163,16 +124,15 @@ Current time: {current_time}
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
     messages.append({"role": "user", "content": user_text})
-
+        
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0.5,
             max_tokens=250
         )
-        answer = response.choices[0].message.content.strip()
-        st.session_state.messages.append({"role": "user", "content": user_text})
+        answer = response.choices.message.content.strip()
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
@@ -189,6 +149,21 @@ def transcribe_audio(base64_audio: str) -> str | None:
         audio_bytes = base64.b64decode(base64_audio)
         result = client.audio.transcriptions.create(
             file=("voice.webm", audio_bytes),
+            model="whisper-large-v3-turbo",
+            response_format="json"
+        )
+        return result.text.strip()
+    except Exception:
+        try:
+            result = client.audio.transcriptions.create(
+                file=("voice.mp4", audio_bytes),
+                model="whisper-large-v3-turbo",
+                response_format="json"
+            )
+            return result.text.strip()
+        except Exception as e:
+            st.error(f"Transcription error: {e}")
+            return None
             model="whisper-large-v3-turbo",
             response_format="json"
         )
