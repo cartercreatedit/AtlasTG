@@ -355,7 +355,7 @@ export default function(component) {
 )
 # =========================
 # =========================
-# LAYOUT & INTERACTION (CINEMATIC CORE INTEGRATION)
+# LAYOUT & INTERACTION (CINEMATIC 3D NEURAL COUPLING)
 # =========================
 st.markdown("""
 <style>
@@ -391,9 +391,11 @@ st.markdown("""
 
 st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 30px rgba(255, 50, 0, 0.85); font-weight: 100; letter-spacing: 16px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
 
-# 1. ORIGINAL CORE TRIGGER LOOP BUTTON
-if st.button("✦ INITIALIZE VOCAL MATRIX ✦", key="stark_manual_voice_trigger"):
+# 1. ORIGINAL VISIBILITY CONTROL SWITCH LINK
+label = "✦ VOCAL MATRIX ENGAGED ✦" if st.session_state.voice_active else "✦ ENGAGE CORE COUPLING ✦"
+if st.button(label, key="btn", use_container_width=True):
     st.session_state.voice_active = not st.session_state.voice_active
+    st.session_state.speech_to_play = ""
     st.rerun()
 
 # Main UI Status Display
@@ -408,6 +410,7 @@ st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: 
 
 # Pass active state as string variable to safely bypass f-string parser conflicts
 is_active_str = "true" if st.session_state.voice_active else "false"
+is_speaking_flag = "true" if (st.session_state.speech_to_play != "") else "false"
 
 # 2. SCALED-UP 380-NODE EXTRA-LARGE CORE SIMULATION ENGINE
 st.components.v1.html(f"""
@@ -422,7 +425,7 @@ st.components.v1.html(f"""
     let particles = [];
     let time = 0;
     
-    let isJarvisSpeaking = false;
+    let isJarvisSpeaking = {is_speaking_flag};
     let isVoiceActive = {is_active_str};
 
     function initHyperSphere() {{
@@ -526,40 +529,43 @@ st.components.v1.html(f"""
         }});
 
         requestAnimationFrame(renderDenseGrid);
-    }}
-
-    window.addEventListener('message', (e) => {{
-        if (e.data && e.data.type === 'jarvis_audio_state') {{
-            isJarvisSpeaking = e.data.speaking;
-        }}
-    }});
+    }
 
     renderDenseGrid();
 </script>
 """, height=530)
 
-# 3. ORIGINAL WORKING SYNC LOGIC MAPPING
-if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
-    raw_audio = st.session_state.jarvis_original_output
-    st.session_state.jarvis_original_output = None
-    
-    with st.spinner("Processing audio matrix..."):
-        text_input = transcribe_audio(raw_audio)
-        if text_input:
-            reply = ask_jarvis(text_input)
-            st.session_state.speech_to_play = reply
-
-is_speaking_flag = "true" if (st.session_state.speech_to_play != "") else "false"
-st.components.v1.html(f"""
-<script>
-    window.parent.postMessage({{type: 'jarvis_audio_state', speaking: {is_speaking_flag}}}, '*');
-</script>
-""", height=1)
-
-# RESTORED ORIGINAL STABLE AUDIO DATA CONNECTIONS PIPELINE
+# =========================
+# ORIGINAL COMPONENT CONNECTIONS & PROCESSING LOGIC
+# =========================
 component_data = {
     "active": st.session_state.voice_active,
-    "text_to_speak": st.session_state.speech_to_play
+    "speak": st.session_state.speech_to_play
 }
 
-voice_component(data=component_data, key="jarvis_voice_module")
+result = voice_component(
+    key="jarvis_comp",
+    data=component_data,
+    on_audio_change=lambda: None,
+    on_error_change=lambda: None,
+)
+
+# Handle voice payload returns matching your stable reference fields exactly
+audio_data = getattr(result, "audio", None)
+
+if audio_data and st.session_state.voice_active:
+    spoken = transcribe_audio(audio_data)
+
+    if spoken and spoken != st.session_state.last_spoken:
+        st.session_state.last_spoken = spoken
+        st.session_state.messages.append({"role": "user", "content": spoken})
+
+        answer = ask_jarvis(spoken)
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+
+        st.session_state.speech_to_play = answer
+        st.rerun()
+
+error = getattr(result, "error", None)
+if error:
+    st.error(f"Mic error: {error}")
