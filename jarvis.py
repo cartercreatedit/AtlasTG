@@ -358,173 +358,152 @@ export default function(component) {
 # STYLING
 # ========================
 # =========================
-# LAYOUT & INTERACTION (CINEMATIC COALITION CORE)
+# LAYOUT & INTERACTION (CINEMATIC NEURAL CORE)
 # =========================
 st.markdown("""
 <style>
-    /* Force canvas environment to blend cleanly into a deep Stark lab background */
+    /* Blends the entire dashboard canvas space into a dark Stark lab background */
     .stApp { background: #030305; }
     iframe { width: 100% !important; margin: 0 auto; display: block; }
 </style>
 """, unsafe_allow_html=True)
 
-# Main Title Headers matching the digital heads-up display tracking style
-st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 20px rgba(255, 60, 0, 0.6); font-weight: 100; letter-spacing: 12px; font-family: monospace; font-size: 26px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #cc4400; font-family: monospace; font-size: 11px; letter-spacing: 4px; margin-bottom: -10px; opacity: 0.75;'>AI MAINFRAME HOLOGRAPHIC GEOMETRY</p>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 25px rgba(255, 60, 0, 0.7); font-weight: 100; letter-spacing: 14px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
 
-# Injecting the scaled-up widescreen movie-accurate canvas simulation engine
+# Injecting the dense, movie-accurate neural particle web simulation engine
 st.components.v1.html("""
 <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 500px; background: #030305; overflow: hidden;">
-    <canvas id="movieJarvisCanvas" width="600" height="500"></canvas>
+    <canvas id="neuralJarvisCanvas" width="600" height="500"></canvas>
 </div>
 <script>
-    const canvas = document.getElementById('movieJarvisCanvas');
+    const canvas = document.getElementById('neuralJarvisCanvas');
     const ctx = canvas.getContext('2d');
     
+    const numParticles = 140;
+    let particles = [];
     let time = 0;
     
-    // Matrix tracking lines to populate the complex background wireframe grid from your image
-    function drawGrid(cx, cy) {
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 60, 0, 0.04)';
-        ctx.lineWidth = 1;
-        // Radiating technical compass background ticks
-        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + Math.cos(a) * 240, cy + Math.sin(a) * 240);
+    // Monitors whether JARVIS is speaking to alter energy state
+    let isJarvisSpeaking = false;
+
+    // Build the 3D spherical shell coordinates matrix matching your image look
+    function initNeuralSphere() {
+        particles = [];
+        for (let i = 0; i < numParticles; i++) {
+            let u = Math.random();
+            let v = Math.random();
+            let theta = u * 2.0 * Math.PI;
+            let phi = Math.acos(2.0 * v - 1.0);
+            
+            // Sphere radius boundaries
+            let radius = 130; 
+            
+            particles.push({
+                x: radius * Math.sin(phi) * Math.cos(theta),
+                y: radius * Math.sin(phi) * Math.sin(theta),
+                z: radius * Math.cos(phi),
+                ox: theta, // original angles to drive noise waves
+                oy: phi
+            });
         }
-        ctx.stroke();
     }
 
-    function renderMovieCore() {
+    function project3D(x, y, z) {
+        let scale = 350 / (350 + z);
+        return {
+            x: canvas.width / 2 + x * scale,
+            y: canvas.height / 2 + y * scale,
+            scale: scale,
+            zDepth: z
+        };
+    }
+
+    initNeuralSphere();
+
+    function renderNeuralGrid() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        time += 0.015;
         
-        let cx = canvas.width / 2;
-        let cy = canvas.height / 2;
+        // Dynamically shift speed based on speaker voice channel activity
+        let activitySpeed = isJarvisSpeaking ? 0.04 : 0.006;
+        let surgeIntensity = isJarvisSpeaking ? 25 : 4;
         
-        // Render subtle radar grid layers first
-        drawGrid(cx, cy);
+        time += activitySpeed;
 
-        // 1. DENSE INNER CORE CORE ORB (The central engine glare from your picture)
-        let coreRadius = 14 + Math.sin(time * 3) * 2;
-        let coreGlow = ctx.createRadialGradient(cx, cy, 2, cx, cy, coreRadius * 1.8);
-        coreGlow.addColorStop(0, 'rgba(255, 235, 180, 1)');
-        coreGlow.addColorStop(0.3, 'rgba(255, 110, 0, 0.8)');
-        coreGlow.addColorStop(1, 'rgba(255, 40, 0, 0)');
-        
-        ctx.beginPath();
-        ctx.arc(cx, cy, coreRadius * 1.8, 0, Math.PI * 2);
-        ctx.fillStyle = coreGlow;
-        ctx.fill();
+        // Apply a dynamic 3D rotational drift frame
+        let rotY = time * 0.4;
+        let rotX = time * 0.2;
+        let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+        let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
 
-        // 2. RADIAL ENERGY SPIKES (The sharp laser strands reaching from center outwards)
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 130, 0, 0.25)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 24; i++) {
-            let angle = (i / 24) * Math.PI * 2 + (time * 0.1);
-            let offset = (i % 3 === 0) ? 190 : 130; // some long strands, some medium
-            if (i % 5 === 0) {
-                ctx.moveTo(cx + Math.cos(angle) * (coreRadius * 0.5), cy + Math.sin(angle) * (coreRadius * 0.5));
-                ctx.lineTo(cx + Math.cos(angle) * offset, cy + Math.sin(angle) * offset);
+        let projectedNodes = [];
+
+        // 1. Calculate and update particle clusters with wave distortion vectors
+        particles.forEach((pt, i) => {
+            // Apply fluid noise ripples onto the sphere surface mapping
+            let wave = Math.sin(pt.ox * 4 + time * 3) * Math.cos(pt.oy * 4 + time * 2) * surgeIntensity;
+            let currentRadius = 135 + wave;
+
+            let x1 = currentRadius * Math.sin(pt.oy) * Math.cos(pt.ox);
+            let y1 = currentRadius * Math.sin(pt.oy) * Math.sin(pt.ox);
+            let z1 = currentRadius * Math.cos(pt.oy);
+
+            // Rotate Y axis
+            let x2 = x1 * cosY + z1 * sinY;
+            let z2 = z1 * cosY - x1 * sinY;
+
+            // Rotate X axis
+            let y3 = y1 * cosX - z2 * sinX;
+            let z3 = z2 * cosX + y1 * sinX;
+
+            projectedNodes.push(project3D(x2, y3, z3));
+        });
+
+        // 2. CONNECTING MESH LINES (Web connections from your screenshot image)
+        ctx.lineWidth = 0.6;
+        for (let i = 0; i < projectedNodes.length; i++) {
+            let p1 = projectedNodes[i];
+            let connectionsCount = 0;
+            
+            // Connect nearest neighboring data streams to form the woven mesh pattern
+            for (let j = i + 1; j < projectedNodes.length; j++) {
+                if (connectionsCount > 3) break; // Limit branches to stay clean
+                
+                let p2 = projectedNodes[j];
+                let dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+
+                // Proximity check line builder
+                if (dist < 55) {
+                    connectionsCount++;
+                    let alpha = (1 - (dist / 55)) * 0.28 * p1.scale;
+                    ctx.strokeStyle = `rgba(255, 95, 0, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
             }
         }
-        ctx.stroke();
 
-        // 3. ASYMMETRICAL MOVIE SHIELD ARCS (The broken layered mechanical rings)
-        // Layer A: Inner detailed tracking dial
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 90, 0, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.arc(cx, cy, 45, time, time + Math.PI * 0.8);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.arc(cx, cy, 45, time + Math.PI, time + Math.PI * 1.4);
-        ctx.stroke();
-
-        // Layer B: Main intersecting technical structural shield line loop
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(1.3, 0.75); // Warp geometry to match the tilted 3D oval look in your screenshot
-        ctx.rotate(time * 0.3);
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 120, 0, 0.7)';
-        ctx.lineWidth = 1.5;
-        ctx.arc(0, 0, 95, 0, Math.PI * 1.5);
-        ctx.stroke();
-        
-        // Add tiny block marker notes on the ring
-        ctx.fillStyle = '#ff6a00';
-        ctx.fillRect(Math.cos(0)*95 - 2, Math.sin(0)*95 - 2, 4, 4);
-        ctx.fillRect(Math.cos(Math.PI*0.5)*95 - 2, Math.sin(Math.PI*0.5)*95 - 2, 4, 4);
-        ctx.restore();
-
-        // Layer C: Giant Outer Orbit Cage (The sprawling thin outer matrix shell)
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(1.45, 0.9);
-        ctx.rotate(-time * 0.15);
-        
-        // Draw the massive outer ring
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 60, 0, 0.35)';
-        ctx.lineWidth = 1;
-        ctx.arc(0, 0, 140, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Draw cross lines slicing directly through the ring shell
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 100, 0, 0.12)';
-        for(let k=0; k<8; k++) {
-            let a1 = (k/8)*Math.PI*2;
-            let a2 = a1 + 0.4;
-            ctx.moveTo(Math.cos(a1)*110, Math.sin(a1)*110);
-            ctx.lineTo(Math.cos(a2)*140, Math.sin(a2)*140);
-        }
-        ctx.stroke();
-        ctx.restore();
-
-        // Layer D: The Dense Secondary Orbit Ring
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.scale(0.85, 1.35); // Vertical tilt variant matching movie schematics
-        ctx.rotate(time * 0.25);
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 75, 0, 0.45)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 8]); // Dashed readouts
-        ctx.arc(0, 0, 115, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-
-        // 4. FLOATING CIRCUIT CLUSTER NODES (The random technical dots along vector endpoints)
-        for (let j = 0; j < 12; j++) {
-            let seedAngle = (j * 4.3) + (time * 0.05);
-            let dist = 135 + Math.sin(time + j) * 8;
-            let fx = cx + Math.cos(seedAngle) * dist;
-            let fy = cy + Math.sin(seedAngle) * dist * 0.7;
-            
+        // 3. DRAW GLOWING NODES (The particle nodes passing down vectors)
+        projectedNodes.forEach(p => {
+            let nodeAlpha = isJarvisSpeaking ? 0.85 * p.scale : 0.5 * p.scale;
+            ctx.fillStyle = `rgba(255, 130, 0, ${nodeAlpha})`;
             ctx.beginPath();
-            ctx.arc(fx, fy, 2, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 150, 0, 0.75)';
+            ctx.arc(p.x, p.y, isJarvisSpeaking ? 2 * p.scale : 1.2 * p.scale, 0, Math.PI * 2);
             ctx.fill();
-            
-            // Draw a fine target connector tracking back down to center hub block
-            ctx.beginPath();
-            ctx.strokeStyle = 'rgba(255, 80, 0, 0.07)';
-            ctx.moveTo(fx, fy);
-            ctx.lineTo(cx, cy);
-            ctx.stroke();
-        }
+        });
 
-        requestAnimationFrame(renderMovieCore);
+        requestAnimationFrame(renderNeuralGrid);
     }
-    
-    // Fire up the matrix calculations immediately on boot execution
-    renderMovieCore();
+
+    // Monitor interface variables to capture audio state dynamically
+    window.addEventListener('message', (e) => {
+        if (e.data && e.data.type === 'jarvis_audio_state') {
+            isJarvisSpeaking = e.data.speaking;
+        }
+    });
+
+    renderNeuralGrid();
 </script>
 """, height=510)
 
@@ -537,6 +516,14 @@ if "jarvis_original_output" in st.session_state and st.session_state.jarvis_orig
         if text_input:
             reply = ask_jarvis(text_input)
             st.session_state.speech_to_play = reply
+
+# Tells the JavaScript code if a voice payload is playing out loud right now
+is_speaking_flag = "true" if (st.session_state.speech_to_play != "") else "false"
+st.components.v1.html(f"""
+<script>
+    window.parent.postMessage({{type: 'jarvis_audio_state', speaking: {is_speaking_flag}}}, '*');
+</script>
+""", height=1)
 
 component_data = {
     "active": True,
