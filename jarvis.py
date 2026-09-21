@@ -353,11 +353,8 @@ export default function(component) {
 }
 """
 )
-
 # =========================
-# LAYOUT & INTERACTION (HYPER-DENSITY INTERACTIVE NEURAL CORE)
-# =========================
-# LAYOUT & INTERACTION (HYPER-DENSITY INTERACTIVE NEURAL CORE)
+# LAYOUT & INTERACTION (HYPER-DENSITY LARGE INTERACTIVE CORE)
 # =========================
 st.markdown("""
 <style>
@@ -367,51 +364,56 @@ st.markdown("""
     /* Center aligns the iframe matrix layout cleanly */
     iframe { width: 100% !important; margin: 0 auto; display: block; }
     
-    /* Turns the native Streamlit button into a giant invisible click shield covering the sphere */
+    /* Styles the physical Start Button to match Tony Stark's orange interface look */
     div.stButton > button {
-        position: absolute;
-        top: -460px; /* Moves the button up directly on top of the 500px sphere canvas */
-        left: 50%;
-        transform: translateX(-50%);
-        width: 320px;
-        height: 320px;
-        border-radius: 50%;
-        background: transparent !important;
-        border: none !important;
-        color: transparent !important;
-        box-shadow: none !important;
+        display: block;
+        margin: 20px auto 10px auto !important;
+        background: #020204 !important;
+        color: #ff5500 !important;
+        border: 2px solid #ff5500 !important;
+        border-radius: 8px !important;
+        padding: 10px 24px !important;
+        font-family: monospace !important;
+        font-size: 14px !important;
+        letter-spacing: 2px !important;
+        font-weight: bold !important;
+        box-shadow: 0 0 15px rgba(255, 85, 0, 0.2) !important;
+        transition: all 0.3s ease !important;
         cursor: pointer;
-        z-index: 9999;
     }
-    /* Prevents default button hover colors from revealing the layout shield */
-    div.stButton > button:hover, div.stButton > button:active, div.stButton > button:focus {
-        background: transparent !important;
-        color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
+    div.stButton > button:hover {
+        background: #ff5500 !important;
+        color: #020204 !important;
+        box-shadow: 0 0 25px rgba(255, 85, 0, 0.6) !important;
+        transform: scale(1.02);
     }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 30px rgba(255, 50, 0, 0.85); font-weight: 100; letter-spacing: 16px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
 
+# 1. THE HIGH-VISIBILITY ACTIVATION BUTTON SYSTEM
+if st.button("✦ INITIALIZE VOCAL MATRIX ✦", key="stark_manual_voice_trigger"):
+    st.session_state.voice_active = not st.session_state.voice_active
+    st.rerun()
+
 # Main UI Status Display
 if st.session_state.voice_active:
     status_text = "VOCAL MATRIX ENGAGED // CAPTURING AUDIO CUES..."
     status_color = "#ff6a00"
 else:
-    status_text = "SYSTEM STANDBY // CLICK CORE CAGE TO INITIALIZE LINK"
+    status_text = "SYSTEM STANDBY // CLICK BUTTON ABOVE TO INITIALIZE LINK"
     status_color = "#993300"
 
-st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: monospace; font-size: 11px; letter-spacing: 3px; margin-bottom: -15px;'>{status_text}</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: monospace; font-size: 11px; letter-spacing: 3px; margin-top: 5px; margin-bottom: -15px;'>{status_text}</p>", unsafe_allow_html=True)
 
 # Pass active state as string variable to safely bypass f-string parser conflicts
 is_active_str = "true" if st.session_state.voice_active else "false"
 
-# Injecting the hyper-dense movie-accurate 380-node particle web simulation engine
+# 2. SCALED-UP 380-NODE EXTRA-LARGE CORE SIMULATION ENGINE
 st.components.v1.html(f"""
-<div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 500px; background: #020204; overflow: hidden; position: relative;">
-    <canvas id="denseNeuralCanvas" width="600" height="500"></canvas>
+<div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 520px; background: #020204; overflow: hidden; position: relative;">
+    <canvas id="denseNeuralCanvas" width="600" height="520"></canvas>
 </div>
 <script>
     const canvas = document.getElementById('denseNeuralCanvas');
@@ -433,7 +435,8 @@ st.components.v1.html(f"""
             let theta = u * 2.0 * Math.PI;
             let phi = Math.acos(2.0 * v - 1.0);
             
-            let radius = 145; 
+            // Cranked radius parameters up from 145 to 210 for an extra-large screen presence
+            let radius = 210; 
             
             particles.push({{
                 x: radius * Math.sin(phi) * Math.cos(theta),
@@ -462,7 +465,7 @@ st.components.v1.html(f"""
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         let speedMultiplier = isJarvisSpeaking ? 0.045 : (isVoiceActive ? 0.02 : 0.005);
-        let waveSurge = isJarvisSpeaking ? 30 : (isVoiceActive ? 15 : 5);
+        let waveSurge = isJarvisSpeaking ? 40 : (isVoiceActive ? 20 : 6);
         
         time += speedMultiplier;
 
@@ -475,7 +478,7 @@ st.components.v1.html(f"""
 
         particles.forEach((pt) => {{
             let noise = Math.sin(pt.ox * 5 + time * 2.5) * Math.cos(pt.oy * 5 + time * 1.8) * waveSurge;
-            let currentRadius = 140 + noise;
+            let currentRadius = 205 + noise;
 
             let x1 = currentRadius * Math.sin(pt.oy) * Math.cos(pt.ox);
             let y1 = currentRadius * Math.sin(pt.oy) * Math.sin(pt.ox);
@@ -494,7 +497,7 @@ st.components.v1.html(f"""
         for (let i = 0; i < projectedNodes.length; i++) {{
             let p1 = projectedNodes[i];
             let currentConnections = 0;
-            let proximityLimit = isVoiceActive ? 65 : 48; 
+            let proximityLimit = isVoiceActive ? 85 : 65; 
 
             for (let j = i + 1; j < projectedNodes.length; j++) {{
                 if (currentConnections > 5) break; 
@@ -518,7 +521,7 @@ st.components.v1.html(f"""
 
         projectedNodes.forEach(p => {{
             let nodeAlpha = isJarvisSpeaking ? 0.95 * p.scale : (isVoiceActive ? 0.75 * p.scale : 0.4 * p.scale);
-            let sizeRadius = isJarvisSpeaking ? 2.2 * p.scale : (isVoiceActive ? 1.6 * p.scale : 1.1 * p.scale);
+            let sizeRadius = isJarvisSpeaking ? 2.5 * p.scale : (isVoiceActive ? 1.8 * p.scale : 1.2 * p.scale);
             
             ctx.fillStyle = "rgba(255, 120, 0, " + nodeAlpha + ")";
             ctx.beginPath();
@@ -527,7 +530,7 @@ st.components.v1.html(f"""
         }});
 
         requestAnimationFrame(renderDenseGrid);
-    }}
+    }
 
     window.addEventListener('message', (e) => {{
         if (e.data && e.data.type === 'jarvis_audio_state') {{
@@ -537,12 +540,7 @@ st.components.v1.html(f"""
 
     renderDenseGrid();
 </script>
-""", height=510)
-
-# Native Python activation link hidden seamlessly behind the sphere layout
-if st.button("Activate Vocal Matrix", key="invisible_sphere_trigger"):
-    st.session_state.voice_active = not st.session_state.voice_active
-    st.rerun()
+""", height=530)
 
 if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
     raw_audio = st.session_state.jarvis_original_output
