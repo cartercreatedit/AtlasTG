@@ -355,10 +355,6 @@ export default function(component) {
 )
 
 # =========================
-# STYLING
-# ========================
-# =========================
-# =========================
 # LAYOUT & INTERACTION (HYPER-DENSITY INTERACTIVE NEURAL CORE)
 # =========================
 st.markdown("""
@@ -488,7 +484,8 @@ st.components.v1.html(f"""
                     let alphaBase = isVoiceActive ? 0.32 : 0.18;
                     let alpha = (1 - (dist / proximityLimit)) * alphaBase * p1.scale;
                     
-                    ctx.strokeStyle = `rgba(255, 85, 0, ${alpha})`;
+                    // Fixed backtick interpolation string conflict using classic Javascript token layout concatenation
+                    ctx.strokeStyle = "rgba(255, 85, 0, " + alpha + ")";
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(p2.x, p2.y);
@@ -501,13 +498,15 @@ st.components.v1.html(f"""
             let nodeAlpha = isJarvisSpeaking ? 0.95 * p.scale : (isVoiceActive ? 0.75 * p.scale : 0.4 * p.scale);
             let sizeRadius = isJarvisSpeaking ? 2.2 * p.scale : (isVoiceActive ? 1.6 * p.scale : 1.1 * p.scale);
             
-            ctx.fillStyle = `rgba(255, 120, 0, ${nodeAlpha})`;
+            ctx.fillStyle = "rgba(255, 120, 0, " + nodeAlpha + ")";
             ctx.beginPath();
             ctx.arc(p.x, p.y, sizeRadius, 0, Math.PI * 2);
             ctx.fill();
         }});
 
         requestAnimationFrame(renderDenseGrid);
+    }
+
     window.addEventListener('message', (e) => {{
         if (e.data && e.data.type === 'jarvis_audio_state') {{
             isJarvisSpeaking = e.data.speaking;
