@@ -508,8 +508,6 @@ st.components.v1.html(f"""
         }});
 
         requestAnimationFrame(renderDenseGrid);
-    }
-
     window.addEventListener('message', (e) => {{
         if (e.data && e.data.type === 'jarvis_audio_state') {{
             isJarvisSpeaking = e.data.speaking;
