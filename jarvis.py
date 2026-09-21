@@ -357,11 +357,39 @@ export default function(component) {
 # =========================
 # LAYOUT & INTERACTION (HYPER-DENSITY INTERACTIVE NEURAL CORE)
 # =========================
+# LAYOUT & INTERACTION (HYPER-DENSITY INTERACTIVE NEURAL CORE)
+# =========================
 st.markdown("""
 <style>
     /* Blends the entire dashboard canvas space into a dark Stark lab background */
     .stApp { background: #020204; }
+    
+    /* Center aligns the iframe matrix layout cleanly */
     iframe { width: 100% !important; margin: 0 auto; display: block; }
+    
+    /* Turns the native Streamlit button into a giant invisible click shield covering the sphere */
+    div.stButton > button {
+        position: absolute;
+        top: -460px; /* Moves the button up directly on top of the 500px sphere canvas */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        background: transparent !important;
+        border: none !important;
+        color: transparent !important;
+        box-shadow: none !important;
+        cursor: pointer;
+        z-index: 9999;
+    }
+    /* Prevents default button hover colors from revealing the layout shield */
+    div.stButton > button:hover, div.stButton > button:active, div.stButton > button:focus {
+        background: transparent !important;
+        color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -383,7 +411,7 @@ is_active_str = "true" if st.session_state.voice_active else "false"
 # Injecting the hyper-dense movie-accurate 380-node particle web simulation engine
 st.components.v1.html(f"""
 <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 500px; background: #020204; overflow: hidden; position: relative;">
-    <canvas id="denseNeuralCanvas" width="600" height="500" style="cursor: pointer;"></canvas>
+    <canvas id="denseNeuralCanvas" width="600" height="500"></canvas>
 </div>
 <script>
     const canvas = document.getElementById('denseNeuralCanvas');
@@ -427,11 +455,6 @@ st.components.v1.html(f"""
             zDepth: z
         }};
     }}
-
-    // Capture user clicks on the sphere lines to trigger the voice core system
-    canvas.addEventListener('click', () => {{
-        window.parent.postMessage({{type: 'jarvis_click_trigger'}}, '*');
-    }});
 
     initHyperSphere();
 
@@ -484,7 +507,6 @@ st.components.v1.html(f"""
                     let alphaBase = isVoiceActive ? 0.32 : 0.18;
                     let alpha = (1 - (dist / proximityLimit)) * alphaBase * p1.scale;
                     
-                    // Fixed backtick interpolation string conflict using classic Javascript token layout concatenation
                     ctx.strokeStyle = "rgba(255, 85, 0, " + alpha + ")";
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
@@ -505,7 +527,7 @@ st.components.v1.html(f"""
         }});
 
         requestAnimationFrame(renderDenseGrid);
-        }}
+    }
 
     window.addEventListener('message', (e) => {{
         if (e.data && e.data.type === 'jarvis_audio_state') {{
@@ -517,22 +539,10 @@ st.components.v1.html(f"""
 </script>
 """, height=510)
 
-# Capture background click messages sent by canvas click handler to toggle microphone state
-if "jarvis_click_trigger" in st.session_state and st.session_state.jarvis_click_trigger:
+# Native Python activation link hidden seamlessly behind the sphere layout
+if st.button("Activate Vocal Matrix", key="invisible_sphere_trigger"):
     st.session_state.voice_active = not st.session_state.voice_active
-    del st.session_state["jarvis_click_trigger"]
     st.rerun()
-
-# Hidden event routing pipeline to connect JavaScript clicks directly into python Session State memory
-st.components.v1.html("""
-<script>
-    window.addEventListener('message', (e) => {
-        if (e.data && e.data.type === 'jarvis_click_trigger') {
-            window.parent.postMessage({type: 'jarvis_click_trigger'}, '*');
-        }
-    });
-</script>
-""", height=0)
 
 if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
     raw_audio = st.session_state.jarvis_original_output
