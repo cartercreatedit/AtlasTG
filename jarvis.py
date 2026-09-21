@@ -355,7 +355,7 @@ export default function(component) {
 )
 # =========================
 # =========================
-# LAYOUT & INTERACTION (CINEMATIC OPERATIONAL MAINFRAME)
+# LAYOUT & INTERACTION (CINEMATIC CORE INTEGRATION)
 # =========================
 st.markdown("""
 <style>
@@ -391,7 +391,7 @@ st.markdown("""
 
 st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 30px rgba(255, 50, 0, 0.85); font-weight: 100; letter-spacing: 16px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
 
-# 1. THE HIGH-VISIBILITY ACTIVATION BUTTON SYSTEM
+# 1. ORIGINAL CORE TRIGGER LOOP BUTTON
 if st.button("✦ INITIALIZE VOCAL MATRIX ✦", key="stark_manual_voice_trigger"):
     st.session_state.voice_active = not st.session_state.voice_active
     st.rerun()
@@ -526,7 +526,7 @@ st.components.v1.html(f"""
         }});
 
         requestAnimationFrame(renderDenseGrid);
-    }}
+    }
 
     window.addEventListener('message', (e) => {{
         if (e.data && e.data.type === 'jarvis_audio_state') {{
@@ -538,6 +538,7 @@ st.components.v1.html(f"""
 </script>
 """, height=530)
 
+# 3. ORIGINAL WORKING SYNC LOGIC MAPPING
 if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
     raw_audio = st.session_state.jarvis_original_output
     st.session_state.jarvis_original_output = None
@@ -548,7 +549,6 @@ if "jarvis_original_output" in st.session_state and st.session_state.jarvis_orig
             reply = ask_jarvis(text_input)
             st.session_state.speech_to_play = reply
 
-# Tells the JavaScript code if a voice payload is playing out loud right now
 is_speaking_flag = "true" if (st.session_state.speech_to_play != "") else "false"
 st.components.v1.html(f"""
 <script>
@@ -556,10 +556,10 @@ st.components.v1.html(f"""
 </script>
 """, height=1)
 
-# Forces microphone active flag to directly track python session state
+# RESTORED ORIGINAL STABLE AUDIO DATA CONNECTIONS PIPELINE
 component_data = {
-    "active": st.session_state.voice_active,
-    "text_to_speak": st.session_state.speech_to_play
+    "voice_active": st.session_state.voice_active,
+    "speech_to_play": st.session_state.speech_to_play
 }
 
 voice_component(data=component_data, key="jarvis_voice_module")
