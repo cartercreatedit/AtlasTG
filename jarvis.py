@@ -558,8 +558,8 @@ st.components.v1.html(f"""
 
 # RESTORED ORIGINAL STABLE AUDIO DATA CONNECTIONS PIPELINE
 component_data = {
-    "voice_active": st.session_state.voice_active,
-    "speech_to_play": st.session_state.speech_to_play
+    "active": st.session_state.voice_active,
+    "text_to_speak": st.session_state.speech_to_play
 }
 
 voice_component(data=component_data, key="jarvis_voice_module")
