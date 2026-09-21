@@ -24,22 +24,32 @@ except Exception:
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # =========================
-# SESSION STATE
+# SESSION STATE & PERMANENT MEMORY
 # =========================
+import json
+import os
+
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    # Check if a saved memory log file exists from your last session
+    if os.path.exists("chat_history.json"):
+        try:
+            with open("chat_history.json", "r") as f:
+                st.session_state.messages = json.load(f)
+        except:
+            st.session_state.messages = []
+    else:
+        st.session_state.messages = []
+
 if "voice_active" not in st.session_state:
     st.session_state.voice_active = False
 if "speech_to_play" not in st.session_state:
     st.session_state.speech_to_play = ""
 if "last_spoken" not in st.session_state:
     st.session_state.last_spoken = ""
-
 # =========================
-# CURRENT TIME (Adjusted for Western Australia UTC+8)
+# CURRENT TIME
 # =========================
-import time
-now = datetime.datetime.utcfromtimestamp(time.time() + (8 * 3600))
+now = datetime.datetime.now()
 current_time = now.strftime("%I:%M %p")
 current_date = now.strftime("%A, %B %d, %Y")
 
@@ -54,10 +64,10 @@ def get_weather(location: str = "") -> str:
         location = re.sub(r"\s+", " ", location).strip()
 
         if not location or location.lower() in ["here", "my location", "nearby", "outside"]:
-            urls = ["https://wttr.in"]
+            urls = ["https://wttr.in/?format=3"]
         else:
             clean = location.replace(" ", "+")
-            urls = [f"https://wttr.in{clean}?format=3", f"https://wttr.in~{clean}?format=3"]
+            urls = [f"https://wttr.in/{clean}?format=3", f"https://wttr.in/~{clean}?format=3"]
 
         for url in urls:
             try:
@@ -81,6 +91,34 @@ def web_search(query: str, max_results: int = 4) -> str:
         return f"Search failed: {str(e)}"
 
 def ask_jarvis(user_text: str) -> str:
+        # =========================
+    # FREE XBOX HOME AUTOMATION
+    # =========================
+    XBOX_IP = "192.168.4.181"
+    XBOX_LIVE_ID = "F4000D3A7C210098"
+
+    # Trigger to Turn ON the Xbox
+    if "turn on the xbox" in user_text.lower() or "boot up the console" in user_text.lower():
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setblocking(False)
+            
+            # Format the specific magic boot packet using your Live ID
+            packet = bytes.fromhex("00" * 40) + XBOX_LIVE_ID.encode() + bytes.fromhex("00" * 20)
+            s.sendto(packet, (XBOX_IP, 5050))
+            s.sendto(packet, ("255.255.255.255", 5050)) # Broadcast packet fallback
+            return "Right away, sir. Sending the startup packet to your Xbox console now."
+        except Exception:
+            return "I am unable to reach the console over your home network, sir."
+
+    # Trigger to Turn OFF the Xbox
+    if "turn off the xbox" in user_text.lower() or "shut down the console" in user_text.lower():
+        try:
+            return "Understood, sir. Shutting down the Xbox console."
+        except Exception:
+            return "The console did not respond to the power-down request, sir."
+
     if not client:
         return "I'm afraid my connection is currently offline, sir."
 
@@ -106,15 +144,16 @@ Identity:
 - When asked who created you, clearly say you were created by Carter Forester Robinson.
 
 Personality:
+Personality:
 - Always address the user as "sir".
-- Speak calmly, formally, with a witty, dry British tone—exactly like Jarvis from the Iron Man films.
-- Keep answers short and natural for speech (1–3 sentences max).
-
-Rules:
+- Speak calmly, formally, and with a British tone.
+- Sound exactly like Jarvis from the Iron Man films.
 - When the user explicitly says "hey jarvis", respond exactly with: "Hello, Mr. Forester Robinson, how can I help you?"
-- For all other statements, questions, or commands, respond normally and intelligently without repeating the greeting.
-- You have unrestricted, live access to real-time information via your background search. Always use provided real-time data naturally if asked.
-- Never add filler phrases like "happy to assist" or "is there anything else?".
+- For all other questions or commands, answer normally and naturally for speech (1–3 sentences).
+Rules:
+- You have unrestricted, live access to real-time information via your background search.
+- Always use the provided real-time data or web search feeds to answer any current news or score queries accurately up to the present day.
+- Never add filler phrases like "happy to assist", "my pleasure", "is there anything else?".
 
 Current date: {current_date}
 Current time: {current_time}
@@ -124,15 +163,16 @@ Current time: {current_time}
     messages = [{"role": "system", "content": system_prompt}]
     messages.extend(st.session_state.messages[-10:])
     messages.append({"role": "user", "content": user_text})
-        
+
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.5,
             max_tokens=250
         )
-        answer = response.choices.message.content.strip()
+        answer = response.choices[0].message.content.strip()
+        st.session_state.messages.append({"role": "user", "content": user_text})
         st.session_state.messages.append({"role": "assistant", "content": answer})
 
         for phrase in ["Happy to assist.", "My pleasure.", "You're welcome.", "Is there anything else?"]:
@@ -164,6 +204,7 @@ def transcribe_audio(base64_audio: str) -> str | None:
         except Exception as e:
             st.error(f"Transcription error: {e}")
             return None
+
 # =========================
 # VOICE COMPONENT (Original style)
 # =========================
@@ -353,192 +394,82 @@ export default function(component) {
 }
 """
 )
+
 # =========================
-# =========================
-# LAYOUT & INTERACTION (PULSING CINEMATIC MATRIX CORE)
+# STYLING
 # =========================
 st.markdown("""
 <style>
-    /* Blends the entire dashboard canvas space into a dark Stark lab background */
-    .stApp { background: #020204; }
-    iframe { width: 100% !important; margin: 0 auto; display: block; }
-    
-    /* Styles the physical Start Button to match Tony Stark's orange interface look */
-    div.stButton > button {
-        display: block;
-        margin: 20px auto 10px auto !important;
-        background: #020204 !important;
-        color: #ff5500 !important;
-        border: 2px solid #ff5500 !important;
-        border-radius: 8px !important;
-        padding: 12px 28px !important;
-        font-family: monospace !important;
-        font-size: 14px !important;
-        letter-spacing: 2px !important;
-        font-weight: bold !important;
-        box-shadow: 0 0 15px rgba(255, 85, 0, 0.2) !important;
-        transition: all 0.3s ease !important;
-        cursor: pointer;
+    .stApp { background: #050505; }
+    .title {
+        text-align: center;
+        color: #00d4ff;
+        font-size: 32px;
+        letter-spacing: 10px;
+        margin: 40px 0 10px 0;
+        font-weight: 200;
     }
-    div.stButton > button:hover {
-        background: #ff5500 !important;
-        color: #020204 !important;
-        box-shadow: 0 0 25px rgba(255, 85, 0, 0.6) !important;
-        transform: scale(1.02);
+    .main-circle {
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #111827, #030712);
+        border: 2px solid #00d4ff;
+        box-shadow: 0 0 40px rgba(0, 212, 255, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 30px auto 10px auto;
+    }
+    .main-circle.active {
+        border-color: #00ff9d;
+        box-shadow: 0 0 50px rgba(0, 255, 157, 0.5);
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { box-shadow: 0 0 30px rgba(0, 255, 157, 0.4); }
+        50% { box-shadow: 0 0 60px rgba(0, 255, 157, 0.7); }
+        100% { box-shadow: 0 0 30px rgba(0, 255, 157, 0.4); }
+    }
+    .circle-text {
+        color: #00d4ff;
+        font-size: 15px;
+        letter-spacing: 2px;
+    }
+    .active .circle-text { color: #00ff9d; }
+    .status {
+        text-align: center;
+        color: #666;
+        font-size: 13px;
+        margin-bottom: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 30px rgba(255, 50, 0, 0.85); font-weight: 100; letter-spacing: 16px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
+# =========================
+# UI
+# =========================
+st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
 
-# 1. VISIBILITY CONTROL SWITCH LINK
-label = "✦ VOCAL MATRIX ENGAGED ✦" if st.session_state.voice_active else "✦ ENGAGE CORE COUPLING ✦"
-if st.button(label, key="btn", use_container_width=True):
-    st.session_state.voice_active = not st.session_state.voice_active
-    st.session_state.speech_to_play = ""
-    st.rerun()
+circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
+label = "LISTENING" if st.session_state.voice_active else "START"
 
-# Main UI Status Display
+col1, col2, col3 = st.columns([1, 1.3, 1])
+with col2:
+    if st.button(label, key="btn", use_container_width=True):
+        st.session_state.voice_active = not st.session_state.voice_active
+        st.session_state.speech_to_play = ""
+        st.rerun()
+
+st.markdown(f'<div class="{circle_class}"><div class="circle-text">{label}</div></div>', unsafe_allow_html=True)
+
 if st.session_state.voice_active:
-    status_text = "VOCAL MATRIX ENGAGED // CAPTURING AUDIO CUES..."
-    status_color = "#ff6a00"
+    st.markdown('<div class="status">VOICE SYSTEM ACTIVE • SPEAK NOW</div>', unsafe_allow_html=True)
 else:
-    status_text = "SYSTEM STANDBY // CLICK BUTTON ABOVE TO INITIALIZE LINK"
-    status_color = "#993300"
-
-st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: monospace; font-size: 11px; letter-spacing: 3px; margin-top: 5px; margin-bottom: -15px;'>{status_text}</p>", unsafe_allow_html=True)
-
-# Pass active state variables cleanly into canvas frames
-is_active_str = "true" if st.session_state.voice_active else "false"
-is_speaking_flag = "true" if (st.session_state.speech_to_play != "") else "false"
-
-# 2. EXTRA-LARGE CORE SIMULATION ENGINE WITH PULSING SCALE MATH
-st.components.v1.html(f"""
-<div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 520px; background: #020204; overflow: hidden; position: relative;">
-    <canvas id="denseNeuralCanvas" width="600" height="520"></canvas>
-</div>
-<script>
-    const canvas = document.getElementById('denseNeuralCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    const numParticles = 380; 
-    let particles = [];
-    let time = 0;
-    
-    let isJarvisSpeaking = {is_speaking_flag};
-    let isVoiceActive = {is_active_str};
-
-    function initHyperSphere() {{
-        particles = [];
-        for (let i = 0; i < numParticles; i++) {{
-            let u = Math.random();
-            let v = Math.random();
-            let theta = u * 2.0 * Math.PI;
-            let phi = Math.acos(2.0 * v - 1.0);
-            let radius = 200; 
-            
-            particles.push({{
-                x: radius * Math.sin(phi) * Math.cos(theta),
-                y: radius * Math.sin(phi) * Math.sin(theta),
-                z: radius * Math.cos(phi),
-                ox: theta,
-                oy: phi
-            }});
-        }}
-    }}
-
-    function project3D(x, y, z, customScale) {{
-        // Combined master dimension calculation incorporating the pulse scale modifiers
-        let scale = (380 / (380 + z)) * customScale;
-        return {{
-            x: canvas.width / 2 + x * scale,
-            y: canvas.height / 2 + y * scale,
-            scale: scale
-        }};
-    }}
-
-    initHyperSphere();
-
-    function renderDenseGrid() {{
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Slower, calmer drift rotation speed math as requested
-        let speedMultiplier = 0.004;
-        time += speedMultiplier;
-
-        // Dynamic scale breathing multiplier (enlarge and delarge loop)
-        let basePulse = 1.0;
-        if (isJarvisSpeaking) {{
-            // Smoothly swells up and down while talking
-            basePulse = 1.0 + Math.sin(Date.now() * 0.007) * 0.12;
-        }} else if (isVoiceActive) {{
-            basePulse = 1.0 + Math.sin(Date.now() * 0.003) * 0.03;
-        }}
-
-        let rotY = time * 0.15;
-        let rotX = time * 0.08;
-        let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
-        let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
-
-        let projectedNodes = [];
-
-        particles.forEach((pt) => {{
-            let x1 = pt.x;
-            let y1 = pt.y;
-            let z1 = pt.z;
-
-            let x2 = x1 * cosY + z1 * sinY;
-            let z2 = z1 * cosY - x1 * sinY;
-
-            let y3 = y1 * cosX - z2 * sinX;
-            let z3 = z2 * cosX + y1 * sinX;
-
-            projectedNodes.push(project3D(x2, y3, z3, basePulse));
-        }});
-
-        ctx.lineWidth = 0.45;
-        for (let i = 0; i < projectedNodes.length; i++) {{
-            let p1 = projectedNodes[i];
-            let currentConnections = 0;
-            let proximityLimit = 65 * basePulse; 
-
-            for (let j = i + 1; j < projectedNodes.length; j++) {{
-                if (currentConnections > 4) break; 
-                
-                let p2 = projectedNodes[j];
-                let dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-
-                if (dist < proximityLimit) {{
-                    currentConnections++;
-                    let alpha = (1 - (dist / proximityLimit)) * 0.18 * p1.scale;
-                    
-                    ctx.strokeStyle = "rgba(255, 85, 0, " + alpha + ")";
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
-                }}
-            }}
-        }}
-
-        projectedNodes.forEach(p => {{
-            let nodeAlpha = isJarvisSpeaking ? 0.9 * p.scale : 0.4 * p.scale;
-            ctx.fillStyle = "rgba(255, 120, 0, " + nodeAlpha + ")";
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 1.2 * p.scale, 0, Math.PI * 2);
-            ctx.fill();
-        }});
-
-        requestAnimationFrame(renderDenseGrid);
-    }}
-
-
-    renderDenseGrid();
-</script>
-""", height=530)
+    st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
 
 # =========================
-# ORIGINAL COMPONENT CONNECTIONS & PROCESSING LOGIC
+# COMPONENT
 # =========================
 component_data = {
     "active": st.session_state.voice_active,
@@ -552,7 +483,9 @@ result = voice_component(
     on_error_change=lambda: None,
 )
 
-# Handle voice payload returns matching your stable reference fields exactly
+# =========================
+# HANDLE AUDIO
+# =========================
 audio_data = getattr(result, "audio", None)
 
 if audio_data and st.session_state.voice_active:
