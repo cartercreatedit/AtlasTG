@@ -355,7 +355,7 @@ export default function(component) {
 )
 # =========================
 # =========================
-# LAYOUT & INTERACTION (CINEMATIC 3D NEURAL COUPLING)
+# LAYOUT & INTERACTION (PULSING CINEMATIC MATRIX CORE)
 # =========================
 st.markdown("""
 <style>
@@ -391,7 +391,7 @@ st.markdown("""
 
 st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 30px rgba(255, 50, 0, 0.85); font-weight: 100; letter-spacing: 16px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
 
-# 1. ORIGINAL VISIBILITY CONTROL SWITCH LINK
+# 1. VISIBILITY CONTROL SWITCH LINK
 label = "✦ VOCAL MATRIX ENGAGED ✦" if st.session_state.voice_active else "✦ ENGAGE CORE COUPLING ✦"
 if st.button(label, key="btn", use_container_width=True):
     st.session_state.voice_active = not st.session_state.voice_active
@@ -408,11 +408,11 @@ else:
 
 st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: monospace; font-size: 11px; letter-spacing: 3px; margin-top: 5px; margin-bottom: -15px;'>{status_text}</p>", unsafe_allow_html=True)
 
-# Pass active state as string variable to safely bypass f-string parser conflicts
+# Pass active state variables cleanly into canvas frames
 is_active_str = "true" if st.session_state.voice_active else "false"
 is_speaking_flag = "true" if (st.session_state.speech_to_play != "") else "false"
 
-# 2. SCALED-UP 380-NODE EXTRA-LARGE CORE SIMULATION ENGINE
+# 2. EXTRA-LARGE CORE SIMULATION ENGINE WITH PULSING SCALE MATH
 st.components.v1.html(f"""
 <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 520px; background: #020204; overflow: hidden; position: relative;">
     <canvas id="denseNeuralCanvas" width="600" height="520"></canvas>
@@ -435,26 +435,25 @@ st.components.v1.html(f"""
             let v = Math.random();
             let theta = u * 2.0 * Math.PI;
             let phi = Math.acos(2.0 * v - 1.0);
-            let radius = 210; 
+            let radius = 200; 
             
             particles.push({{
                 x: radius * Math.sin(phi) * Math.cos(theta),
                 y: radius * Math.sin(phi) * Math.sin(theta),
                 z: radius * Math.cos(phi),
                 ox: theta,
-                oy: phi,
-                seed: Math.random() * 10
+                oy: phi
             }});
         }}
     }}
 
-    function project3D(x, y, z) {{
-        let scale = 380 / (380 + z);
+    function project3D(x, y, z, customScale) {{
+        // Combined master dimension calculation incorporating the pulse scale modifiers
+        let scale = (380 / (380 + z)) * customScale;
         return {{
             x: canvas.width / 2 + x * scale,
             y: canvas.height / 2 + y * scale,
-            scale: scale,
-            zDepth: z
+            scale: scale
         }};
     }}
 
@@ -463,25 +462,30 @@ st.components.v1.html(f"""
     function renderDenseGrid() {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        let speedMultiplier = isJarvisSpeaking ? 0.045 : (isVoiceActive ? 0.02 : 0.005);
-        let waveSurge = isJarvisSpeaking ? 40 : (isVoiceActive ? 20 : 6);
-        
+        // Slower, calmer drift rotation speed math as requested
+        let speedMultiplier = 0.004;
         time += speedMultiplier;
 
-        let rotY = time * 0.35;
-        let rotX = time * 0.18;
+        // Dynamic scale breathing multiplier (enlarge and delarge loop)
+        let basePulse = 1.0;
+        if (isJarvisSpeaking) {{
+            // Smoothly swells up and down while talking
+            basePulse = 1.0 + Math.sin(Date.now() * 0.007) * 0.12;
+        }} else if (isVoiceActive) {{
+            basePulse = 1.0 + Math.sin(Date.now() * 0.003) * 0.03;
+        }}
+
+        let rotY = time * 0.15;
+        let rotX = time * 0.08;
         let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
         let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
 
         let projectedNodes = [];
 
         particles.forEach((pt) => {{
-            let noise = Math.sin(pt.ox * 5 + time * 2.5) * Math.cos(pt.oy * 5 + time * 1.8) * waveSurge;
-            let currentRadius = 205 + noise;
-
-            let x1 = currentRadius * Math.sin(pt.oy) * Math.cos(pt.ox);
-            let y1 = currentRadius * Math.sin(pt.oy) * Math.sin(pt.ox);
-            let z1 = currentRadius * Math.cos(pt.oy);
+            let x1 = pt.x;
+            let y1 = pt.y;
+            let z1 = pt.z;
 
             let x2 = x1 * cosY + z1 * sinY;
             let z2 = z1 * cosY - x1 * sinY;
@@ -489,25 +493,24 @@ st.components.v1.html(f"""
             let y3 = y1 * cosX - z2 * sinX;
             let z3 = z2 * cosX + y1 * sinX;
 
-            projectedNodes.push(project3D(x2, y3, z3));
+            projectedNodes.push(project3D(x2, y3, z3, basePulse));
         }});
 
         ctx.lineWidth = 0.45;
         for (let i = 0; i < projectedNodes.length; i++) {{
             let p1 = projectedNodes[i];
             let currentConnections = 0;
-            let proximityLimit = isVoiceActive ? 85 : 65; 
+            let proximityLimit = 65 * basePulse; 
 
             for (let j = i + 1; j < projectedNodes.length; j++) {{
-                if (currentConnections > 5) break; 
+                if (currentConnections > 4) break; 
                 
                 let p2 = projectedNodes[j];
                 let dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
                 if (dist < proximityLimit) {{
                     currentConnections++;
-                    let alphaBase = isVoiceActive ? 0.32 : 0.18;
-                    let alpha = (1 - (dist / proximityLimit)) * alphaBase * p1.scale;
+                    let alpha = (1 - (dist / proximityLimit)) * 0.18 * p1.scale;
                     
                     ctx.strokeStyle = "rgba(255, 85, 0, " + alpha + ")";
                     ctx.beginPath();
@@ -519,17 +522,15 @@ st.components.v1.html(f"""
         }}
 
         projectedNodes.forEach(p => {{
-            let nodeAlpha = isJarvisSpeaking ? 0.95 * p.scale : (isVoiceActive ? 0.75 * p.scale : 0.4 * p.scale);
-            let sizeRadius = isJarvisSpeaking ? 2.5 * p.scale : (isVoiceActive ? 1.8 * p.scale : 1.2 * p.scale);
-            
+            let nodeAlpha = isJarvisSpeaking ? 0.9 * p.scale : 0.4 * p.scale;
             ctx.fillStyle = "rgba(255, 120, 0, " + nodeAlpha + ")";
             ctx.beginPath();
-            ctx.arc(p.x, p.y, sizeRadius, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, 1.2 * p.scale, 0, Math.PI * 2);
             ctx.fill();
         }});
 
         requestAnimationFrame(renderDenseGrid);
-    }}
+    }
 
     renderDenseGrid();
 </script>
