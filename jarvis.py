@@ -571,7 +571,7 @@ st.components.v1.html(f"""
             ctx.beginPath(); ctx.arc(p.x, p.y, isListening ? 1.8 * p.scale : 1.1 * p.scale, 0, Math.PI * 2); ctx.fill();
         }});
         requestAnimationFrame(renderDenseGrid);
-    }
+    }}
     renderDenseGrid();
 </script>
 """, height=570)
