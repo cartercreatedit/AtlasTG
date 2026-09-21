@@ -357,109 +357,126 @@ export default function(component) {
 # =========================
 # STYLING
 # =========================
+# =========================
+# LAYOUT & INTERACTION (3D HOLOGRAM CORE)
+# =========================
 st.markdown("""
 <style>
     .stApp { background: #050505; }
-    .title {
-        text-align: center;
-        color: #00d4ff;
-        font-size: 32px;
-        letter-spacing: 10px;
-        margin: 40px 0 10px 0;
-        font-weight: 200;
-    }
-    .main-circle {
-        width: 180px;
-        height: 180px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 30% 30%, #111827, #030712);
-        border: 2px solid #00d4ff;
-        box-shadow: 0 0 40px rgba(0, 212, 255, 0.35);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 30px auto 10px auto;
-    }
-    .main-circle.active {
-        border-color: #00ff9d;
-        box-shadow: 0 0 50px rgba(0, 255, 157, 0.5);
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 30px rgba(0, 255, 157, 0.4); }
-        50% { box-shadow: 0 0 60px rgba(0, 255, 157, 0.7); }
-        100% { box-shadow: 0 0 30px rgba(0, 255, 157, 0.4); }
-    }
-    .circle-text {
-        color: #00d4ff;
-        font-size: 15px;
-        letter-spacing: 2px;
-    }
-    .active .circle-text { color: #00ff9d; }
-    .status {
-        text-align: center;
-        color: #666;
-        font-size: 13px;
-        margin-bottom: 20px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# UI
-# =========================
-st.markdown('<div class="title">J.A.R.V.I.S.</div>', unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #ff5500; text-shadow: 0 0 15px #ff5500; font-weight: 200; letter-spacing: 6px;'>✦ J.A.R.V.I.S.</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #cc4400; font-family: monospace; letter-spacing: 2px; margin-bottom: 20px;'>HOLOGRAPHIC INTERFACE TERMINAL</p>", unsafe_allow_html=True)
 
-circle_class = "main-circle active" if st.session_state.voice_active else "main-circle"
-label = "LISTENING" if st.session_state.voice_active else "START"
+# Injecting the 3D spinning canvas object widget into your webpage
+st.components.v1.html("""
+<div style="display: flex; justify-content: center; align-items: center; height: 260px; background: #050505;">
+    <canvas id="hologramCanvas" width="250" height="250" style="cursor: grab;"></canvas>
+</div>
+<script>
+    const canvas = document.getElementById('hologramCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let points = [];
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
 
-col1, col2, col3 = st.columns([1, 1.3, 1])
-with col2:
-    if st.button(label, key="btn", use_container_width=True):
-        st.session_state.voice_active = not st.session_state.voice_active
-        st.session_state.speech_to_play = ""
-        st.rerun()
+    // Generate points for our 3D concentric holographic rings cage
+    function initSphere() {
+        points = [];
+        // Inner Core Ring
+        for (let i = 0; i < 60; i++) {
+            let theta = (i / 60) * Math.PI * 2;
+            points.push({x: Math.cos(theta) * 35, y: Math.sin(theta) * 35, z: 0, r: 0});
+        }
+        // Middle Intersecting Axis Rings Cage
+        for (let i = 0; i < 90; i++) {
+            let theta = (i / 90) * Math.PI * 2;
+            points.push({x: Math.cos(theta) * 75, y: 0, z: Math.sin(theta) * 75, r: 1});
+            points.push({x: 0, y: Math.cos(theta) * 75, z: Math.sin(theta) * 75, r: 2});
+        }
+        // Large Outer Orbit Rings
+        for (let i = 0; i < 120; i++) {
+            let theta = (i / 120) * Math.PI * 2;
+            points.push({x: Math.cos(theta) * 105, y: Math.sin(theta) * 105, z: 0, r: 3});
+        }
+    }
 
-st.markdown(f'<div class="{circle_class}"><div class="circle-text">{label}</div></div>', unsafe_allow_html=True)
+    function rotateX(pt, angle) {
+        let cos = Math.cos(angle), sin = Math.sin(angle);
+        let y1 = pt.y * cos - pt.z * sin;
+        let z1 = pt.z * cos + pt.y * sin;
+        pt.y = y1; pt.z = z1;
+    }
 
-if st.session_state.voice_active:
-    st.markdown('<div class="status">VOICE SYSTEM ACTIVE • SPEAK NOW</div>', unsafe_allow_html=True)
-else:
-    st.markdown('<div class="status">CLICK TO ACTIVATE</div>', unsafe_allow_html=True)
+    function rotateY(pt, angle) {
+        let cos = Math.cos(angle), sin = Math.sin(angle);
+        let x1 = pt.x * cos + pt.z * sin;
+        let z1 = pt.z * cos - pt.x * sin;
+        pt.x = x1; pt.z = z1;
+    }
 
-# =========================
-# COMPONENT
-# =========================
+    canvas.addEventListener('mousedown', (e) => { isDragging = true; });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+    canvas.addEventListener('mousemove', (e) => {
+        let deltaMove = { x: e.offsetX - previousMousePosition.x, y: e.offsetY - previousMousePosition.y };
+        if (isDragging) {
+            points.forEach(pt => {
+                rotateY(pt, deltaMove.x * 0.005);
+                rotateX(pt, deltaMove.y * 0.005);
+            });
+        }
+        previousMousePosition = { x: e.offsetX, y: e.offsetY };
+    });
+
+    initSphere();
+
+    function renderLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let cx = canvas.width / 2;
+        let cy = canvas.height / 2;
+
+        if (!isDragging) {
+            points.forEach(pt => {
+                if(pt.r === 0) { rotateY(pt, 0.005); rotateX(pt, 0.002); }
+                if(pt.r === 1) { rotateY(pt, -0.008); }
+                if(pt.r === 2) { rotateX(pt, 0.01); }
+                if(pt.r === 3) { rotateY(pt, 0.003); rotateX(pt, -0.004); }
+            });
+        }
+
+        points.forEach(pt => {
+            let perspective = 300 / (300 + pt.z);
+            let x2d = cx + pt.x * perspective;
+            let y2d = cy + pt.y * perspective;
+
+            ctx.beginPath();
+            ctx.arc(x2d, y2d, pt.r === 0 ? 1.5 : 1, 0, Math.PI * 2);
+            if (pt.r === 0) ctx.fillStyle = '#ff6a00';
+            else if (pt.r === 3) ctx.fillStyle = 'rgba(255, 85, 0, 0.25)';
+            else ctx.fillStyle = 'rgba(255, 140, 0, 0.55)';
+            ctx.fill();
+        });
+        requestAnimationFrame(renderLoop);
+    }
+    renderLoop();
+</script>
+""", height=280)
+
+if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
+    raw_audio = st.session_state.jarvis_original_output
+    st.session_state.jarvis_original_output = None
+    
+    with st.spinner("Processing audio matrix..."):
+        text_input = transcribe_audio(raw_audio)
+        if text_input:
+            reply = ask_jarvis(text_input)
+            st.session_state.speech_to_play = reply
+
 component_data = {
-    "active": st.session_state.voice_active,
-    "speak": st.session_state.speech_to_play
+    "active": True,
+    "text_to_speak": st.session_state.speech_to_play
 }
 
-result = voice_component(
-    key="jarvis_comp",
-    data=component_data,
-    on_audio_change=lambda: None,
-    on_error_change=lambda: None,
-)
-
-# =========================
-# HANDLE AUDIO
-# =========================
-audio_data = getattr(result, "audio", None)
-
-if audio_data and st.session_state.voice_active:
-    spoken = transcribe_audio(audio_data)
-
-    if spoken and spoken != st.session_state.last_spoken:
-        st.session_state.last_spoken = spoken
-        st.session_state.messages.append({"role": "user", "content": spoken})
-
-        answer = ask_jarvis(spoken)
-        st.session_state.messages.append({"role": "assistant", "content": answer})
-
-        st.session_state.speech_to_play = answer
-        st.rerun()
-
-error = getattr(result, "error", None)
-if error:
-    st.error(f"Mic error: {error}")
+voice_component(data=component_data, key="jarvis_voice_module")
