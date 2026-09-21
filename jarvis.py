@@ -358,6 +358,7 @@ export default function(component) {
 # STYLING
 # ========================
 # =========================
+# =========================
 # LAYOUT & INTERACTION (HYPER-DENSITY INTERACTIVE NEURAL CORE)
 # =========================
 st.markdown("""
@@ -380,6 +381,9 @@ else:
 
 st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: monospace; font-size: 11px; letter-spacing: 3px; margin-bottom: -15px;'>{status_text}</p>", unsafe_allow_html=True)
 
+# Pass active state as string variable to safely bypass f-string parser conflicts
+is_active_str = "true" if st.session_state.voice_active else "false"
+
 # Injecting the hyper-dense movie-accurate 380-node particle web simulation engine
 st.components.v1.html(f"""
 <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 500px; background: #020204; overflow: hidden; position: relative;">
@@ -395,11 +399,11 @@ st.components.v1.html(f"""
     let time = 0;
     
     let isJarvisSpeaking = false;
-    let isVoiceActive = {str(st.session_state.voice_active).lower()};
+    let isVoiceActive = {is_active_str};
 
-    function initHyperSphere() {
+    function initHyperSphere() {{
         particles = [];
-        for (let i = 0; i < numParticles; i++) {
+        for (let i = 0; i < numParticles; i++) {{
             let u = Math.random();
             let v = Math.random();
             let theta = u * 2.0 * Math.PI;
@@ -407,39 +411,37 @@ st.components.v1.html(f"""
             
             let radius = 145; 
             
-            particles.push({
+            particles.push({{
                 x: radius * Math.sin(phi) * Math.cos(theta),
                 y: radius * Math.sin(phi) * Math.sin(theta),
                 z: radius * Math.cos(phi),
                 ox: theta,
                 oy: phi,
                 seed: Math.random() * 10
-            });
-        }
-    }
+            }});
+        }}
+    }}
 
-    function project3D(x, y, z) {
+    function project3D(x, y, z) {{
         let scale = 380 / (380 + z);
-        return {
+        return {{
             x: canvas.width / 2 + x * scale,
             y: canvas.height / 2 + y * scale,
             scale: scale,
             zDepth: z
-        };
-    }
+        }};
+    }}
 
     // Capture user clicks on the sphere lines to trigger the voice core system
     canvas.addEventListener('click', () => {{
-        // Sends a message to the outer Streamlit container window to execute python logic
         window.parent.postMessage({{type: 'jarvis_click_trigger'}}, '*');
     }});
 
     initHyperSphere();
 
-    function renderDenseGrid() {
+    function renderDenseGrid() {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Handle physical speeds based on speaking state or listener trigger state
         let speedMultiplier = isJarvisSpeaking ? 0.045 : (isVoiceActive ? 0.02 : 0.005);
         let waveSurge = isJarvisSpeaking ? 30 : (isVoiceActive ? 15 : 5);
         
@@ -452,8 +454,7 @@ st.components.v1.html(f"""
 
         let projectedNodes = [];
 
-        // 1. Calculate high-density spatial coordinate deformations
-        particles.forEach((pt) => {
+        particles.forEach((pt) => {{
             let noise = Math.sin(pt.ox * 5 + time * 2.5) * Math.cos(pt.oy * 5 + time * 1.8) * waveSurge;
             let currentRadius = 140 + noise;
 
@@ -468,40 +469,35 @@ st.components.v1.html(f"""
             let z3 = z2 * cosX + y1 * sinX;
 
             projectedNodes.push(project3D(x2, y3, z3));
-        });
+        }});
 
-        // 2. ULTRA-DENSE WEB MESH LINKS GENERATION (Weaves thousands of fine glowing data wires)
         ctx.lineWidth = 0.45;
-        for (let i = 0; i < projectedNodes.length; i++) {
+        for (let i = 0; i < projectedNodes.length; i++) {{
             let p1 = projectedNodes[i];
             let currentConnections = 0;
-            
-            // Search radius boundary optimized for dense clusters matching your shared file image
             let proximityLimit = isVoiceActive ? 65 : 48; 
 
-            for (let j = i + 1; j < projectedNodes.length; j++) {
-                if (currentConnections > 5) break; // Allows recursive dense webbing splits
+            for (let j = i + 1; j < projectedNodes.length; j++) {{
+                if (currentConnections > 5) break; 
                 
                 let p2 = projectedNodes[j];
                 let dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
-                if (dist < proximityLimit) {
+                if (dist < proximityLimit) {{
                     currentConnections++;
                     let alphaBase = isVoiceActive ? 0.32 : 0.18;
                     let alpha = (1 - (dist / proximityLimit)) * alphaBase * p1.scale;
                     
-                    // Core glow accent colors mapping
                     ctx.strokeStyle = `rgba(255, 85, 0, ${alpha})`;
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(p2.x, p2.y);
                     ctx.stroke();
-                }
-            }
-        }
+                }}
+            }}
+        }}
 
-        // 3. RENDER ALL HIGH-BRIGHTNESS CONCENTRIC NODES
-        projectedNodes.forEach(p => {
+        projectedNodes.forEach(p => {{
             let nodeAlpha = isJarvisSpeaking ? 0.95 * p.scale : (isVoiceActive ? 0.75 * p.scale : 0.4 * p.scale);
             let sizeRadius = isJarvisSpeaking ? 2.2 * p.scale : (isVoiceActive ? 1.6 * p.scale : 1.1 * p.scale);
             
@@ -509,12 +505,11 @@ st.components.v1.html(f"""
             ctx.beginPath();
             ctx.arc(p.x, p.y, sizeRadius, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }});
 
         requestAnimationFrame(renderDenseGrid);
     }
 
-    // Dynamic message channels pipeline sync handlers
     window.addEventListener('message', (e) => {{
         if (e.data && e.data.type === 'jarvis_audio_state') {{
             isJarvisSpeaking = e.data.speaking;
@@ -528,7 +523,7 @@ st.components.v1.html(f"""
 # Capture background click messages sent by canvas click handler to toggle microphone state
 if "jarvis_click_trigger" in st.session_state and st.session_state.jarvis_click_trigger:
     st.session_state.voice_active = not st.session_state.voice_active
-    del st.session_state["jarvis_click_trigger"] # Flush action to avoid infinite loops
+    del st.session_state["jarvis_click_trigger"]
     st.rerun()
 
 # Hidden event routing pipeline to connect JavaScript clicks directly into python Session State memory
@@ -536,26 +531,11 @@ st.components.v1.html("""
 <script>
     window.addEventListener('message', (e) => {
         if (e.data && e.data.type === 'jarvis_click_trigger') {
-            // Sends the message upwards into Streamlit's structural component layer
             window.parent.postMessage({type: 'jarvis_click_trigger'}, '*');
         }
     });
 </script>
 """, height=0)
-
-# Setup background macro triggers to intercept iframe outputs safely
-st.markdown("""
-<script>
-    const streamlitDoc = window.parent.document;
-    window.addEventListener('message', (e) => {
-        if (e.data && e.data.type === 'jarvis_click_trigger') {
-            // Locates the hidden session query parameters to inject execution signals
-            const button = Array.from(streamlitDoc.querySelectorAll('button')).find(el => el.textContent === 'Execute Matrix');
-            if (button) button.click();
-        }
-    });
-</script>
-""", unsafe_allow_html=True)
 
 if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
     raw_audio = st.session_state.jarvis_original_output
