@@ -358,36 +358,46 @@ export default function(component) {
 # STYLING
 # ========================
 # =========================
-# LAYOUT & INTERACTION (CINEMATIC NEURAL CORE)
+# LAYOUT & INTERACTION (HYPER-DENSITY INTERACTIVE NEURAL CORE)
 # =========================
 st.markdown("""
 <style>
     /* Blends the entire dashboard canvas space into a dark Stark lab background */
-    .stApp { background: #030305; }
+    .stApp { background: #020204; }
     iframe { width: 100% !important; margin: 0 auto; display: block; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 25px rgba(255, 60, 0, 0.7); font-weight: 100; letter-spacing: 14px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 30px rgba(255, 50, 0, 0.85); font-weight: 100; letter-spacing: 16px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
 
-# Injecting the dense, movie-accurate neural particle web simulation engine
-st.components.v1.html("""
-<div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 500px; background: #030305; overflow: hidden;">
-    <canvas id="neuralJarvisCanvas" width="600" height="500"></canvas>
+# Main UI Status Display
+if st.session_state.voice_active:
+    status_text = "VOCAL MATRIX ENGAGED // CAPTURING AUDIO CUES..."
+    status_color = "#ff6a00"
+else:
+    status_text = "SYSTEM STANDBY // CLICK CORE CAGE TO INITIALIZE LINK"
+    status_color = "#993300"
+
+st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: monospace; font-size: 11px; letter-spacing: 3px; margin-bottom: -15px;'>{status_text}</p>", unsafe_allow_html=True)
+
+# Injecting the hyper-dense movie-accurate 380-node particle web simulation engine
+st.components.v1.html(f"""
+<div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 500px; background: #020204; overflow: hidden; position: relative;">
+    <canvas id="denseNeuralCanvas" width="600" height="500" style="cursor: pointer;"></canvas>
 </div>
 <script>
-    const canvas = document.getElementById('neuralJarvisCanvas');
+    const canvas = document.getElementById('denseNeuralCanvas');
     const ctx = canvas.getContext('2d');
     
-    const numParticles = 140;
+    // Massive vector array allocation to match the extreme line density from your screenshot
+    const numParticles = 380; 
     let particles = [];
     let time = 0;
     
-    // Monitors whether JARVIS is speaking to alter energy state
     let isJarvisSpeaking = false;
+    let isVoiceActive = {str(st.session_state.voice_active).lower()};
 
-    // Build the 3D spherical shell coordinates matrix matching your image look
-    function initNeuralSphere() {
+    function initHyperSphere() {
         particles = [];
         for (let i = 0; i < numParticles; i++) {
             let u = Math.random();
@@ -395,21 +405,21 @@ st.components.v1.html("""
             let theta = u * 2.0 * Math.PI;
             let phi = Math.acos(2.0 * v - 1.0);
             
-            // Sphere radius boundaries
-            let radius = 130; 
+            let radius = 145; 
             
             particles.push({
                 x: radius * Math.sin(phi) * Math.cos(theta),
                 y: radius * Math.sin(phi) * Math.sin(theta),
                 z: radius * Math.cos(phi),
-                ox: theta, // original angles to drive noise waves
-                oy: phi
+                ox: theta,
+                oy: phi,
+                seed: Math.random() * 10
             });
         }
     }
 
     function project3D(x, y, z) {
-        let scale = 350 / (350 + z);
+        let scale = 380 / (380 + z);
         return {
             x: canvas.width / 2 + x * scale,
             y: canvas.height / 2 + y * scale,
@@ -418,64 +428,70 @@ st.components.v1.html("""
         };
     }
 
-    initNeuralSphere();
+    // Capture user clicks on the sphere lines to trigger the voice core system
+    canvas.addEventListener('click', () => {{
+        // Sends a message to the outer Streamlit container window to execute python logic
+        window.parent.postMessage({{type: 'jarvis_click_trigger'}}, '*');
+    }});
 
-    function renderNeuralGrid() {
+    initHyperSphere();
+
+    function renderDenseGrid() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Dynamically shift speed based on speaker voice channel activity
-        let activitySpeed = isJarvisSpeaking ? 0.04 : 0.006;
-        let surgeIntensity = isJarvisSpeaking ? 25 : 4;
+        // Handle physical speeds based on speaking state or listener trigger state
+        let speedMultiplier = isJarvisSpeaking ? 0.045 : (isVoiceActive ? 0.02 : 0.005);
+        let waveSurge = isJarvisSpeaking ? 30 : (isVoiceActive ? 15 : 5);
         
-        time += activitySpeed;
+        time += speedMultiplier;
 
-        // Apply a dynamic 3D rotational drift frame
-        let rotY = time * 0.4;
-        let rotX = time * 0.2;
+        let rotY = time * 0.35;
+        let rotX = time * 0.18;
         let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
         let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
 
         let projectedNodes = [];
 
-        // 1. Calculate and update particle clusters with wave distortion vectors
-        particles.forEach((pt, i) => {
-            // Apply fluid noise ripples onto the sphere surface mapping
-            let wave = Math.sin(pt.ox * 4 + time * 3) * Math.cos(pt.oy * 4 + time * 2) * surgeIntensity;
-            let currentRadius = 135 + wave;
+        // 1. Calculate high-density spatial coordinate deformations
+        particles.forEach((pt) => {
+            let noise = Math.sin(pt.ox * 5 + time * 2.5) * Math.cos(pt.oy * 5 + time * 1.8) * waveSurge;
+            let currentRadius = 140 + noise;
 
             let x1 = currentRadius * Math.sin(pt.oy) * Math.cos(pt.ox);
             let y1 = currentRadius * Math.sin(pt.oy) * Math.sin(pt.ox);
             let z1 = currentRadius * Math.cos(pt.oy);
 
-            // Rotate Y axis
             let x2 = x1 * cosY + z1 * sinY;
             let z2 = z1 * cosY - x1 * sinY;
 
-            // Rotate X axis
             let y3 = y1 * cosX - z2 * sinX;
             let z3 = z2 * cosX + y1 * sinX;
 
             projectedNodes.push(project3D(x2, y3, z3));
         });
 
-        // 2. CONNECTING MESH LINES (Web connections from your screenshot image)
-        ctx.lineWidth = 0.6;
+        // 2. ULTRA-DENSE WEB MESH LINKS GENERATION (Weaves thousands of fine glowing data wires)
+        ctx.lineWidth = 0.45;
         for (let i = 0; i < projectedNodes.length; i++) {
             let p1 = projectedNodes[i];
-            let connectionsCount = 0;
+            let currentConnections = 0;
             
-            // Connect nearest neighboring data streams to form the woven mesh pattern
+            // Search radius boundary optimized for dense clusters matching your shared file image
+            let proximityLimit = isVoiceActive ? 65 : 48; 
+
             for (let j = i + 1; j < projectedNodes.length; j++) {
-                if (connectionsCount > 3) break; // Limit branches to stay clean
+                if (currentConnections > 5) break; // Allows recursive dense webbing splits
                 
                 let p2 = projectedNodes[j];
                 let dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
 
-                // Proximity check line builder
-                if (dist < 55) {
-                    connectionsCount++;
-                    let alpha = (1 - (dist / 55)) * 0.28 * p1.scale;
-                    ctx.strokeStyle = `rgba(255, 95, 0, ${alpha})`;
+                if (dist < proximityLimit) {
+                    currentConnections++;
+                    let alphaBase = isVoiceActive ? 0.32 : 0.18;
+                    let alpha = (1 - (dist / proximityLimit)) * alphaBase * p1.scale;
+                    
+                    // Core glow accent colors mapping
+                    ctx.strokeStyle = `rgba(255, 85, 0, ${alpha})`;
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(p2.x, p2.y);
@@ -484,28 +500,62 @@ st.components.v1.html("""
             }
         }
 
-        // 3. DRAW GLOWING NODES (The particle nodes passing down vectors)
+        // 3. RENDER ALL HIGH-BRIGHTNESS CONCENTRIC NODES
         projectedNodes.forEach(p => {
-            let nodeAlpha = isJarvisSpeaking ? 0.85 * p.scale : 0.5 * p.scale;
-            ctx.fillStyle = `rgba(255, 130, 0, ${nodeAlpha})`;
+            let nodeAlpha = isJarvisSpeaking ? 0.95 * p.scale : (isVoiceActive ? 0.75 * p.scale : 0.4 * p.scale);
+            let sizeRadius = isJarvisSpeaking ? 2.2 * p.scale : (isVoiceActive ? 1.6 * p.scale : 1.1 * p.scale);
+            
+            ctx.fillStyle = `rgba(255, 120, 0, ${nodeAlpha})`;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, isJarvisSpeaking ? 2 * p.scale : 1.2 * p.scale, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, sizeRadius, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        requestAnimationFrame(renderNeuralGrid);
+        requestAnimationFrame(renderDenseGrid);
     }
 
-    // Monitor interface variables to capture audio state dynamically
-    window.addEventListener('message', (e) => {
-        if (e.data && e.data.type === 'jarvis_audio_state') {
+    // Dynamic message channels pipeline sync handlers
+    window.addEventListener('message', (e) => {{
+        if (e.data && e.data.type === 'jarvis_audio_state') {{
             isJarvisSpeaking = e.data.speaking;
-        }
-    });
+        }}
+    }});
 
-    renderNeuralGrid();
+    renderDenseGrid();
 </script>
 """, height=510)
+
+# Capture background click messages sent by canvas click handler to toggle microphone state
+if "jarvis_click_trigger" in st.session_state and st.session_state.jarvis_click_trigger:
+    st.session_state.voice_active = not st.session_state.voice_active
+    del st.session_state["jarvis_click_trigger"] # Flush action to avoid infinite loops
+    st.rerun()
+
+# Hidden event routing pipeline to connect JavaScript clicks directly into python Session State memory
+st.components.v1.html("""
+<script>
+    window.addEventListener('message', (e) => {
+        if (e.data && e.data.type === 'jarvis_click_trigger') {
+            // Sends the message upwards into Streamlit's structural component layer
+            window.parent.postMessage({type: 'jarvis_click_trigger'}, '*');
+        }
+    });
+</script>
+""", height=0)
+
+# Setup background macro triggers to intercept iframe outputs safely
+st.markdown("""
+<script>
+    const streamlitDoc = window.parent.document;
+    window.addEventListener('message', (e) => {
+        if (e.data && e.data.type === 'jarvis_click_trigger') {
+            // Locates the hidden session query parameters to inject execution signals
+            const button = Array.from(streamlitDoc.querySelectorAll('button')).find(el => el.textContent === 'Execute Matrix');
+            if (button) button.click();
+        }
+    });
+</script>
+""", unsafe_allow_html=True)
 
 if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
     raw_audio = st.session_state.jarvis_original_output
