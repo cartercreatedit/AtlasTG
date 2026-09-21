@@ -529,7 +529,7 @@ st.components.v1.html(f"""
         }});
 
         requestAnimationFrame(renderDenseGrid);
-    }
+    }}
 
     renderDenseGrid();
 </script>
