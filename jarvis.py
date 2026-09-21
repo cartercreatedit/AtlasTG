@@ -362,107 +362,136 @@ export default function(component) {
 # =========================
 st.markdown("""
 <style>
-    .stApp { background: #050505; }
+    .stApp { background: #040406; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align: center; color: #ff5500; text-shadow: 0 0 15px #ff5500; font-weight: 200; letter-spacing: 6px;'>✦ J.A.R.V.I.S.</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #cc4400; font-family: monospace; letter-spacing: 2px; margin-bottom: 20px;'>HOLOGRAPHIC INTERFACE TERMINAL</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #ff5500; text-shadow: 0 0 20px #ff3300; font-weight: 100; letter-spacing: 8px; font-family: monospace;'>✦ J.A.R.V.I.S.</h1>", unsafe_allow_html=True)
 
-# Injecting the 3D spinning canvas object widget into your webpage
+# Injecting the dense movie-accurate vector interface
 st.components.v1.html("""
-<div style="display: flex; justify-content: center; align-items: center; height: 260px; background: #050505;">
-    <canvas id="hologramCanvas" width="250" height="250" style="cursor: grab;"></canvas>
+<div style="display: flex; justify-content: center; align-items: center; height: 280px; background: #040406;">
+    <canvas id="jarvisCoreCanvas" width="300" height="300" style="cursor: move;"></canvas>
 </div>
 <script>
-    const canvas = document.getElementById('hologramCanvas');
+    const canvas = document.getElementById('jarvisCoreCanvas');
     const ctx = canvas.getContext('2d');
     
-    let points = [];
+    let angleX = 0.4;
+    let angleY = 0.6;
     let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
+    let prevMouse = { x: 0, y: 0 };
+    let pulseFactor = 0;
 
-    // Generate points for our 3D concentric holographic rings cage
-    function initSphere() {
-        points = [];
-        // Inner Core Ring
-        for (let i = 0; i < 60; i++) {
-            let theta = (i / 60) * Math.PI * 2;
-            points.push({x: Math.cos(theta) * 35, y: Math.sin(theta) * 35, z: 0, r: 0});
-        }
-        // Middle Intersecting Axis Rings Cage
-        for (let i = 0; i < 90; i++) {
-            let theta = (i / 90) * Math.PI * 2;
-            points.push({x: Math.cos(theta) * 75, y: 0, z: Math.sin(theta) * 75, r: 1});
-            points.push({x: 0, y: Math.cos(theta) * 75, z: Math.sin(theta) * 75, r: 2});
-        }
-        // Large Outer Orbit Rings
-        for (let i = 0; i < 120; i++) {
-            let theta = (i / 120) * Math.PI * 2;
-            points.push({x: Math.cos(theta) * 105, y: Math.sin(theta) * 105, z: 0, r: 3});
-        }
+    // Build the structural data framework matching the image rings & vertical links
+    const rings = [
+        { radius: 30, count: 40, type: 'dashed', speedX: 0.01, speedY: 0.005 },
+        { radius: 65, count: 60, type: 'solid', speedX: -0.005, speedY: 0.01 },
+        { radius: 95, count: 80, type: 'web', speedX: 0.003, speedY: -0.007 },
+        { radius: 120, count: 50, type: 'outer', speedX: 0.008, speedY: 0.002 }
+    ];
+
+    function project(x, y, z) {
+        // 3D Matrix Rotations
+        let cosX = Math.cos(angleX), sinX = Math.sin(angleX);
+        let cosY = Math.cos(angleY), sinY = Math.sin(angleY);
+        
+        let y1 = y * cosX - z * sinX;
+        let z1 = z * cosX + y * sinX;
+        
+        let x2 = x * cosY + z1 * sinY;
+        let z2 = z1 * cosY - x * sinY;
+        
+        let scale = 320 / (320 + z2);
+        return {
+            x: 150 + x2 * scale,
+            y: 150 + y1 * scale,
+            visible: z2 > -200
+        };
     }
 
-    function rotateX(pt, angle) {
-        let cos = Math.cos(angle), sin = Math.sin(angle);
-        let y1 = pt.y * cos - pt.z * sin;
-        let z1 = pt.z * cos + pt.y * sin;
-        pt.y = y1; pt.z = z1;
-    }
-
-    function rotateY(pt, angle) {
-        let cos = Math.cos(angle), sin = Math.sin(angle);
-        let x1 = pt.x * cos + pt.z * sin;
-        let z1 = pt.z * cos - pt.x * sin;
-        pt.x = x1; pt.z = z1;
-    }
-
-    canvas.addEventListener('mousedown', (e) => { isDragging = true; });
-    window.addEventListener('mouseup', () => { isDragging = false; });
+    canvas.addEventListener('mousedown', (e) => { isDragging = true; prevMouse = { x: e.offsetX, y: e.offsetY }; });
+    window.addEventListener('mouseup', () => isDragging = false);
     canvas.addEventListener('mousemove', (e) => {
-        let deltaMove = { x: e.offsetX - previousMousePosition.x, y: e.offsetY - previousMousePosition.y };
         if (isDragging) {
-            points.forEach(pt => {
-                rotateY(pt, deltaMove.x * 0.005);
-                rotateX(pt, deltaMove.y * 0.005);
-            });
+            angleY += (e.offsetX - prevMouse.x) * 0.01;
+            angleX += (e.offsetY - prevMouse.y) * 0.01;
         }
-        previousMousePosition = { x: e.offsetX, y: e.offsetY };
+        prevMouse = { x: e.offsetX, y: e.offsetY };
     });
 
-    initSphere();
-
-    function renderLoop() {
+    function drawCore() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        let cx = canvas.width / 2;
-        let cy = canvas.height / 2;
+        pulseFactor += 0.04;
+        let coreGlow = Math.sin(pulseFactor) * 4 + 12;
 
-        if (!isDragging) {
-            points.forEach(pt => {
-                if(pt.r === 0) { rotateY(pt, 0.005); rotateX(pt, 0.002); }
-                if(pt.r === 1) { rotateY(pt, -0.008); }
-                if(pt.r === 2) { rotateX(pt, 0.01); }
-                if(pt.r === 3) { rotateY(pt, 0.003); rotateX(pt, -0.004); }
-            });
-        }
+        // 1. Center Core Spark Orb
+        let center = project(0, 0, 0);
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, coreGlow / 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 200, 100, 0.9)';
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#ff5500';
+        ctx.fill();
+        ctx.shadowBlur = 0; // Reset shadow for clean structural vectors
 
-        points.forEach(pt => {
-            let perspective = 300 / (300 + pt.z);
-            let x2d = cx + pt.x * perspective;
-            let y2d = cy + pt.y * perspective;
+        // 2. Render Rings and the Intersecting Vertical Data Links
+        rings.forEach((ring, rIdx) => {
+            let pts = [];
+            // Calculate rotational shift override
+            let timeShiftX = Date.now() * ring.speedX * 0.05;
+            let timeShiftY = Date.now() * ring.speedY * 0.05;
 
+            for (let i = 0; i < ring.count; i++) {
+                let pct = i / ring.count;
+                let theta = pct * Math.PI * 2;
+                
+                // Tilt various ring planes dynamically to match the sphere image matrix
+                let rx = Math.cos(theta) * ring.radius;
+                let ry = Math.sin(theta) * ring.radius;
+                let rz = 0;
+
+                if (ring.type === 'solid') { rz = rx * 0.3; rx *= 0.9; }
+                if (ring.type === 'web') { rz = ry * -0.4; }
+
+                let p = project(rx, ry, rz);
+                pts.push(p);
+            }
+
+            // Draw Vector Line Paths
             ctx.beginPath();
-            ctx.arc(x2d, y2d, pt.r === 0 ? 1.5 : 1, 0, Math.PI * 2);
-            if (pt.r === 0) ctx.fillStyle = '#ff6a00';
-            else if (pt.r === 3) ctx.fillStyle = 'rgba(255, 85, 0, 0.25)';
-            else ctx.fillStyle = 'rgba(255, 140, 0, 0.55)';
-            ctx.fill();
+            ctx.strokeStyle = rIdx === 0 ? 'rgba(255, 130, 0, 0.8)' : 'rgba(255, 80, 0, 0.35)';
+            ctx.lineWidth = ring.type === 'dashed' ? 1.5 : 1;
+            
+            if (ring.type === 'dashed') ctx.setLineDash([4, 6]);
+            else ctx.setLineDash([]);
+
+            for (let i = 0; i < pts.length; i++) {
+                if (i === 0) ctx.moveTo(pts[i].x, pts[i].y);
+                else ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            // 3. Connect Cross-Data Struts (the vertical wiring patterns from your image)
+            if (ring.type === 'web' && pts.length > 0) {
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(255, 160, 0, 0.15)';
+                for (let k = 0; k < pts.length; k += 8) {
+                    let outerPt = project(Math.cos(k)*120, Math.sin(k)*120, Math.cos(k)*40);
+                    ctx.moveTo(pts[k].x, pts[k].y);
+                    ctx.lineTo(outerPt.x, outerPt.y);
+                    ctx.lineTo(center.x, center.y); // Tie back to central spark
+                }
+                ctx.stroke();
+            }
         });
-        requestAnimationFrame(renderLoop);
+
+        requestAnimationFrame(drawCore);
     }
-    renderLoop();
+    drawCore();
 </script>
-""", height=280)
+""", height=290)
 
 if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
     raw_audio = st.session_state.jarvis_original_output
