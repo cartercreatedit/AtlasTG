@@ -354,14 +354,12 @@ export default function(component) {
 """
 )
 # =========================
-# LAYOUT & INTERACTION (HYPER-DENSITY LARGE INTERACTIVE CORE)
+# LAYOUT & INTERACTION (CINEMATIC OPERATIONAL MAINFRAME)
 # =========================
 st.markdown("""
 <style>
     /* Blends the entire dashboard canvas space into a dark Stark lab background */
     .stApp { background: #020204; }
-    
-    /* Center aligns the iframe matrix layout cleanly */
     iframe { width: 100% !important; margin: 0 auto; display: block; }
     
     /* Styles the physical Start Button to match Tony Stark's orange interface look */
@@ -372,7 +370,7 @@ st.markdown("""
         color: #ff5500 !important;
         border: 2px solid #ff5500 !important;
         border-radius: 8px !important;
-        padding: 10px 24px !important;
+        padding: 12px 28px !important;
         font-family: monospace !important;
         font-size: 14px !important;
         letter-spacing: 2px !important;
@@ -392,39 +390,117 @@ st.markdown("""
 
 st.markdown("<h2 style='text-align: center; color: #ff5500; text-shadow: 0 0 30px rgba(255, 50, 0, 0.85); font-weight: 100; letter-spacing: 16px; font-family: monospace; font-size: 24px; margin-top: 10px;'>J.A.R.V.I.S.</h2>", unsafe_allow_html=True)
 
-# 1. THE HIGH-VISIBILITY ACTIVATION BUTTON SYSTEM
-if st.button("✦ INITIALIZE VOCAL MATRIX ✦", key="stark_manual_voice_trigger"):
-    st.session_state.voice_active = not st.session_state.voice_active
-    st.rerun()
+# Process incoming text transcript inputs from the web standard listener frame
+if "web_voice_input" in st.session_state and st.session_state.web_voice_input:
+    user_speech = st.session_state.web_voice_input
+    st.session_state.web_voice_input = "" # Flush
+    with st.spinner("Processing vocal matrices..."):
+        reply = ask_jarvis(user_speech)
+        st.session_state.speech_to_play = reply
 
-# Main UI Status Display
-if st.session_state.voice_active:
-    status_text = "VOCAL MATRIX ENGAGED // CAPTURING AUDIO CUES..."
-    status_color = "#ff6a00"
+# Display active reading states to user
+if st.session_state.speech_to_play:
+    status_text = "TRANSMITTING VOCAL FEED FEEDBACK..."
+    status_color = "#ffaa00"
 else:
-    status_text = "SYSTEM STANDBY // CLICK BUTTON ABOVE TO INITIALIZE LINK"
+    status_text = "SYSTEM READY // PRESS TERMINAL COUPLING TO ENGAGE MIC"
     status_color = "#993300"
 
 st.markdown(f"<p style='text-align: center; color: {status_color}; font-family: monospace; font-size: 11px; letter-spacing: 3px; margin-top: 5px; margin-bottom: -15px;'>{status_text}</p>", unsafe_allow_html=True)
 
-# Pass active state as string variable to safely bypass f-string parser conflicts
-is_active_str = "true" if st.session_state.voice_active else "false"
+# Tells the JavaScript core if JARVIS is currently active or thinking
+is_speaking_flag = "true" if st.session_state.speech_to_play else "false"
+text_payload = st.session_state.speech_to_play or ""
 
-# 2. SCALED-UP 380-NODE EXTRA-LARGE CORE SIMULATION ENGINE
+# Injecting the completely rebuilt hyper-dense core + browser native voice capture deck
 st.components.v1.html(f"""
-<div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 520px; background: #020204; overflow: hidden; position: relative;">
-    <canvas id="denseNeuralCanvas" width="600" height="520"></canvas>
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 560px; background: #020204; overflow: hidden; position: relative;">
+    <button id="nativeVoiceBtn" style="background: #020204; color: #ff5500; border: 2px solid #ff5500; border-radius: 8px; padding: 12px 28px; font-family: monospace; font-size: 14px; letter-spacing: 2px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(255,85,0,0.2); margin-bottom: 10px; transition: all 0.3s;">✦ ENGAGE CORE COUPLING ✦</button>
+    <canvas id="denseNeuralCanvas" width="600" height="460"></canvas>
 </div>
+
 <script>
     const canvas = document.getElementById('denseNeuralCanvas');
     const ctx = canvas.getContext('2d');
+    const voiceBtn = document.getElementById('nativeVoiceBtn');
     
     const numParticles = 380; 
     let particles = [];
     let time = 0;
     
-    let isJarvisSpeaking = false;
-    let isVoiceActive = {is_active_str};
+    let isSpeaking = {is_speaking_flag};
+    let isListening = false;
+
+    // Standard Chromebook Browser Native Speech Tools
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+
+    if (SpeechRecognition) {{
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'en-AU';
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {{
+            isListening = true;
+            voiceBtn.innerText = "✦ MATRIX CAPTURING AUDIO... ✦";
+            voiceBtn.style.background = "#ff5500";
+            voiceBtn.style.color = "#020204";
+            voiceBtn.style.boxShadow = "0 0 25px rgba(255,85,0,0.6)";
+        }};
+
+        recognition.onend = () => {{
+            isListening = false;
+            if(!isSpeaking) {{
+                voiceBtn.innerText = "✦ ENGAGE CORE COUPLING ✦";
+                voiceBtn.style.background = "#020204";
+                voiceBtn.style.color = "#ff5500";
+                voiceBtn.style.boxShadow = "0 0 15px rgba(255,85,0,0.2)";
+            }}
+        }};
+
+        recognition.onresult = (event) => {{
+            const transcript = event.results[0][0].transcript;
+            // Delivers text data straight back into Streamlit memory loops
+            window.parent.postMessage({{type: 'jarvis_speech_input', text: transcript}}, '*');
+        }};
+    }}
+
+    voiceBtn.addEventListener('click', () => {{
+        if (!recognition) {{
+            alert("Speech interface unsupported in this window configuration.");
+            return;
+        }}
+        if (isListening) {{
+            recognition.stop();
+        }} else {{
+            window.speechSynthesis.cancel();
+            recognition.start();
+        }}
+    }});
+
+    // Chrome OS audio text playback sequence
+    function speakOutput(text) {{
+        if (!window.speechSynthesis || !text) return;
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        let selectedVoice = voices.find(v => v.name.includes("Chrome OS UK 2")) || voices.find(v => v.lang.includes("en-GB")) || voices[0];
+        if (selectedVoice) utterance.voice = selectedVoice;
+        utterance.rate = 1.05;
+        utterance.pitch = 0.95;
+        
+        utterance.onstart = () => {{ isSpeaking = true; voiceBtn.innerText = "✦ J.A.R.V.I.S. TRANSMITTING... ✦"; }};
+        utterance.onend = () => {{ 
+            isSpeaking = false; 
+            voiceBtn.innerText = "✦ ENGAGE CORE COUPLING ✦";
+            window.parent.postMessage({{type: 'clear_speech_state'}}, '*');
+        }};
+        window.speechSynthesis.speak(utterance);
+    }}
+
+    if ("{text_payload}" !== "") {{
+        speakOutput("{text_payload}");
+    }}
 
     function initHyperSphere() {{
         particles = [];
@@ -433,134 +509,77 @@ st.components.v1.html(f"""
             let v = Math.random();
             let theta = u * 2.0 * Math.PI;
             let phi = Math.acos(2.0 * v - 1.0);
-            let radius = 210; 
-            
+            let radius = 180; 
             particles.push({{
                 x: radius * Math.sin(phi) * Math.cos(theta),
                 y: radius * Math.sin(phi) * Math.sin(theta),
                 z: radius * Math.cos(phi),
-                ox: theta,
-                oy: phi,
-                seed: Math.random() * 10
+                ox: theta, oy: phi
             }});
         }}
     }}
 
     function project3D(x, y, z) {{
         let scale = 380 / (380 + z);
-        return {{
-            x: canvas.width / 2 + x * scale,
-            y: canvas.height / 2 + y * scale,
-            scale: scale,
-            zDepth: z
-        }};
+        return {{ x: canvas.width / 2 + x * scale, y: canvas.height / 2 + y * scale, scale: scale }};
     }}
 
     initHyperSphere();
 
     function renderDenseGrid() {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        let speedMultiplier = isJarvisSpeaking ? 0.045 : (isVoiceActive ? 0.02 : 0.005);
-        let waveSurge = isJarvisSpeaking ? 40 : (isVoiceActive ? 20 : 6);
-        
+        let speedMultiplier = isSpeaking ? 0.045 : (isListening ? 0.025 : 0.005);
+        let waveSurge = isSpeaking ? 40 : (isListening ? 22 : 6);
         time += speedMultiplier;
 
-        let rotY = time * 0.35;
-        let rotX = time * 0.18;
+        let rotY = time * 0.35; let rotX = time * 0.18;
         let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
         let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
-
         let projectedNodes = [];
 
         particles.forEach((pt) => {{
             let noise = Math.sin(pt.ox * 5 + time * 2.5) * Math.cos(pt.oy * 5 + time * 1.8) * waveSurge;
-            let currentRadius = 205 + noise;
-
+            let currentRadius = 175 + noise;
             let x1 = currentRadius * Math.sin(pt.oy) * Math.cos(pt.ox);
             let y1 = currentRadius * Math.sin(pt.oy) * Math.sin(pt.ox);
             let z1 = currentRadius * Math.cos(pt.oy);
-
-            let x2 = x1 * cosY + z1 * sinY;
-            let z2 = z1 * cosY - x1 * sinY;
-
-            let y3 = y1 * cosX - z2 * sinX;
-            let z3 = z2 * cosX + y1 * sinX;
-
+            let x2 = x1 * cosY + z1 * sinY; let z2 = z1 * cosY - x1 * sinY;
+            let y3 = y1 * cosX - z2 * sinX; let z3 = z2 * cosX + y1 * sinX;
             projectedNodes.push(project3D(x2, y3, z3));
         }});
 
         ctx.lineWidth = 0.45;
         for (let i = 0; i < projectedNodes.length; i++) {{
-            let p1 = projectedNodes[i];
-            let currentConnections = 0;
-            let proximityLimit = isVoiceActive ? 85 : 65; 
-
+            let p1 = projectedNodes[i]; let currentConnections = 0;
+            let proximityLimit = isListening ? 80 : 60; 
             for (let j = i + 1; j < projectedNodes.length; j++) {{
-                if (currentConnections > 5) break; 
-                
+                if (currentConnections > 4) break; 
                 let p2 = projectedNodes[j];
                 let dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-
                 if (dist < proximityLimit) {{
                     currentConnections++;
-                    let alphaBase = isVoiceActive ? 0.32 : 0.18;
-                    let alpha = (1 - (dist / proximityLimit)) * alphaBase * p1.scale;
-                    
+                    let alpha = (1 - (dist / proximityLimit)) * (isListening ? 0.35 : 0.18) * p1.scale;
                     ctx.strokeStyle = "rgba(255, 85, 0, " + alpha + ")";
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
                 }}
             }}
         }}
 
         projectedNodes.forEach(p => {{
-            let nodeAlpha = isJarvisSpeaking ? 0.95 * p.scale : (isVoiceActive ? 0.75 * p.scale : 0.4 * p.scale);
-            let sizeRadius = isJarvisSpeaking ? 2.5 * p.scale : (isVoiceActive ? 1.8 * p.scale : 1.2 * p.scale);
-            
+            let nodeAlpha = isSpeaking ? 0.95 * p.scale : (isListening ? 0.75 * p.scale : 0.4 * p.scale);
             ctx.fillStyle = "rgba(255, 120, 0, " + nodeAlpha + ")";
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, sizeRadius, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x, p.y, isListening ? 1.8 * p.scale : 1.1 * p.scale, 0, Math.PI * 2); ctx.fill();
         }});
-
         requestAnimationFrame(renderDenseGrid);
-    }}
-
-    window.addEventListener('message', (e) => {{
-        if (e.data && e.data.type === 'jarvis_audio_state') {{
-            isJarvisSpeaking = e.data.speaking;
-        }}
-    }});
-
+    }
     renderDenseGrid();
 </script>
-""", height=530)
+""", height=570)
 
-if "jarvis_original_output" in st.session_state and st.session_state.jarvis_original_output:
-    raw_audio = st.session_state.jarvis_original_output
-    st.session_state.jarvis_original_output = None
-    
-    with st.spinner("Processing audio matrix..."):
-        text_input = transcribe_audio(raw_audio)
-        if text_input:
-            reply = ask_jarvis(text_input)
-            st.session_state.speech_to_play = reply
-
-# Tells the JavaScript code if a voice payload is playing out loud right now
-is_speaking_flag = "true" if (st.session_state.speech_to_play != "") else "false"
-st.components.v1.html(f"""
-<script>
-    window.parent.postMessage({{type: 'jarvis_audio_state', speaking: {is_speaking_flag}}}, '*');
-</script>
-""", height=1)
-
-# Forces microphone active flag to directly track python session state
-component_data = {
-    "active": st.session_state.voice_active,
-    "text_to_speak": st.session_state.speech_to_play
-}
-
-voice_component(data=component_data, key="jarvis_voice_module")
+# Connect cross-window listeners to funnel voice text straight back into Python pipelines
+if "jarvis_speech_msg" in st.session_state and st.session_state.jarvis_speech_msg:
+    msg_data = st.session_state.jarvis_speech_msg
+    del st.session_state["jarvis_speech_msg"]
+    if msg_data.get("type") == "jarvis_speech_input":
+        st.session_state.web_voice_input = msg_data.get("text", "")
+        st.rerun()
