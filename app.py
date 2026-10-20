@@ -123,7 +123,6 @@ section[data-testid="stSidebar"] h3 {
     letter-spacing: 0.5px;
     margin: 20px 0 10px 0;
 }
-/* New Chat + Accent Button styling */
 div.stButton > button {
     border-radius: 24px !important;
 }
@@ -139,7 +138,6 @@ if not api_key:
 client = Groq(api_key=api_key)
 
 # ── 4. MULTI-CHAT INTERACTIVE HISTORY INITIALIZATION ─────────────────────
-# Initialize global conversation memory map if missing
 if "all_chats" not in st.session_state:
     initial_id = str(uuid.uuid4())
     st.session_state.all_chats = {
@@ -150,14 +148,12 @@ if "all_chats" not in st.session_state:
     }
     st.session_state.current_chat_id = initial_id
 
-# Safe pointers to current chat active parameters
 current_id = st.session_state.current_chat_id
 active_chat = st.session_state.all_chats[current_id]
 
 # ── 5. SIDEBAR WORKSPACE ARCHIVE PANEL (GOOGLE AI STYLE) ─────────────────────
 with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
-    # New Chat initialization command trigger
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
         st.session_state.all_chats[new_id] = {
@@ -169,9 +165,7 @@ with st.sidebar:
         
     st.markdown("### Recent Chats")
     
-    # Render interactive log for all saved chat tracking sessions
     for chat_id, data in list(st.session_state.all_chats.items()):
-        # Styling marker to highlight the active chosen context matrix thread
         button_label = f"💬 {data['title'][:24]}..." if len(data['title']) > 24 else f"💬 {data['title']}"
         if chat_id == st.session_state.current_chat_id:
             button_label = f"👉 {data['title'][:22]}"
@@ -208,13 +202,12 @@ text_prompt = st.chat_input("Message AtlasTG...")
 if text_prompt:
     active_chat["messages"].append({"role": "user", "content": text_prompt})
     
-    # Dynamically update sidebar thread title using the first user question
     if active_chat["title"] == "New Chat Thread" or active_chat["title"] == "Welcome to AtlasTG":
         active_chat["title"] = text_prompt[:30]
         
     st.rerun()
 
-# Run the core api processing loop if last element is user text prompt array matrix
+# Run the core api processing loop safely if last element is user prompt text
 if len(active_chat["messages"]) > 0 and active_chat["messages"][-1]["role"] == "user":
     sys_content = (
         "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
@@ -232,8 +225,13 @@ if len(active_chat["messages"]) > 0 and active_chat["messages"][-1]["role"] == "
     api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in active_chat["messages"]]
     
     completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
-    reply = completion.choices.message.content
+    
+    # FIXED SYNTAX INDEX EXTRACTION:
+    reply = completion.choices[0].message.content
         
     active_chat["messages"].append({"role": "assistant", "content": reply})
     st.rerun()
 
+# ── 10. SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
