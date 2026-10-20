@@ -35,7 +35,7 @@ def verify_user(username, password):
     c.execute("SELECT password_hash FROM users WHERE username=?", (username.strip().lower(),))
     row = c.fetchone()
     conn.close()
-    if row and row == hash_password(password):
+    if row and row[0] == hash_password(password):
         return True
     return False
 
@@ -268,8 +268,7 @@ if not st.session_state.all_chats:
     save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
     st.session_state.current_chat_id = initial_id
 elif "current_chat_id" not in st.session_state:
-    # FIXED: Added the required operational block logic so it isn't an empty block anymore
-    st.session_state.current_chat_id = str(list(st.session_state.all_chats.keys())[0])
+    st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
 
 current_id = str(st.session_state.current_chat_id)
 active_chat = st.session_state.all_chats[current_id]
@@ -280,5 +279,5 @@ with st.sidebar:
     
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
-            st.session_state.all_chats[new_id] = {
-            }
+        st.session_state.all_chats[new_id] = {
+            "title": "New Chat Thread",
