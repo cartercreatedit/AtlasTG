@@ -61,10 +61,11 @@ def load_user_chats(username):
     conn.close()
     
     chats = {}
-    for row in rows:
-        chats[row[0]] = {
-            "title": row[1],
-            "messages": json.loads(row[2])
+    for r in rows:
+        c_id, title, msg_json = r[0], r[1], r[2]
+        chats[c_id] = {
+            "title": title,
+            "messages": json.loads(msg_json)
         }
     return chats
 
