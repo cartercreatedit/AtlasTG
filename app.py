@@ -8,7 +8,7 @@ st.set_page_config(
     page_title="AtlasTG",
     page_icon="✦",
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"  # Opened by default to showcase the new tools
 )
 
 # ── 2. ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
@@ -77,7 +77,7 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     box-shadow: none !important; 
     max-width: 100% !important; 
 }
-/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX (NO WHITE RING HIGHLIGHT) ── */
+/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
 div[data-testid="stChatInput"] { 
     position: fixed !important; 
     bottom: 32px !important; 
@@ -98,7 +98,6 @@ div[data-testid="stChatInput"] {
     box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important; 
     outline: none !important; 
 }
-/* Obliterate inner background border constraints */
 div[data-testid="stChatInput"] *, .stChatInput div[data-baseweb="textarea"], .stChatInput div[data-baseweb="base-input"], .stChatInput textarea { 
     border: none !important; 
     background-color: transparent !important; 
@@ -108,6 +107,51 @@ div[data-testid="stChatInput"] *, .stChatInput div[data-baseweb="textarea"], .st
 .stChatInput textarea { 
     color: #f4f4f4 !important; 
     font-size: 15.5px !important; 
+}
+
+/* ── PREMIUM SIDEBAR DARK CUSTOMIZATION ── */
+section[data-testid="stSidebar"] {
+    background-color: #0d0d0d !important;
+    border-right: 1px solid #1a1a1a !important;
+}
+section[data-testid="stSidebar"] h3 {
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    font-size: 1.2rem !important;
+    letter-spacing: 0.5px;
+    margin-bottom: 20px;
+}
+section[data-testid="stSidebar"] button {
+    background-color: #141414 !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #262626 !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+section[data-testid="stSidebar"] button:hover {
+    background-color: #1a1a1a !important;
+    border-color: #404040 !important;
+    color: #ffffff !important;
+}
+.metric-container {
+    background-color: #121212;
+    border: 1px solid #1c1c1c;
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 15px;
+}
+.metric-label {
+    color: #888888;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.metric-value {
+    color: #00ffcc;
+    font-size: 18px;
+    font-family: monospace;
+    font-weight: 600;
+    margin-top: 4px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -120,24 +164,48 @@ if not api_key:
 
 client = Groq(api_key=api_key)
 
-# ── 4. CONTROL DECK OPERATIONS (SIDEBAR) ─────────────────────
-with st.sidebar:
-    st.markdown("### AtlasTG Engine Tools")
-    if st.button("Reset Session Memory", use_container_width=True):
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}
-        ]
-        st.rerun()
-
-# ── 5. BRAND HEADER INDEX ────────────────────────────────────
-st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
-
-# ── 6. CACHE MATRIX & STATE INITIALIZATION ─────────────────────
+# ── 4. CACHE MATRIX & STATE INITIALIZATION ─────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}
     ]
+
+# ── 5. ADVANCED INTEGRATED SIDEBAR CONTROL MATRIX ─────────────────────
+with st.sidebar:
+    st.markdown("### AtlasTG Control Panel")
+    
+    # Session Operation
+    if st.button("Reset Engine Memory", use_container_width=True):
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}
+        ]
+        st.rerun()
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Matrix Telemetry")
+    
+    # Calculate text payload size dynamically
+    total_turns = len(st.session_state.messages) - 1
+    char_count = sum(len(m["content"]) for m in st.session_state.messages)
+    
+    st.markdown(f'''
+    <div class="metric-container">
+        <div class="metric-label">Active Engine Engine Model</div>
+        <div class="metric-value" style="color: #ffffff; font-size: 14px;">gpt-oss-120b</div>
+    </div>
+    <div class="metric-container">
+        <div class="metric-label">Conversation Depth</div>
+        <div class="metric-value">{total_turns} interaction{"s" if total_turns != 1 else ""}</div>
+    </div>
+    <div class="metric-container">
+        <div class="metric-label">Cached Framework Payload</div>
+        <div class="metric-value" style="color: #a855f7;">{char_count} chars</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+# ── 6. BRAND HEADER INDEX ────────────────────────────────────
+st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
+st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
 
 # ── 7. TIMELINE PIPELINE GENERATION ──────────────────
 for msg in st.session_state.messages:
@@ -184,23 +252,3 @@ if st.session_state.messages[-1]["role"] == "user":
             {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
         ]
         
-        with st.spinner(""):
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=api_messages,
-                temperature=0.2,
-                max_tokens=1000
-            )
-            
-            # FIXED EXTRACTION SYNTAX: Accesses response index securely
-            reply = completion.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-            st.rerun()
-
-    except Exception as e:
-        st.session_state.messages.append({"role": "assistant", "content": f"Engine Connectivity Error: {e}"})
-        st.rerun()
-
-# ── 10. SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
