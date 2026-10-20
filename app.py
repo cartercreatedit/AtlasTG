@@ -35,20 +35,17 @@ h1 {
 .stCaption { 
     color: #8b8b8b !important; 
 }
-/* Clear default Streamlit padding baggage */
 div[data-testid="stChatMessage"] { 
     background-color: transparent !important; 
     border: none !important; 
     box-shadow: none !important; 
     padding: 0px !important; 
 }
-/* Force clean text behavior inside all markdown elements */
 div[data-testid="stMarkdownContainer"] p { 
     color: #f1f5f9 !important; 
     font-size: 15.5px !important; 
     line-height: 1.6 !important; 
 }
-/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) { 
     display: flex !important; 
     justify-content: flex-end !important; 
@@ -64,7 +61,6 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     display: inline-block !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important; 
 }
-/* Assistant Plain Text Layout */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) { 
     display: flex !important; 
     justify-content: flex-start !important; 
@@ -77,7 +73,6 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     box-shadow: none !important; 
     max-width: 100% !important; 
 }
-/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
 div[data-testid="stChatInput"] { 
     position: fixed !important; 
     bottom: 32px !important; 
@@ -108,8 +103,6 @@ div[data-testid="stChatInput"] *, .stChatInput div[data-baseweb="textarea"], .st
     color: #f4f4f4 !important; 
     font-size: 15.5px !important; 
 }
-
-/* ── PREMIUM SIDEBAR DARK CUSTOMIZATION ── */
 section[data-testid="stSidebar"] {
     background-color: #0d0d0d !important;
     border-right: 1px solid #1a1a1a !important;
@@ -232,20 +225,25 @@ if text_prompt:
 
 # Process engine completion logic safely if last message is from user
 if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
-    try:
-        sys_content = (
-            "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-            "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-            "CRITICAL TIMELINE AND IDENTITY LAWS:\n"
-            "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation.\n"
-            "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix.\n"
-            "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication.\n"
-            "FORMATTING LAWS:\n"
-            "- NEVER use Markdown or HTML tables under any circumstances.\n"
-            "- Structure information visually using Markdown headers (###), bold tags, and bullet points.\n"
-            "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-        )
+    sys_content = (
+        "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+        "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+        "CRITICAL TIMELINE AND IDENTITY LAWS:\n"
+        "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation.\n"
+        "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix.\n"
+        "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication.\n"
+        "FORMATTING LAWS:\n"
+        "- NEVER use Markdown or HTML tables under any circumstances.\n"
+        "- Structure information visually using Markdown headers (###), bold tags, and bullet points.\n"
+        "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
+    )
+    
+    api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+    
+    completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
+    reply = completion.choices.message.content
         
-        api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-        
-        # Switched to direct execution layout to prevent syntax block compilation bugs
+    st.session_state.messages.append({"role": "assistant", "content": reply})
+    st.rerun()
+
+# ── 10. SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
