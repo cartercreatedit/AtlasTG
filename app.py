@@ -21,10 +21,8 @@ DB_FILE = "atlastg_matrix.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    # Users table
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (username TEXT PRIMARY KEY, password_hash TEXT)''')
-    # Chats index metadata table
     c.execute('''CREATE TABLE IF NOT EXISTS chats 
                  (chat_id TEXT PRIMARY KEY, username TEXT, title TEXT, messages_json TEXT)''')
     conn.commit()
@@ -82,7 +80,7 @@ def save_or_update_chat(chat_id, username, title, messages):
     conn.commit()
     conn.close()
 
-# Initialize localized matrix tables
+# Initialize database structure tables
 init_db()
 
 # ── 3. GOOGLE AI STYLE MIDNIGHT THEME CUSTOMIZATION ─────────────────────────
@@ -127,7 +125,6 @@ div[data-testid="stMarkdownContainer"] p {
     font-size: 15.5px !important; 
     line-height: 1.6 !important; 
 }
-/* User pointed tail chat bubble */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) { 
     display: flex !important; 
     justify-content: flex-end !important; 
@@ -143,7 +140,6 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     display: inline-block !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important; 
 }
-/* Assistant plain container */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) { 
     display: flex !important; 
     justify-content: flex-start !important; 
@@ -156,7 +152,6 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     box-shadow: none !important; 
     max-width: 100% !important; 
 }
-/* Premium Input Dock */
 div[data-testid="stChatInput"] { 
     position: fixed !important; 
     bottom: 32px !important; 
@@ -263,10 +258,8 @@ if st.session_state.logged_in_user is None:
 username = st.session_state.logged_in_user
 
 if "all_chats" not in st.session_state:
-    # Recover hard tracking history maps directly from SQL local database
     st.session_state.all_chats = load_user_chats(username)
     
-    # Inject default thread if database query returned an empty index
     if not st.session_state.all_chats:
         initial_id = str(uuid.uuid4())
         st.session_state.all_chats = {
@@ -288,3 +281,8 @@ with st.sidebar:
     st.markdown(f"<p style='color: #8b8b8b; font-size: 13px; margin-top: 10px;'>Identity: <b>{username}</b></p>", unsafe_allow_html=True)
     
     if st.button("➕ New Chat", use_container_width=True):
+        new_id = str(uuid.uuid4())
+        st.session_state.all_chats[new_id] = {
+            "title": "New Chat Thread",
+            "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
+        }
