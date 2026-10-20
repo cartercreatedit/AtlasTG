@@ -183,7 +183,7 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### Matrix Telemetry")
     
-    total_turns = len(st.session_state.messages) - 1
+    total_turns = max(0, len(st.session_state.messages) - 1)
     char_count = sum(len(m["content"]) for m in st.session_state.messages)
     
     st.markdown(f'''
@@ -231,7 +231,7 @@ if text_prompt:
     st.rerun()
 
 # Process engine completion logic safely if last message is from user
-if st.session_state.messages[-1]["role"] == "user":
+if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] == "user":
     try:
         sys_content = (
             "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
@@ -249,4 +249,5 @@ if st.session_state.messages[-1]["role"] == "user":
         api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         
         with st.spinner(""):
-            completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-120b", 
