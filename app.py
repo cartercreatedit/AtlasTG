@@ -35,7 +35,7 @@ def verify_user(username, password):
     c.execute("SELECT password_hash FROM users WHERE username=?", (username.strip().lower(),))
     row = c.fetchone()
     conn.close()
-    if row and row[0] == hash_password(password):
+    if row and row == hash_password(password):
         return True
     return False
 
@@ -60,7 +60,6 @@ def load_user_chats(username):
     
     chats = {}
     for r in rows:
-        # FIXED: Explicitly pull text values out of the tuple elements to prevent index errors
         chat_id_str = str(r[0])
         title_str = str(r[1])
         msg_json_str = str(r[2])
@@ -269,7 +268,7 @@ if not st.session_state.all_chats:
     save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
     st.session_state.current_chat_id = initial_id
 elif "current_chat_id" not in st.session_state:
-    # FIXED: Convert dict keys to an absolute flat string list rather than storing structural rows
+    # FIXED: Added the required operational block logic so it isn't an empty block anymore
     st.session_state.current_chat_id = str(list(st.session_state.all_chats.keys())[0])
 
 current_id = str(st.session_state.current_chat_id)
@@ -280,3 +279,5 @@ with st.sidebar:
     st.markdown(f"<p style='color: #8b8b8b; font-size: 13px; margin-top: 10px;'>Identity: <b>{username}</b></p>", unsafe_allow_html=True)
     
     if st.button("➕ New Chat", use_container_width=True):
+        new_id = str(uuid.uuid4())
+        st.session_state.all_chats[new_id] = {
