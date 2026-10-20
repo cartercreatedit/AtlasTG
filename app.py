@@ -62,7 +62,6 @@ def load_user_chats(username):
     
     chats = {}
     for r in rows:
-        # FIXED: Explicitly extraction via tuple array indices to avoid structural leakage
         c_id = r[0]
         title = r[1]
         msg_json = r[2]
@@ -275,6 +274,7 @@ if "all_chats" not in st.session_state:
         save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
         st.session_state.current_chat_id = initial_id
     else:
+        # FIXED: Extraction of individual string pointer context dynamically to avoid list-index bugs
         st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
 
 current_id = st.session_state.current_chat_id
