@@ -2,7 +2,10 @@ import streamlit as st
 from groq import Groq
 import os
 import streamlit.components.v1 as components
+import sqlite3
+import hashlib
 import uuid
+import json
 
 # ── 1. GLOBAL LAYOUT CONFIGURATION ─────────────────────────
 st.set_page_config(
@@ -12,7 +15,77 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ── 2. GOOGLE AI STYLE MIDNIGHT THEME CUSTOMIZATION ─────────────────────────
+# ── 2. DATABASE PERSISTENCE FRAMEWORK MATRIX ────────────────
+DB_FILE = "atlastg_matrix.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    # Users table
+    c.execute('''CREATE TABLE IF NOT EXISTS users 
+                 (username TEXT PRIMARY KEY, password_hash TEXT)''')
+    # Chats index metadata table
+    c.execute('''CREATE TABLE IF NOT EXISTS chats 
+                 (chat_id TEXT PRIMARY KEY, username TEXT, title TEXT, messages_json TEXT)''')
+    conn.commit()
+    conn.close()
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_user(username, password):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT password_hash FROM users WHERE username=?", (username,))
+    row = c.fetchone()
+    conn.close()
+    if row and row[0] == hash_password(password):
+        return True
+    return False
+
+def register_user(username, password):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO users VALUES (?, ?)", (username, hash_password(password)))
+        conn.commit()
+        success = True
+    except sqlite3.IntegrityError:
+        success = False
+    conn.close()
+    return success
+
+def load_user_chats(username):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT chat_id, title, messages_json FROM chats WHERE username=?", (username,))
+    rows = c.fetchall()
+    conn.close()
+    
+    chats = {}
+    for row in rows:
+        chats[row[0]] = {
+            "title": row[1],
+            "messages": json.loads(row[2])
+        }
+    return chats
+
+def save_or_update_chat(chat_id, username, title, messages):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    messages_json = json.dumps(messages)
+    c.execute('''INSERT INTO chats (chat_id, username, title, messages_json) 
+                 VALUES (?, ?, ?, ?)
+                 ON CONFLICT(chat_id) DO UPDATE SET 
+                 title=excluded.title, messages_json=excluded.messages_json''', 
+              (chat_id, username, title, messages_json))
+    conn.commit()
+    conn.close()
+
+# Initialize localized matrix tables
+init_db()
+
+# ── 3. GOOGLE AI STYLE MIDNIGHT THEME CUSTOMIZATION ─────────────────────────
 st.markdown("""
 <style>
 .stApp { 
@@ -20,16 +93,14 @@ st.markdown("""
     color: #e3e3e3; 
 }
 .main .block-container { 
-    padding-top: 4rem; /* Adjusted down slightly to make room for the reopen toggle */
+    padding-top: 4rem; 
     padding-bottom: 160px !important; 
     max-width: 760px; 
     min-height: 100vh; 
 }
-/* FIXED: Kept header visible so native reopen toggle button remains functional */
 #MainMenu, footer, .stDeployButton { 
     visibility: hidden; 
 }
-/* Make the native top header blend perfectly into the black background */
 header[data-testid="stHeader"] {
     background-color: transparent !important;
 }
@@ -45,7 +116,6 @@ h1 {
 .stCaption { 
     color: #9e9e9e !important; 
 }
-/* Clear standard spacing anomalies */
 div[data-testid="stChatMessage"] { 
     background-color: transparent !important; 
     border: none !important; 
@@ -57,7 +127,7 @@ div[data-testid="stMarkdownContainer"] p {
     font-size: 15.5px !important; 
     line-height: 1.6 !important; 
 }
-/* User Message Pointed Bubbles */
+/* User pointed tail chat bubble */
 div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) { 
     display: flex !important; 
     justify-content: flex-end !important; 
@@ -73,7 +143,7 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     display: inline-block !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important; 
 }
-/* Assistant Message Layout */
+/* Assistant plain container */
 div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) { 
     display: flex !important; 
     justify-content: flex-start !important; 
@@ -86,7 +156,7 @@ div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth
     box-shadow: none !important; 
     max-width: 100% !important; 
 }
-/* Google Console Style Dock Fixed Chat Input */
+/* Premium Input Dock */
 div[data-testid="stChatInput"] { 
     position: fixed !important; 
     bottom: 32px !important; 
@@ -117,8 +187,6 @@ div[data-testid="stChatInput"] *, .stChatInput div[data-baseweb="textarea"], .st
     color: #f5f5f5 !important; 
     font-size: 15.5px !important; 
 }
-
-/* ── GOOGLE-STYLE SIDEBAR DIRECTORY PANEL ── */
 section[data-testid="stSidebar"] {
     background-color: #111111 !important;
     border-right: 1px solid #1f1f1f !important;
@@ -134,10 +202,19 @@ section[data-testid="stSidebar"] h3 {
 div.stButton > button {
     border-radius: 24px !important;
 }
+.auth-container {
+    background-color: #111111;
+    border: 1px solid #222222;
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 420px;
+    margin: 80px auto 0 auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── 3. API CONFIGURATION & CORE VALIDATION ─────────────────────
+# ── 4. API CONFIGURATION & CORE VALIDATION ─────────────────────
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error("Missing GROQ_API_KEY environment variable.")
@@ -145,97 +222,69 @@ if not api_key:
 
 client = Groq(api_key=api_key)
 
-# ── 4. MULTI-CHAT INTERACTIVE HISTORY INITIALIZATION ─────────────────────
+# ── 5. AUTHENTICATION CONTROLLER SYSTEM ────────────────────────────────────
+if "logged_in_user" not in st.session_state:
+    st.session_state.logged_in_user = None
+
+if st.session_state.logged_in_user is None:
+    st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: white; margin-bottom: 5px;'>AtlasTG Engine</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #888; font-size: 13px;'>Secure Core Verification Gate</p>", unsafe_allow_html=True)
+    
+    tab_login, tab_signup = st.tabs(["Sign In", "Create Account"])
+    
+    with tab_login:
+        login_user = st.text_input("Username", key="login_username")
+        login_pass = st.text_input("Password", type="password", key="login_password")
+        if st.button("Access Engine Pipeline", use_container_width=True):
+            if verify_user(login_user, login_pass):
+                st.session_state.logged_in_user = login_user
+                st.rerun()
+            else:
+                st.error("Invalid credentials footprint.")
+                
+    with tab_signup:
+        reg_user = st.text_input("Choose Username", key="reg_username")
+        reg_pass = st.text_input("Choose Password", type="password", key="reg_password")
+        if st.button("Register Identity Frame", use_container_width=True):
+            if reg_user.strip() == "" or reg_pass.strip() == "":
+                st.error("Fields cannot stand empty.")
+            elif register_user(reg_user, reg_pass):
+                st.success("Identity locked! Switching to authentication...")
+                st.session_state.logged_in_user = reg_user
+                st.rerun()
+            else:
+                st.error("Username index footprint already occupied.")
+                
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.stop()
+
+# ── 6. DATA CONTEXT MEMORY RECOVERY ──────────────────────────────────────────
+username = st.session_state.logged_in_user
+
 if "all_chats" not in st.session_state:
-    initial_id = str(uuid.uuid4())
-    st.session_state.all_chats = {
-        initial_id: {
-            "title": "Welcome to AtlasTG",
-            "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
+    # Recover hard tracking history maps directly from SQL local database
+    st.session_state.all_chats = load_user_chats(username)
+    
+    # Inject default thread if database query returned an empty index
+    if not st.session_state.all_chats:
+        initial_id = str(uuid.uuid4())
+        st.session_state.all_chats = {
+            initial_id: {
+                "title": "Welcome to AtlasTG",
+                "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
+            }
         }
-    }
-    st.session_state.current_chat_id = initial_id
+        save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
+        st.session_state.current_chat_id = initial_id
+    else:
+        st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
 
 current_id = st.session_state.current_chat_id
 active_chat = st.session_state.all_chats[current_id]
 
-# ── 5. SIDEBAR WORKSPACE ARCHIVE PANEL (GOOGLE AI STYLE) ─────────────────────
+# ── 7. GOOGLE-STYLE SIDEBAR LOGISTICS DIRECTORY ─────────────────────────────
 with st.sidebar:
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color: #8b8b8b; font-size: 13px; margin-top: 10px;'>Identity: <b>{username}</b></p>", unsafe_allow_html=True)
+    
     if st.button("➕ New Chat", use_container_width=True):
-        new_id = str(uuid.uuid4())
-        st.session_state.all_chats[new_id] = {
-            "title": "New Chat Thread",
-            "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
-        }
-        st.session_state.current_chat_id = new_id
-        st.rerun()
-        
-    st.markdown("### Recent Chats")
-    
-    for chat_id, data in list(st.session_state.all_chats.items()):
-        button_label = f"💬 {data['title'][:24]}..." if len(data['title']) > 24 else f"💬 {data['title']}"
-        if chat_id == st.session_state.current_chat_id:
-            button_label = f"👉 {data['title'][:22]}"
-            
-        if st.button(button_label, key=f"nav_{chat_id}", use_container_width=True):
-            st.session_state.current_chat_id = chat_id
-            st.rerun()
-
-# ── 6. MAIN WORKSPACE DISPLAY HEADER ────────────────────────────────────
-st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
-
-# ── 7. TIMELINE PIPELINE GENERATION ──────────────────
-for msg in active_chat["messages"]:
-    if msg["role"] == "user":
-        col_spacer, col_bubble = st.columns([0.2, 0.8])
-        with col_bubble:
-            st.markdown(f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
-                <div style="background-color: #1e1e1e; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                    {msg["content"]}
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-        st.markdown(msg["content"])
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ── 8. LIVE USER CONSOLE INPUT DOCK ─────────────────────
-text_prompt = st.chat_input("Message AtlasTG...")
-
-# ── 9. ADVANCED COMPILATION HANDLING ENGINE ──────────────────────
-if text_prompt:
-    active_chat["messages"].append({"role": "user", "content": text_prompt})
-    
-    if active_chat["title"] == "New Chat Thread" or active_chat["title"] == "Welcome to AtlasTG":
-        active_chat["title"] = text_prompt[:30]
-        
-    st.rerun()
-
-if len(active_chat["messages"]) > 0 and active_chat["messages"][-1]["role"] == "user":
-    sys_content = (
-        "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-        "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-        "CRITICAL TIMELINE AND IDENTITY LAWS:\n"
-        "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation.\n"
-        "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix.\n"
-        "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication.\n"
-        "FORMATTING LAWS:\n"
-        "- NEVER use Markdown or HTML tables under any circumstances.\n"
-        "- Structure information visually using Markdown headers (###), bold tags, and bullet points.\n"
-        "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-    )
-    
-    api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in active_chat["messages"]]
-    
-    completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
-    
-    reply = completion.choices.message.content
-        
-    active_chat["messages"].append({"role": "assistant", "content": reply})
-    st.rerun()
-
-# ── 10. SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
