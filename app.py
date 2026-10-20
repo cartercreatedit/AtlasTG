@@ -21,10 +21,8 @@ DB_FILE = "atlastg_matrix.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (username TEXT PRIMARY KEY, password_hash TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS chats 
-                 (chat_id TEXT PRIMARY KEY, username TEXT, title TEXT, messages_json TEXT)''')
+    c.execute("CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password_hash TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS chats (chat_id TEXT PRIMARY KEY, username TEXT, title TEXT, messages_json TEXT)")
     conn.commit()
     conn.close()
 
@@ -72,15 +70,11 @@ def save_or_update_chat(chat_id, username, title, messages):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     messages_json = json.dumps(messages)
-    c.execute('''INSERT INTO chats (chat_id, username, title, messages_json) 
-                 VALUES (?, ?, ?, ?)
-                 ON CONFLICT(chat_id) DO UPDATE SET 
-                 title=excluded.title, messages_json=excluded.messages_json''', 
-              (chat_id, username.strip().lower(), title, messages_json))
+    c.execute("INSERT INTO chats (chat_id, username, title, messages_json) VALUES (?, ?, ?, ?) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title, messages_json=excluded.messages_json", (chat_id, username.strip().lower(), title, messages_json))
     conn.commit()
     conn.close()
 
-# Initialize database tracking files natively
+# Initialize data tracking tables
 init_db()
 
 # ── 3. GOOGLE AI STYLE MIDNIGHT THEME CUSTOMIZATION ─────────────────────────
@@ -271,7 +265,6 @@ if "all_chats" not in st.session_state:
         save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
         st.session_state.current_chat_id = initial_id
     else:
-        # FIXED: Forces extraction of single string key natively to stop sequence array errors
         st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
 
 current_id = st.session_state.current_chat_id
@@ -284,3 +277,6 @@ with st.sidebar:
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
         st.session_state.all_chats[new_id] = {
+            "title": "New Chat Thread",
+            "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
+        }
