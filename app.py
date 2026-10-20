@@ -248,6 +248,4 @@ if len(st.session_state.messages) > 0 and st.session_state.messages[-1]["role"] 
         
         api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         
-        with st.spinner(""):
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b", 
+        # Switched to direct execution layout to prevent syntax block compilation bugs
