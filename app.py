@@ -280,4 +280,5 @@ with st.sidebar:
     
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
-        st.session_state.all_chats[new_id] = {
+            st.session_state.all_chats[new_id] = {
+            }
