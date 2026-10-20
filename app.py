@@ -20,13 +20,21 @@ st.markdown("""
     color: #e3e3e3; 
 }
 .main .block-container { 
-    padding-top: 2rem; 
+    padding-top: 4rem; /* Adjusted down slightly to make room for the reopen toggle */
     padding-bottom: 160px !important; 
     max-width: 760px; 
     min-height: 100vh; 
 }
-#MainMenu, footer, header, .stDeployButton { 
+/* FIXED: Kept header visible so native reopen toggle button remains functional */
+#MainMenu, footer, .stDeployButton { 
     visibility: hidden; 
+}
+/* Make the native top header blend perfectly into the black background */
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
+}
+header[data-testid="stHeader"] button {
+    color: #ffffff !important;
 }
 h1 { 
     color: #ffffff !important; 
@@ -207,7 +215,6 @@ if text_prompt:
         
     st.rerun()
 
-# Run the core api processing loop safely if last element is user prompt text
 if len(active_chat["messages"]) > 0 and active_chat["messages"][-1]["role"] == "user":
     sys_content = (
         "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
@@ -226,12 +233,9 @@ if len(active_chat["messages"]) > 0 and active_chat["messages"][-1]["role"] == "
     
     completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_messages, temperature=0.2, max_tokens=1000)
     
-    # FIXED SYNTAX INDEX EXTRACTION:
-    reply = completion.choices[0].message.content
+    reply = completion.choices.message.content
         
     active_chat["messages"].append({"role": "assistant", "content": reply})
     st.rerun()
 
 # ── 10. SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
