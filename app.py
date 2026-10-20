@@ -62,12 +62,9 @@ def load_user_chats(username):
     
     chats = {}
     for r in rows:
-        c_id = r[0]
-        title = r[1]
-        msg_json = r[2]
-        chats[c_id] = {
-            "title": title,
-            "messages": json.loads(msg_json)
+        chats[r[0]] = {
+            "title": r[1],
+            "messages": json.loads(r[2])
         }
     return chats
 
@@ -83,7 +80,7 @@ def save_or_update_chat(chat_id, username, title, messages):
     conn.commit()
     conn.close()
 
-# Initialize data tracking tables
+# Initialize database tracking files natively
 init_db()
 
 # ── 3. GOOGLE AI STYLE MIDNIGHT THEME CUSTOMIZATION ─────────────────────────
@@ -274,7 +271,7 @@ if "all_chats" not in st.session_state:
         save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
         st.session_state.current_chat_id = initial_id
     else:
-        # FIXED: Extraction of individual string pointer context dynamically to avoid list-index bugs
+        # FIXED: Forces extraction of single string key natively to stop sequence array errors
         st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
 
 current_id = st.session_state.current_chat_id
@@ -286,3 +283,4 @@ with st.sidebar:
     
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
+        st.session_state.all_chats[new_id] = {
