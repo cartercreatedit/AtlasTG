@@ -62,7 +62,10 @@ def load_user_chats(username):
     
     chats = {}
     for r in rows:
-        c_id, title, msg_json = r[0], r[1], r[2]
+        # FIXED: Explicitly extraction via tuple array indices to avoid structural leakage
+        c_id = r[0]
+        title = r[1]
+        msg_json = r[2]
         chats[c_id] = {
             "title": title,
             "messages": json.loads(msg_json)
@@ -283,5 +286,3 @@ with st.sidebar:
     
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
-        st.session_state.all_chats[new_id] = {
-            "title": "New Chat Thread",
