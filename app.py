@@ -60,9 +60,13 @@ def load_user_chats(username):
     
     chats = {}
     for r in rows:
-        chats[r[0]] = {
-            "title": r[1],
-            "messages": json.loads(r[2])
+        # FIXED: Decoupled indexing from raw rows to prevent memory crashes
+        chat_id_val = r[0]
+        title_val = r[1]
+        msg_json_val = r[2]
+        chats[chat_id_val] = {
+            "title": title_val,
+            "messages": json.loads(msg_json_val)
         }
     return chats
 
@@ -253,19 +257,19 @@ username = st.session_state.logged_in_user
 
 if "all_chats" not in st.session_state:
     st.session_state.all_chats = load_user_chats(username)
-    
-    if not st.session_state.all_chats:
-        initial_id = str(uuid.uuid4())
-        st.session_state.all_chats = {
-            initial_id: {
-                "title": "Welcome to AtlasTG",
-                "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
-            }
+
+if not st.session_state.all_chats:
+    initial_id = str(uuid.uuid4())
+    st.session_state.all_chats = {
+        initial_id: {
+            "title": "Welcome to AtlasTG",
+            "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
         }
-        save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
-        st.session_state.current_chat_id = initial_id
-    else:
-        st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
+    }
+    save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
+    st.session_state.current_chat_id = initial_id
+elif "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.all_chats:
+    st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
 
 current_id = st.session_state.current_chat_id
 active_chat = st.session_state.all_chats[current_id]
@@ -277,6 +281,3 @@ with st.sidebar:
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
         st.session_state.all_chats[new_id] = {
-            "title": "New Chat Thread",
-            "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
-        }
