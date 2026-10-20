@@ -60,13 +60,13 @@ def load_user_chats(username):
     
     chats = {}
     for r in rows:
-        # FIXED: Decoupled indexing from raw rows to prevent memory crashes
-        chat_id_val = r[0]
-        title_val = r[1]
-        msg_json_val = r[2]
-        chats[chat_id_val] = {
-            "title": title_val,
-            "messages": json.loads(msg_json_val)
+        # FIXED: Explicitly pull text values out of the tuple elements to prevent index errors
+        chat_id_str = str(r[0])
+        title_str = str(r[1])
+        msg_json_str = str(r[2])
+        chats[chat_id_str] = {
+            "title": title_str,
+            "messages": json.loads(msg_json_str)
         }
     return chats
 
@@ -74,7 +74,7 @@ def save_or_update_chat(chat_id, username, title, messages):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     messages_json = json.dumps(messages)
-    c.execute("INSERT INTO chats (chat_id, username, title, messages_json) VALUES (?, ?, ?, ?) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title, messages_json=excluded.messages_json", (chat_id, username.strip().lower(), title, messages_json))
+    c.execute("INSERT INTO chats (chat_id, username, title, messages_json) VALUES (?, ?, ?, ?) ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title, messages_json=excluded.messages_json", (str(chat_id), username.strip().lower(), str(title), messages_json))
     conn.commit()
     conn.close()
 
@@ -268,10 +268,11 @@ if not st.session_state.all_chats:
     }
     save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
     st.session_state.current_chat_id = initial_id
-elif "current_chat_id" not in st.session_state or st.session_state.current_chat_id not in st.session_state.all_chats:
-    st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
+elif "current_chat_id" not in st.session_state:
+    # FIXED: Convert dict keys to an absolute flat string list rather than storing structural rows
+    st.session_state.current_chat_id = str(list(st.session_state.all_chats.keys())[0])
 
-current_id = st.session_state.current_chat_id
+current_id = str(st.session_state.current_chat_id)
 active_chat = st.session_state.all_chats[current_id]
 
 # ── 7. GOOGLE-STYLE SIDEBAR LOGISTICS DIRECTORY ─────────────────────────────
@@ -279,6 +280,3 @@ with st.sidebar:
     st.markdown(f"<p style='color: #8b8b8b; font-size: 13px; margin-top: 10px;'>Identity: <b>{username}</b></p>", unsafe_allow_html=True)
     
     if st.button("➕ New Chat", use_container_width=True):
-        new_id = str(uuid.uuid4())
-        st.session_state.all_chats[new_id] = {
-        }
