@@ -34,7 +34,7 @@ def hash_password(password):
 def verify_user(username, password):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT password_hash FROM users WHERE username=?", (username,))
+    c.execute("SELECT password_hash FROM users WHERE username=?", (username.strip().lower(),))
     row = c.fetchone()
     conn.close()
     if row and row[0] == hash_password(password):
@@ -45,7 +45,7 @@ def register_user(username, password):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO users VALUES (?, ?)", (username, hash_password(password)))
+        c.execute("INSERT INTO users VALUES (?, ?)", (username.strip().lower(), hash_password(password)))
         conn.commit()
         success = True
     except sqlite3.IntegrityError:
@@ -56,7 +56,7 @@ def register_user(username, password):
 def load_user_chats(username):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT chat_id, title, messages_json FROM chats WHERE username=?", (username,))
+    c.execute("SELECT chat_id, title, messages_json FROM chats WHERE username=?", (username.strip().lower(),))
     rows = c.fetchall()
     conn.close()
     
@@ -76,11 +76,11 @@ def save_or_update_chat(chat_id, username, title, messages):
                  VALUES (?, ?, ?, ?)
                  ON CONFLICT(chat_id) DO UPDATE SET 
                  title=excluded.title, messages_json=excluded.messages_json''', 
-              (chat_id, username, title, messages_json))
+              (chat_id, username.strip().lower(), title, messages_json))
     conn.commit()
     conn.close()
 
-# Initialize database structure tables
+# Initialize data tracking tables
 init_db()
 
 # ── 3. GOOGLE AI STYLE MIDNIGHT THEME CUSTOMIZATION ─────────────────────────
@@ -233,7 +233,7 @@ if st.session_state.logged_in_user is None:
         login_pass = st.text_input("Password", type="password", key="login_password")
         if st.button("Access Engine Pipeline", use_container_width=True):
             if verify_user(login_user, login_pass):
-                st.session_state.logged_in_user = login_user
+                st.session_state.logged_in_user = login_user.strip().lower()
                 st.rerun()
             else:
                 st.error("Invalid credentials footprint.")
@@ -246,7 +246,7 @@ if st.session_state.logged_in_user is None:
                 st.error("Fields cannot stand empty.")
             elif register_user(reg_user, reg_pass):
                 st.success("Identity locked! Switching to authentication...")
-                st.session_state.logged_in_user = reg_user
+                st.session_state.logged_in_user = reg_user.strip().lower()
                 st.rerun()
             else:
                 st.error("Username index footprint already occupied.")
@@ -284,5 +284,3 @@ with st.sidebar:
         new_id = str(uuid.uuid4())
         st.session_state.all_chats[new_id] = {
             "title": "New Chat Thread",
-            "messages": [{"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}]
-        }
