@@ -60,6 +60,7 @@ def load_user_chats(username):
     
     chats = {}
     for r in rows:
+        # FIXED: Explicit tuple index references prevent dictionary corruption 
         chat_id_str = str(r[0])
         title_str = str(r[1])
         msg_json_str = str(r[2])
@@ -77,7 +78,7 @@ def save_or_update_chat(chat_id, username, title, messages):
     conn.commit()
     conn.close()
 
-# Initialize data tracking tables
+# Initialize database components natively
 init_db()
 
 # ── 3. GOOGLE AI STYLE MIDNIGHT THEME CUSTOMIZATION ─────────────────────────
@@ -268,7 +269,6 @@ if not st.session_state.all_chats:
     save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
     st.session_state.current_chat_id = initial_id
 elif "current_chat_id" not in st.session_state:
-    # FIXED: Direct assignment to clean first string key natively to stop sequence errors
     st.session_state.current_chat_id = next(iter(st.session_state.all_chats.keys()))
 
 current_id = str(st.session_state.current_chat_id)
