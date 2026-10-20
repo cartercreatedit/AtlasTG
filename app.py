@@ -268,7 +268,8 @@ if not st.session_state.all_chats:
     save_or_update_chat(initial_id, username, "Welcome to AtlasTG", st.session_state.all_chats[initial_id]["messages"])
     st.session_state.current_chat_id = initial_id
 elif "current_chat_id" not in st.session_state:
-    st.session_state.current_chat_id = list(st.session_state.all_chats.keys())[0]
+    # FIXED: Direct assignment to clean first string key natively to stop sequence errors
+    st.session_state.current_chat_id = next(iter(st.session_state.all_chats.keys()))
 
 current_id = str(st.session_state.current_chat_id)
 active_chat = st.session_state.all_chats[current_id]
@@ -280,4 +281,3 @@ with st.sidebar:
     if st.button("➕ New Chat", use_container_width=True):
         new_id = str(uuid.uuid4())
         st.session_state.all_chats[new_id] = {
-            "title": "New Chat Thread",
