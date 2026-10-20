@@ -8,7 +8,7 @@ st.set_page_config(
     page_title="AtlasTG",
     page_icon="✦",
     layout="centered",
-    initial_sidebar_state="expanded"  # Opened by default to showcase the new tools
+    initial_sidebar_state="expanded"
 )
 
 # ── 2. ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
@@ -59,7 +59,7 @@ div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-chil
     border: 1px solid #2d2d2d !important; 
     padding: 12px 18px !important; 
     border-radius: 18px !important; 
-    border-top-right-radius: 2px !important; /* Signature pointed tail secured back */
+    border-top-right-radius: 2px !important; 
     max-width: 80% !important; 
     display: inline-block !important; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important; 
@@ -174,7 +174,6 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.markdown("### AtlasTG Control Panel")
     
-    # Session Operation
     if st.button("Reset Engine Memory", use_container_width=True):
         st.session_state.messages = [
             {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}
@@ -184,13 +183,12 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### Matrix Telemetry")
     
-    # Calculate text payload size dynamically
     total_turns = len(st.session_state.messages) - 1
     char_count = sum(len(m["content"]) for m in st.session_state.messages)
     
     st.markdown(f'''
     <div class="metric-container">
-        <div class="metric-label">Active Engine Engine Model</div>
+        <div class="metric-label">Active Engine Model</div>
         <div class="metric-value" style="color: #ffffff; font-size: 14px;">gpt-oss-120b</div>
     </div>
     <div class="metric-container">
@@ -232,7 +230,7 @@ if text_prompt:
     st.session_state.messages.append({"role": "user", "content": text_prompt})
     st.rerun()
 
-# Check to see if engine completion processing is required
+# Process engine completion logic safely if last message is from user
 if st.session_state.messages[-1]["role"] == "user":
     try:
         sys_content = (
@@ -252,3 +250,7 @@ if st.session_state.messages[-1]["role"] == "user":
             {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
         ]
         
+        with st.spinner(""):
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=api_messages,
