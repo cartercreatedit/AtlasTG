@@ -159,7 +159,7 @@ for msg in st.session_state.messages:
 # ── 8. LIVE USER CONSOLE INPUT DOCK ─────────────────────
 text_prompt = st.chat_input("Message AtlasTG...")
 
-# ── 9. STREAMING COMPUTATION PROCESSING MATRIX ──────────────────────
+# ── 9. ADVANCED INTERACTIVE COMPUTATION MATRIX ──────────────────────
 if text_prompt:
     st.session_state.messages.append({"role": "user", "content": text_prompt})
     st.rerun()
@@ -184,30 +184,18 @@ if st.session_state.messages[-1]["role"] == "user":
             {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
         ]
         
-        # Render a live text placeholder to pipe streaming tokens into the timeline
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-        response_placeholder = st.empty()
-        
-        # Initialize Groq stream setup
-        completion_stream = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=api_messages,
-            temperature=0.2,
-            max_tokens=1000,
-            stream=True
-        )
-        
-        full_response = ""
-        for chunk in completion_stream:
-            if chunk.choices and chunk.choices[0].delta.content:
-                full_response += chunk.choices[0].delta.content
-                response_placeholder.markdown(full_response + " ▌")
-                
-        response_placeholder.markdown(full_response)
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
-        st.rerun()
+        with st.spinner(""):
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=api_messages,
+                temperature=0.2,
+                max_tokens=1000
+            )
+            
+            # FIXED EXTRACTION SYNTAX: Accesses response index securely
+            reply = completion.choices[0].message.content
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+            st.rerun()
 
     except Exception as e:
         st.session_state.messages.append({"role": "assistant", "content": f"Engine Connectivity Error: {e}"})
