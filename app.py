@@ -246,11 +246,7 @@ if st.session_state.messages[-1]["role"] == "user":
             "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
         )
         
-        api_messages = [{"role": "system", "content": sys_content}] + [
-            {"role": m["role"], "content": m["content"]} for m in st.session_state.messages
-        ]
+        api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
         
         with st.spinner(""):
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=api_messages,
+            # Flattened single line structure to stop syntax parsing breakage
