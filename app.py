@@ -144,6 +144,7 @@ def fetch_live_news_stream(query, max_results=5):
     try:
         q = urllib.parse.quote(query)
         url = f"https://google.com{q}&hl=en-US&gl=US&ceid=US:en"
+
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=6) as resp:
             xml_data = resp.read()
