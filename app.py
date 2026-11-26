@@ -1,6 +1,14 @@
 import streamlit as st
 from groq import Groq
 import os
+import json
+import re
+import math
+import datetime
+import base64
+import requests
+from bs4 import BeautifulSoup
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -10,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
+# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING + CLEAN EXPANDER ──────
 st.markdown("""
 <style>
 .stApp {
@@ -23,7 +31,7 @@ st.markdown("""
     max-width: 760px;
     min-height: 100vh;
 }
-#MainMenu, footer, header, .stDeployButton {
+#MainMenu, footer, .stDeployButton {
     visibility: hidden;
 }
 h1 {
@@ -35,12 +43,22 @@ h1 {
     color: #8b8b8b !important;
 }
 
-/* Clear default Streamlit padding baggage */
-div[data-testid="stChatMessage"] {
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0px !important;
+/* Sidebar dark styling */
+section[data-testid="stSidebar"] {
+    background-color: #111111 !important;
+    border-right: 1px solid #222222 !important;
+}
+
+/* Clean Reasoning Expander */
+div[data-testid="stExpander"] {
+    background-color: #121212 !important;
+    border: 1px solid #242424 !important;
+    border-radius: 12px !important;
+    margin-bottom: 10px !important;
+}
+div[data-testid="stExpander"] summary {
+    color: #9ca3af !important;
+    font-size: 13.5px !important;
 }
 
 /* Force clean text behavior inside all markdown elements */
@@ -48,37 +66,6 @@ div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
-}
-
-/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
-    display: flex !important;
-    justify-content: flex-end !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2d2d2d !important;
-    padding: 12px 18px !important;
-    border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Signature pointed tail secured back */
-    max-width: 80% !important;
-    display: inline-block !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-}
-
-/* Assistant Plain Text Layout */
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: flex !important;
-    justify-content: flex-start !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 4px 0px !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
 }
 
 /* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX (NO WHITE RING HIGHLIGHT) ── */
@@ -102,8 +89,6 @@ div[data-testid="stChatInput"] {
     box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
     outline: none !important;
 }
-
-/* Obliterate inner background border constraints */
 div[data-testid="stChatInput"] *,
 .stChatInput div[data-baseweb="textarea"],
 .stChatInput div[data-baseweb="base-input"],
@@ -120,78 +105,183 @@ div[data-testid="stChatInput"] *,
 </style>
 """, unsafe_allow_html=True)
 
-# ── API Key Configuration ─────────────────────
+# ── API Key Configuration ───────────────────────────────────────────
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error("Missing GROQ_API_KEY")
     st.stop()
 
 client = Groq(api_key=api_key)
+sentiment_analyzer = SentimentIntensityAnalyzer()
 
-# ── Header ────────────────────────────────────
+# ── 1. SELF-OPTIMIZING KNOWLEDGE BASE ENGINE ────────────────────────
+KB_FILE = "atlastg_knowledge.json"
+
+def load_kb():
+    if os.path.exists(KB_FILE):
+        with open(KB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_kb(entries):
+    with open(KB_FILE, "w", encoding="utf-8") as f:
+        json.dump(entries, f, indent=2)
+
+def ingest_text_to_kb(source_name, raw_text):
+    kb = load_kb()
+    # Split text into ~500-character overlapping chunks for fast retrieval
+    chunks = [raw_text[i:i+500].strip() for i in range(0, len(raw_text), 400) if raw_text[i:i+500].strip()]
+    for chunk in chunks:
+        kb.append({
+            "source": source_name,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "content": chunk
+        })
+    save_kb(kb)
+    return len(chunks)
+
+def ingest_url_to_kb(url):
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        resp = requests.get(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer"]):
+            tag.decompose()
+        clean_text = " ".join(soup.get_text(separator=" ").split())
+        return ingest_text_to_kb(url, clean_text)
+    except Exception as e:
+        return f"Error: {e}"
+
+def retrieve_relevant_knowledge(query, top_k=3):
+    kb = load_kb()
+    if not kb:
+        return ""
+    query_words = set(re.findall(r'\w+', query.lower()))
+    scored = []
+    for item in kb:
+        item_words = set(re.findall(r'\w+', item["content"].lower()))
+        overlap = len(query_words.intersection(item_words))
+        if overlap > 0:
+            scored.append((overlap, item))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_items = [f"[{item['source']}]: {item['content']}" for _, item in scored[:top_k]]
+    return "\n\n".join(top_items)
+
+# ── 2. SECURE SANDBOXED PLUG-IN ARCHITECTURE ────────────────────────
+def safe_calculator(expression: str) -> str:
+    """Safely evaluates mathematical expressions without eval() vulnerabilities."""
+    allowed_names = {k: v for k, v in math.__dict__.items() if not k.startswith("__")}
+    allowed_names.update({"abs": abs, "round": round})
+    try:
+        code = compile(expression, "<string>", "eval")
+        for name in code.co_names:
+            if name not in allowed_names:
+                raise NameError(f"Use of '{name}' is restricted in sandbox.")
+        return str(eval(code, {"__builtins__": {}}, allowed_names))
+    except Exception as e:
+        return f"Calculation error: {e}"
+
+def get_current_time() -> str:
+    return datetime.datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
+
+def self_update_memory(fact: str) -> str:
+    ingest_text_to_kb("AtlasTG Autonomous Memory", fact)
+    return f"Successfully committed to permanent knowledge base: '{fact}'"
+
+TOOLS_SCHEMA = [
+    {
+        "type": "function",
+        "function": {
+            "name": "safe_calculator",
+            "description": "Evaluates mathematical equations, algebra, or scientific calculations safely.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {"type": "string", "description": "Math expression, e.g., 'sqrt(144) * 3.14'"}
+                },
+                "required": ["expression"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_time",
+            "description": "Returns the exact current system date and time.",
+            "parameters": {"type": "object", "properties": {}}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "self_update_memory",
+            "description": "Saves a verified fact, user preference, or new technical standard into AtlasTG's permanent knowledge base.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "fact": {"type": "string", "description": "The verified fact or rule to remember permanently."}
+                },
+                "required": ["fact"]
+            }
+        }
+    }
+]
+
+def execute_tool_call(tool_call):
+    fn_name = tool_call.function.name
+    args = json.loads(tool_call.function.arguments or "{}")
+    if fn_name == "safe_calculator":
+        return safe_calculator(args.get("expression", ""))
+    elif fn_name == "get_current_time":
+        return get_current_time()
+    elif fn_name == "self_update_memory":
+        return self_update_memory(args.get("fact", ""))
+    return "Unknown tool."
+
+# ── 3. ADVANCED EMOTIONAL MODELING ──────────────────────────────────
+def analyze_emotional_context(text):
+    scores = sentiment_analyzer.polarity_scores(text)
+    compound = scores["compound"]
+    if compound <= -0.4:
+        return "User sentiment is distressed, frustrated, or negative. Respond with heightened empathy, patience, and supportive clarity while maintaining logical rigor."
+    elif compound >= 0.5:
+        return "User sentiment is enthusiastic or positive. Match their constructive energy with sharp, encouraging precision."
+    return "User sentiment is neutral or analytical. Maintain calm, high-precision executive clarity."
+
+# ── SIDEBAR: KNOWLEDGE BASE & MULTIMODAL CONTROLS ───────────────────
+with st.sidebar:
+    st.markdown("### ✦ AtlasTG Core Modules")
+    
+    # Knowledge Base Ingestion
+    st.markdown("**Knowledge Base Ingestion**")
+    url_input = st.text_input("Ingest Live Website URL", placeholder="https://...")
+    if st.button("Learn URL") and url_input:
+        with st.spinner("Ingesting web data..."):
+            res = ingest_url_to_kb(url_input)
+            if isinstance(res, int):
+                st.success(f"Indexed {res} knowledge chunks.")
+            else:
+                st.error(res)
+
+    uploaded_doc = st.file_uploader("Upload Knowledge File (.txt, .md)", type=["txt", "md"])
+    if uploaded_doc and st.button("Index Document"):
+        text_data = uploaded_doc.read().decode("utf-8", errors="ignore")
+        chunks_added = ingest_text_to_kb(uploaded_doc.name, text_data)
+        st.success(f"Indexed {chunks_added} chunks from {uploaded_doc.name}.")
+
+    kb_count = len(load_kb())
+    st.caption(f"Active Memory Nodes: **{kb_count}**")
+
+    st.divider()
+    # Multimodal Vision Input
+    st.markdown("**Multimodal Vision Input**")
+    uploaded_image = st.file_uploader("Attach Image for Analysis", type=["png", "jpg", "jpeg", "webp"])
+
+# ── Header ──────────────────────────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
 
-# ── Session state ─────────────────────────────
+# ── Session state ───────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}
-    ]
-
-# ── Render Message Timeline using Native Safe Structures ──────────────────
-for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        col_spacer, col_bubble = st.columns([0.2, 0.8])
-        with col_bubble:
-            st.markdown(f'''
-            <div style="display: flex; justify-content: flex-end; width: 100%; clear: both;">
-                <div style="background-color: #1a1a1a; border: 1px solid #2d2d2d; color: #e3e3e3; padding: 12px 18px; border-radius: 18px; border-top-right-radius: 2px; font-size: 15.5px; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); text-align: left; width: fit-content; max-width: 100%;">
-                    {msg["content"]}
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.markdown('<div style="margin: 16px 0; clear: both; text-align: left;">', unsafe_allow_html=True)
-        st.markdown(msg["content"])
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ── SINGLE TEXT INPUT CONSOLE DOCK ─────────────────────
-text_prompt = st.chat_input("Message AtlasTG...")
-
-# ── PROCESS INJECTED PARAMETERS ──────────────────────
-if text_prompt:
-    st.session_state.messages.append({"role": "user", "content": text_prompt})
-    
-    with st.spinner(""):
-        try:
-            sys_content = (
-                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                "CRITICAL TIMELINE AND IDENTITY LAWS: "
-                "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
-                "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
-                "FORMATTING LAWS: "
-                "- NEVER use Markdown or HTML tables under any circumstances. "
-                "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
-                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-            )
-            api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-            
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b", 
-                messages=api_messages, 
-                temperature=0.2, 
-                max_tokens=1000
-            )
-            # FIXED EXTRACTION SYNTAX: Properly accesses index position 0 of the choices array layout
-            reply = completion.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-            
-    st.rerun()
-
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
