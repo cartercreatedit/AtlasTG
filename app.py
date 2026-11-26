@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING + CLEAN EXPANDER ──────
+# ── BORDERLESS DARK STYLING (KEEPS SIDEBAR ARROW VISIBLE) ───────────
 st.markdown("""
 <style>
 .stApp {
@@ -32,6 +32,9 @@ st.markdown("""
 }
 #MainMenu, footer, .stDeployButton {
     visibility: hidden;
+}
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
 }
 h1 {
     color: #ffffff !important;
@@ -67,7 +70,7 @@ div[data-testid="stMarkdownContainer"] p {
     line-height: 1.6 !important;
 }
 
-/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX (NO WHITE RING HIGHLIGHT) ── */
+/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -112,7 +115,7 @@ if not api_key:
 
 client = Groq(api_key=api_key)
 
-# ── BUILT-IN HTML TEXT EXTRACTOR (NO EXTERNAL PACKAGES NEEDED) ──────
+# ── BUILT-IN HTML TEXT EXTRACTOR ────────────────────────────────────
 class CleanHTMLTextExtractor(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -139,8 +142,11 @@ KB_FILE = "atlastg_knowledge.json"
 
 def load_kb():
     if os.path.exists(KB_FILE):
-        with open(KB_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            with open(KB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
     return []
 
 def save_kb(entries):
@@ -256,7 +262,7 @@ def execute_tool_call(tool_call):
         return self_update_memory(args.get("fact", ""))
     return "Unknown tool."
 
-# ── 3. ADVANCED EMOTIONAL MODELING (BUILT-IN LEXICON) ──────────────
+# ── 3. ADVANCED EMOTIONAL MODELING ──────────────────────────────────
 def analyze_emotional_context(text):
     words = set(re.findall(r'\w+', text.lower()))
     negative_cues = {"sad", "angry", "frustrated", "upset", "stressed", "worried", "hate", "broken", "failed", "hurt", "anxious", "help", "tired", "overwhelmed"}
@@ -288,4 +294,3 @@ with st.sidebar:
     uploaded_doc = st.file_uploader("Upload Knowledge File (.txt, .md)", type=["txt", "md"])
     if uploaded_doc and st.button("Index Document"):
         text_data = uploaded_doc.read().decode("utf-8", errors="ignore")
-        chunks_added = ingest_text_to_kb(uploaded_doc.name, text_data)
