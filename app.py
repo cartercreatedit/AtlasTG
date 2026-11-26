@@ -237,7 +237,7 @@ if text_prompt:
             if live_context:
                 knowledge_injection += f"\n\nREAL-TIME LIVE DATA STREAM (LATEST HEADLINES):\n{live_context}\n"
 
-            sys_content = (
+            sys_content = 
                 "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
                 "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
                 "CRITICAL TIMELINE AND IDENTITY LAWS: "
