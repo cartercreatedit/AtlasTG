@@ -132,10 +132,10 @@ def search_domain_library(query, top_k=3):
         score = len(q_words.intersection(c_words))
         if score > 0:
             matches.append((score, f"[{item['topic']}]: {item['content']}"))
-    matches.sort(key=lambda x: x[0], reverse=True)
+    matches.sort(key=lambda x: x, reverse=True)
     results = []
     for m in matches[:top_k]:
-        results.append(m[1])
+        results.append(m)
     return "\n\n".join(results)
 
 def fetch_live_news_stream(max_results=6):
@@ -190,6 +190,32 @@ def build_system_prompt(extra_context):
         extra_context
     ]
     return "\n".join(lines)
+
+def run_atlastg_chat(user_prompt, live_enabled, history):
+    try:
+        d_ctx = search_domain_library(user_prompt)
+        l_ctx = fetch_live_news_stream() if live_enabled else ""
+        extra = ""
+        if d_ctx:
+            extra += "\nDOMAIN LIBRARY DATA:\n" + d_ctx
+        if l_ctx:
+            extra += "\nLIVE DATA STREAM:\n" + l_ctx
+
+        sys_prompt = build_system_prompt(extra)
+        api_msgs = [{"role": "system", "content": sys_prompt}]
+        for m in history:
+            api_msgs.append({"role": m["role"], "content": m["content"]})
+
+        res = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=api_msgs,
+            temperature=0.2,
+            max_tokens=1000
+        )
+        first = res.choices.pop(0)
+        return first.message.content
+    except Exception as e:
+        return f"Error: {e}"
 
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
@@ -259,20 +285,3 @@ for msg in st.session_state.messages:
 text_prompt = st.chat_input("Message AtlasTG...")
 
 if text_prompt:
-    st.session_state.messages.append({"role": "user", "content": text_prompt})
-    with st.spinner(""):
-        try:
-            d_ctx = search_domain_library(text_prompt)
-            l_ctx = fetch_live_news_stream() if live_on else ""
-            extra = ""
-            if d_ctx:
-                extra += "\nDOMAIN LIBRARY DATA:\n" + d_ctx
-            if l_ctx:
-                extra += "\nLIVE DATA STREAM (VERIFIED REAL-TIME HEADLINES):\n" + l_ctx
-
-            sys_prompt = build_system_prompt(extra)
-            api_msgs = [{"role": "system", "content": sys_prompt}]
-            for m in st.session_state.messages:
-                api_msgs.append({"role": m["role"], "content": m["content"]})
-
-            completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_msgs, temperature=0.2, max_tokens=1000)
