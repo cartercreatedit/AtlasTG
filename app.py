@@ -150,10 +150,10 @@ def search_domain_library(query, top_k=3):
         score = len(q_words.intersection(c_words))
         if score > 0:
             matches.append((score, f"[{item['topic']}]: {item['content']}"))
-    matches.sort(key=lambda x: x, reverse=True)
+    matches.sort(key=lambda x: x[0], reverse=True)
     results = []
     for m in matches[:top_k]:
-        results.append(m)
+        results.append(m[1])
     return "\n\n".join(results)
 
 def fetch_live_news_stream(query, max_results=5):
@@ -242,14 +242,13 @@ if text_prompt:
             
             knowledge_injection = ""
             if domain_context:
-                knowledge_injection += f"\n\nDOMAIN-SPECIFIC LIBRARY DATA:\n{domain_context}\n"
+                knowledge_injection += "\n\nDOMAIN-SPECIFIC LIBRARY DATA:\n" + domain_context + "\n"
             if live_context:
-                knowledge_injection += f"\n\nREAL-TIME LIVE DATA STREAM (LATEST HEADLINES):\n{live_context}\n"
+                knowledge_injection += "\n\nREAL-TIME LIVE DATA STREAM (LATEST HEADLINES):\n" + live_context + "\n"
 
-            sys_content = (
-                "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-                "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-                "CRITICAL TIMELINE AND IDENTITY LAWS: "
-                "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
-                "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
+            sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
+            sys_content += "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
+            sys_content += "CRITICAL TIMELINE AND IDENTITY LAWS: "
+            sys_content += "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
+            sys_content += "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
+            sys_content += "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
