@@ -132,10 +132,10 @@ def search_domain_library(query, top_k=3):
         score = len(q_words.intersection(c_words))
         if score > 0:
             matches.append((score, f"[{item['topic']}]: {item['content']}"))
-    matches.sort(key=lambda x: x, reverse=True)
+    matches.sort(key=lambda x: x[0], reverse=True)
     results = []
     for m in matches[:top_k]:
-        results.append(m)
+        results.append(m[1])
     return "\n\n".join(results)
 
 def fetch_live_news_stream(max_results=6):
@@ -257,6 +257,7 @@ for msg in st.session_state.messages:
         st.markdown('</div>', unsafe_allow_html=True)
 
 text_prompt = st.chat_input("Message AtlasTG...")
+
 if text_prompt:
     st.session_state.messages.append({"role": "user", "content": text_prompt})
     with st.spinner(""):
@@ -267,7 +268,7 @@ if text_prompt:
             if d_ctx:
                 extra += "\nDOMAIN LIBRARY DATA:\n" + d_ctx
             if l_ctx:
-                extra += "\nLIVE DATA STREAM:\n" + l_ctx
+                extra += "\nLIVE DATA STREAM (VERIFIED REAL-TIME HEADLINES):\n" + l_ctx
 
             sys_prompt = build_system_prompt(extra)
             api_msgs = [{"role": "system", "content": sys_prompt}]
@@ -275,11 +276,3 @@ if text_prompt:
                 api_msgs.append({"role": m["role"], "content": m["content"]})
 
             completion = client.chat.completions.create(model="openai/gpt-oss-120b", messages=api_msgs, temperature=0.2, max_tokens=1000)
-            reply = completion.choices.message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-    st.rerun()
-
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
