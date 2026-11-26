@@ -139,9 +139,7 @@ def search_domain_library(query, top_k=3):
     return "\n\n".join(results)
 
 def fetch_live_news_stream(max_results=6):
-    """Fetches real JSON news feeds that never block cloud servers."""
     lines = []
-    # Source 1: Hacker News Top Tech Stories (Official Firebase JSON API)
     try:
         top_url = "https://firebaseio.com"
         req = urllib.request.Request(top_url, headers={"User-Agent": "AtlasTG/1.0"})
@@ -156,7 +154,6 @@ def fetch_live_news_stream(max_results=6):
     except Exception:
         pass
 
-    # Source 2: Spaceflight & Science News JSON API
     try:
         sci_url = "https://spaceflightnewsapi.net"
         req = urllib.request.Request(sci_url, headers={"User-Agent": "AtlasTG/1.0"})
@@ -276,3 +273,10 @@ if text_prompt:
             sys_prompt = build_system_prompt(extra)
             api_msgs = [{"role": "system", "content": sys_prompt}]
             for m in st.session_state.messages:
+                api_msgs.append({"role": m["role"], "content": m["content"]})
+
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=api_msgs,
+                temperature=0.2,
+                max_tokens=1000
