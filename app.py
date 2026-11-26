@@ -285,3 +285,8 @@ for msg in st.session_state.messages:
 text_prompt = st.chat_input("Message AtlasTG...")
 
 if text_prompt:
+    st.session_state.messages.append({"role": "user", "content": text_prompt})
+    with st.spinner(""):
+        reply = run_atlastg_chat(text_prompt, live_on, st.session_state.messages)
+        st.session_state.messages.append({"role": "assistant", "content": reply})
+    st.rerun()
