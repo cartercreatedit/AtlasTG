@@ -1,6 +1,11 @@
 import streamlit as st
 from groq import Groq
 import os
+import re
+import json
+import urllib.request
+import urllib.parse
+import xml.etree.ElementTree as ET
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -35,6 +40,18 @@ h1 {
     color: #8b8b8b !important;
 }
 
+/* Subtle Knowledge Expander */
+div[data-testid="stExpander"] {
+    background-color: #111111 !important;
+    border: 1px solid #222222 !important;
+    border-radius: 14px !important;
+    margin-bottom: 16px !important;
+}
+div[data-testid="stExpander"] summary {
+    color: #8b8b8b !important;
+    font-size: 13px !important;
+}
+
 /* Clear default Streamlit padding baggage */
 div[data-testid="stChatMessage"] {
     background-color: transparent !important;
@@ -48,37 +65,6 @@ div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
-}
-
-/* ── RE-ESTABLISHED USER PROMPT POINTED BUBBLES ── */
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) {
-    display: flex !important;
-    justify-content: flex-end !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="user-avatar"]) > div:nth-child(2) {
-    background-color: #1a1a1a !important;
-    border: 1px solid #2d2d2d !important;
-    padding: 12px 18px !important;
-    border-radius: 18px !important;
-    border-top-right-radius: 2px !important; /* Signature pointed tail secured back */
-    max-width: 80% !important;
-    display: inline-block !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-}
-
-/* Assistant Plain Text Layout */
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) {
-    display: flex !important;
-    justify-content: flex-start !important;
-    margin: 16px 0 !important;
-}
-div[data-testid="stChatMessage"]:has([data-testid="assistant-avatar"]) > div:nth-child(2) {
-    background-color: transparent !important;
-    border: none !important;
-    padding: 4px 0px !important;
-    box-shadow: none !important;
-    max-width: 100% !important;
 }
 
 /* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX (NO WHITE RING HIGHLIGHT) ── */
@@ -128,9 +114,88 @@ if not api_key:
 
 client = Groq(api_key=api_key)
 
+# ── 1. EXPANDED KNOWLEDGE HORIZON ENGINE ──────
+KB_FILE = "atlastg_domain_library.json"
+
+def load_domain_library():
+    if os.path.exists(KB_FILE):
+        try:
+            with open(KB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def add_to_domain_library(topic, content):
+    lib = load_domain_library()
+    chunks = [content[i:i+600].strip() for i in range(0, len(content), 500) if content[i:i+600].strip()]
+    for chunk in chunks:
+        lib.append({"topic": topic, "content": chunk})
+    with open(KB_FILE, "w", encoding="utf-8") as f:
+        json.dump(lib, f, indent=2)
+    return len(chunks)
+
+def search_domain_library(query, top_k=3):
+    lib = load_domain_library()
+    if not lib:
+        return ""
+    q_words = set(re.findall(r'\w+', query.lower()))
+    matches = []
+    for item in lib:
+        c_words = set(re.findall(r'\w+', item["content"].lower()))
+        score = len(q_words.intersection(c_words))
+        if score > 0:
+            matches.append((score, f"[{item['topic']}]: {item['content']}"))
+    matches.sort(key=lambda x: x[0], reverse=True)
+    return "\n\n".join([m[1] for m in matches[:top_k]])
+
+def fetch_live_news_stream(query, max_results=5):
+    """Fetches real-time news headlines and publication dates using built-in Python libraries."""
+    try:
+        encoded_q = urllib.parse.quote(query)
+        rss_url = f"https://google.com{encoded_q}&hl=en-US&gl=US&ceid=US:en"
+        req = urllib.request.Request(rss_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=6) as response:
+            xml_data = response.read()
+        root = ET.fromstring(xml_data)
+        items = root.findall(".//item")[:max_results]
+        if not items:
+            return ""
+        headlines = []
+        for item in items:
+            title = item.find("title").text if item.find("title") is not None else ""
+            pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
+            headlines.append(f"- {title} ({pub_date})")
+        return "\n".join(headlines)
+    except Exception:
+        return ""
+
 # ── Header ────────────────────────────────────
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
+
+# ── Subtle Knowledge Horizon Control Bar ──────
+with st.expander("✦ Knowledge Horizon (Live Stream & Domain Library)"):
+    live_stream_enabled = st.toggle("Enable Real-Time Live Data Stream", value=True)
+    
+    col1, col2 = st.columns([0.75, 0.25])
+    with col1:
+        domain_topic = st.text_input("Topic / Field Name", placeholder="e.g., Quantum Materials, Bio-informatics", label_visibility="collapsed")
+    with col2:
+        uploaded_txt = st.file_uploader("Upload .txt", type=["txt", "md"], label_visibility="collapsed")
+        
+    domain_notes = st.text_area("Paste specialized notes or technical data to add to AtlasTG's library:", height=80, placeholder="Paste domain-specific facts, research notes, or custom rules here...")
+    
+    if st.button("Save to Domain Library"):
+        raw_text = domain_notes.strip()
+        if uploaded_txt is not None:
+            raw_text += "\n" + uploaded_txt.read().decode("utf-8", errors="ignore")
+        if raw_text:
+            topic_label = domain_topic.strip() if domain_topic.strip() else "Specialized Knowledge"
+            added = add_to_domain_library(topic_label, raw_text)
+            st.success(f"Added {added} knowledge blocks under '{topic_label}'.")
+            
+    st.caption(f"Stored Domain Knowledge Blocks: **{len(load_domain_library())}**")
 
 # ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
@@ -164,34 +229,21 @@ if text_prompt:
     
     with st.spinner(""):
         try:
+            # 1. Pull from Domain-Specific Corpora
+            domain_context = search_domain_library(text_prompt)
+            
+            # 2. Pull from Real-Time Data Stream if enabled
+            live_context = fetch_live_news_stream(text_prompt) if live_stream_enabled else ""
+            
+            knowledge_injection = ""
+            if domain_context:
+                knowledge_injection += f"\n\nDOMAIN-SPECIFIC LIBRARY DATA:\n{domain_context}\n"
+            if live_context:
+                knowledge_injection += f"\n\nREAL-TIME LIVE DATA STREAM (LATEST HEADLINES):\n{live_context}\n"
+
             sys_content = (
                 "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
                 "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
                 "CRITICAL TIMELINE AND IDENTITY LAWS: "
                 "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
                 "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-                "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
-                "FORMATTING LAWS: "
-                "- NEVER use Markdown or HTML tables under any circumstances. "
-                "- Structure information visually using Markdown headers (###), bold tags, and bullet points. "
-                "- Dynamically scale response lengths. Keep greetings or casual phrases concise, but expand deeply into structured paragraphs for complex logic, emotional scenarios, or relationship questions."
-            )
-            api_messages = [{"role": "system", "content": sys_content}] + [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-            
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b", 
-                messages=api_messages, 
-                temperature=0.2, 
-                max_tokens=1000
-            )
-            # FIXED EXTRACTION SYNTAX: Properly accesses index position 0 of the choices array layout
-            reply = completion.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-            
-    st.rerun()
-
-# ── SAFE AUTO-SCROLL INTERFACE ANCHOR ──────────────────────
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
