@@ -128,7 +128,11 @@ def load_domain_library():
 
 def add_to_domain_library(topic, content):
     lib = load_domain_library()
-    chunks = [content[i:i+600].strip() for i in range(0, len(content), 500) if content[i:i+600].strip()]
+    chunks = []
+    for i in range(0, len(content), 500):
+        piece = content[i:i+600].strip()
+        if piece:
+            chunks.append(piece)
     for chunk in chunks:
         lib.append({"topic": topic, "content": chunk})
     with open(KB_FILE, "w", encoding="utf-8") as f:
@@ -146,8 +150,11 @@ def search_domain_library(query, top_k=3):
         score = len(q_words.intersection(c_words))
         if score > 0:
             matches.append((score, f"[{item['topic']}]: {item['content']}"))
-    matches.sort(key=lambda x: x[0], reverse=True)
-    return "\n\n".join([m[1] for m in matches[:top_k]])
+    matches.sort(key=lambda x: x, reverse=True)
+    results = []
+    for m in matches[:top_k]:
+        results.append(m)
+    return "\n\n".join(results)
 
 def fetch_live_news_stream(query, max_results=5):
     try:
@@ -162,8 +169,10 @@ def fetch_live_news_stream(query, max_results=5):
             return ""
         headlines = []
         for item in items:
-            title = item.find("title").text if item.find("title") is not None else ""
-            pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
+            title_el = item.find("title")
+            date_el = item.find("pubDate")
+            title = title_el.text if title_el is not None else ""
+            pub_date = date_el.text if date_el is not None else ""
             headlines.append(f"- {title} ({pub_date})")
         return "\n".join(headlines)
     except Exception:
@@ -237,11 +246,10 @@ if text_prompt:
             if live_context:
                 knowledge_injection += f"\n\nREAL-TIME LIVE DATA STREAM (LATEST HEADLINES):\n{live_context}\n"
 
-            sys_content = {
+            sys_content = (
                 "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
                 "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
                 "CRITICAL TIMELINE AND IDENTITY LAWS: "
                 "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
                 "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
                 "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
-            }
