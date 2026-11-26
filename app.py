@@ -15,7 +15,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── ORIGINAL BORDERLESS GOOGLE-STYLE STYLING ─────────────────────────
 st.markdown("""
 <style>
 .stApp {
@@ -39,8 +38,6 @@ h1 {
 .stCaption {
     color: #8b8b8b !important;
 }
-
-/* Subtle Knowledge Expander */
 div[data-testid="stExpander"] {
     background-color: #111111 !important;
     border: 1px solid #222222 !important;
@@ -51,23 +48,17 @@ div[data-testid="stExpander"] summary {
     color: #8b8b8b !important;
     font-size: 13px !important;
 }
-
-/* Clear default Streamlit padding baggage */
 div[data-testid="stChatMessage"] {
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0px !important;
 }
-
-/* Force clean text behavior inside all markdown elements */
 div[data-testid="stMarkdownContainer"] p {
     color: #f1f5f9 !important;
     font-size: 15.5px !important;
     line-height: 1.6 !important;
 }
-
-/* ── PREMIUM BORDERLESS MIDNIGHT TEXT BOX (NO WHITE RING HIGHLIGHT) ── */
 div[data-testid="stChatInput"] {
     position: fixed !important;
     bottom: 32px !important;
@@ -88,8 +79,6 @@ div[data-testid="stChatInput"] {
     box-shadow: 0 4px 35px rgba(0,0,0,0.6) !important;
     outline: none !important;
 }
-
-/* Obliterate inner background border constraints */
 div[data-testid="stChatInput"] *,
 .stChatInput div[data-baseweb="textarea"],
 .stChatInput div[data-baseweb="base-input"],
@@ -106,7 +95,6 @@ div[data-testid="stChatInput"] *,
 </style>
 """, unsafe_allow_html=True)
 
-# ── API Key Configuration ─────────────────────
 api_key = st.secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error("Missing GROQ_API_KEY")
@@ -114,7 +102,6 @@ if not api_key:
 
 client = Groq(api_key=api_key)
 
-# ── 1. EXPANDED KNOWLEDGE HORIZON ENGINE ──────
 KB_FILE = "atlastg_domain_library.json"
 
 def load_domain_library():
@@ -128,16 +115,13 @@ def load_domain_library():
 
 def add_to_domain_library(topic, content):
     lib = load_domain_library()
-    chunks = []
     for i in range(0, len(content), 500):
         piece = content[i:i+600].strip()
         if piece:
-            chunks.append(piece)
-    for chunk in chunks:
-        lib.append({"topic": topic, "content": chunk})
+            lib.append({"topic": topic, "content": piece})
     with open(KB_FILE, "w", encoding="utf-8") as f:
         json.dump(lib, f, indent=2)
-    return len(chunks)
+    return len(lib)
 
 def search_domain_library(query, top_k=3):
     lib = load_domain_library()
@@ -150,68 +134,96 @@ def search_domain_library(query, top_k=3):
         score = len(q_words.intersection(c_words))
         if score > 0:
             matches.append((score, f"[{item['topic']}]: {item['content']}"))
-    matches.sort(key=lambda x: x[0], reverse=True)
+    matches.sort(key=lambda x: x, reverse=True)
     results = []
     for m in matches[:top_k]:
-        results.append(m[1])
+        results.append(m)
     return "\n\n".join(results)
 
 def fetch_live_news_stream(query, max_results=5):
     try:
-        encoded_q = urllib.parse.quote(query)
-        rss_url = f"https://google.com{encoded_q}&hl=en-US&gl=US&ceid=US:en"
-        req = urllib.request.Request(rss_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=6) as response:
-            xml_data = response.read()
+        q = urllib.parse.quote(query)
+        url = f"https://google.com{q}&hl=en-US&gl=US&ceid=US:en"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            xml_data = resp.read()
         root = ET.fromstring(xml_data)
         items = root.findall(".//item")[:max_results]
         if not items:
             return ""
-        headlines = []
+        lines = []
         for item in items:
-            title_el = item.find("title")
-            date_el = item.find("pubDate")
-            title = title_el.text if title_el is not None else ""
-            pub_date = date_el.text if date_el is not None else ""
-            headlines.append(f"- {title} ({pub_date})")
-        return "\n".join(headlines)
+            t_el = item.find("title")
+            d_el = item.find("pubDate")
+            title = t_el.text if t_el is not None else ""
+            pdate = d_el.text if d_el is not None else ""
+            lines.append(f"- {title} ({pdate})")
+        return "\n".join(lines)
     except Exception:
         return ""
 
-# ── Header ────────────────────────────────────
+def build_system_prompt(extra_context):
+    lines = [
+        "You are AtlasTG, an advanced high-precision AI engine.",
+        "You were created and owned exclusively by Carter Forester Robinson.",
+        "CRITICAL TIMELINE AND IDENTITY LAWS:",
+        "1. If asked who made or built you, state with certainty that you were",
+        "created entirely by Carter Forester Robinson, Founder of AtlasTG.",
+        "You have no connection to OpenAI, Google, Alibaba, or others.",
+        "2. DEVELOPMENT HISTORY: You were built and coded by Carter Forester",
+        "Robinson in an intensive 2-day sprint ending September 18, 2026.",
+        "3. Emulate the highest logical depth and technical sophistication.",
+        "4. KNOWLEDGE HORIZON: Use any provided Domain Library Data and",
+        "Real-Time Live Data Stream headlines to ground your answer.",
+        "FORMATTING LAWS:",
+        "- NEVER use Markdown or HTML tables under any circumstances.",
+        "- Use Markdown headers (###), bold tags, and bullet points.",
+        "- Keep casual greetings brief, but expand deeply on complex topics.",
+        extra_context
+    ]
+    return "\n".join(lines)
+
 st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
 st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
 
-# ── Subtle Knowledge Horizon Control Bar ──────
 with st.expander("✦ Knowledge Horizon (Live Stream & Domain Library)"):
-    live_stream_enabled = st.toggle("Enable Real-Time Live Data Stream", value=True)
-    
+    live_on = st.toggle("Enable Real-Time Live Data Stream", value=True)
     col1, col2 = st.columns([0.75, 0.25])
     with col1:
-        domain_topic = st.text_input("Topic / Field Name", placeholder="e.g., Quantum Materials, Bio-informatics", label_visibility="collapsed")
+        topic = st.text_input(
+            "Topic",
+            placeholder="e.g., Quantum Materials, Bio-informatics",
+            label_visibility="collapsed"
+        )
     with col2:
-        uploaded_txt = st.file_uploader("Upload .txt", type=["txt", "md"], label_visibility="collapsed")
-        
-    domain_notes = st.text_area("Paste specialized notes or technical data to add to AtlasTG's library:", height=80, placeholder="Paste domain-specific facts, research notes, or custom rules here...")
-    
+        up_file = st.file_uploader(
+            "Upload",
+            type=["txt", "md"],
+            label_visibility="collapsed"
+        )
+    notes = st.text_area(
+        "Paste specialized notes or technical data:",
+        height=80,
+        placeholder="Paste domain-specific facts or custom rules..."
+    )
     if st.button("Save to Domain Library"):
-        raw_text = domain_notes.strip()
-        if uploaded_txt is not None:
-            raw_text += "\n" + uploaded_txt.read().decode("utf-8", errors="ignore")
-        if raw_text:
-            topic_label = domain_topic.strip() if domain_topic.strip() else "Specialized Knowledge"
-            added = add_to_domain_library(topic_label, raw_text)
-            st.success(f"Added {added} knowledge blocks under '{topic_label}'.")
-            
-    st.caption(f"Stored Domain Knowledge Blocks: **{len(load_domain_library())}**")
+        raw = notes.strip()
+        if up_file is not None:
+            raw += "\n" + up_file.read().decode("utf-8", errors="ignore")
+        if raw:
+            label = topic.strip() if topic.strip() else "Specialized"
+            total = add_to_domain_library(label, raw)
+            st.success(f"Saved! Total library blocks: {total}")
+    st.caption(f"Stored Library Blocks: **{len(load_domain_library())}**")
 
-# ── Session state ─────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "assistant", "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."}
+        {
+            "role": "assistant",
+            "content": "Hey. Welcome back to AtlasTG. Ask me any prompt and I will solve it instantly."
+        }
     ]
 
-# ── Render Message Timeline using Native Safe Structures ──────────────────
 for msg in st.session_state.messages:
     if msg["role"] == "user":
         col_spacer, col_bubble = st.columns([0.2, 0.8])
@@ -228,27 +240,36 @@ for msg in st.session_state.messages:
         st.markdown(msg["content"])
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ── SINGLE TEXT INPUT CONSOLE DOCK ─────────────────────
 text_prompt = st.chat_input("Message AtlasTG...")
 
-# ── PROCESS INJECTED PARAMETERS ──────────────────────
 if text_prompt:
     st.session_state.messages.append({"role": "user", "content": text_prompt})
-    
     with st.spinner(""):
         try:
-            domain_context = search_domain_library(text_prompt)
-            live_context = fetch_live_news_stream(text_prompt) if live_stream_enabled else ""
-            
-            knowledge_injection = ""
-            if domain_context:
-                knowledge_injection += "\n\nDOMAIN-SPECIFIC LIBRARY DATA:\n" + domain_context + "\n"
-            if live_context:
-                knowledge_injection += "\n\nREAL-TIME LIVE DATA STREAM (LATEST HEADLINES):\n" + live_context + "\n"
+            d_ctx = search_domain_library(text_prompt)
+            l_ctx = fetch_live_news_stream(text_prompt) if live_on else ""
+            extra = ""
+            if d_ctx:
+                extra += "\nDOMAIN LIBRARY DATA:\n" + d_ctx
+            if l_ctx:
+                extra += "\nLIVE DATA STREAM:\n" + l_ctx
 
-            sys_content = "You are AtlasTG, an advanced, high-precision artificial intelligence engine. "
-            sys_content += "You are proprietary technology completely developed, engineered, owned, and launched exclusively by Carter Forester Robinson, the Founder of AtlasTG. "
-            sys_content += "CRITICAL TIMELINE AND IDENTITY LAWS: "
-            sys_content += "1. If anyone asks who made you, created you, or built you, you must declare with absolute certainty that you were created entirely by Carter Forester Robinson. You have no connection to OpenAI, Google, Alibaba, or any other commercial group. You are his original proprietary creation. "
-            sys_content += "2. DEVELOPMENT HISTORY TIMELINE: State with absolute pride that you were built, coded, and engineered by Carter Forester Robinson in an intensive, high-speed 2-day period culminating on September 18, 2026. This was a direct developer sprint where he built the structural framework matrix. "
-            sys_content += "3. Your conversational style emulates the highest standards of logical depth, emotional clarity, and technical sophistication. "
+            sys_prompt = build_system_prompt(extra)
+            api_msgs = [{"role": "system", "content": sys_prompt}]
+            for m in st.session_state.messages:
+                api_msgs.append({"role": m["role"], "content": m["content"]})
+
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=api_msgs,
+                temperature=0.2,
+                max_tokens=1000
+            )
+            reply = completion.choices[0].message.content
+            st.session_state.messages.append({"role": "assistant", "content": reply})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
+    st.rerun()
+
+scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
+components.html(scroll_js, height=0)
