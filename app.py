@@ -6,9 +6,8 @@ import re
 import math
 import datetime
 import base64
-import requests
-from bs4 import BeautifulSoup
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import urllib.request
+from html.parser import HTMLParser
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -112,7 +111,28 @@ if not api_key:
     st.stop()
 
 client = Groq(api_key=api_key)
-sentiment_analyzer = SentimentIntensityAnalyzer()
+
+# ── BUILT-IN HTML TEXT EXTRACTOR (NO EXTERNAL PACKAGES NEEDED) ──────
+class CleanHTMLTextExtractor(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.text_parts = []
+        self.skip = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style", "nav", "footer"):
+            self.skip = True
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style", "nav", "footer"):
+            self.skip = False
+
+    def handle_data(self, data):
+        if not self.skip and data.strip():
+            self.text_parts.append(data.strip())
+
+    def get_text(self):
+        return " ".join(self.text_parts)
 
 # ── 1. SELF-OPTIMIZING KNOWLEDGE BASE ENGINE ────────────────────────
 KB_FILE = "atlastg_knowledge.json"
@@ -141,13 +161,12 @@ def ingest_text_to_kb(source_name, raw_text):
 
 def ingest_url_to_kb(url):
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        resp = requests.get(url, headers=headers, timeout=10)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer"]):
-            tag.decompose()
-        clean_text = " ".join(soup.get_text(separator=" ").split())
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html_content = resp.read().decode("utf-8", errors="ignore")
+        parser = CleanHTMLTextExtractor()
+        parser.feed(html_content)
+        clean_text = parser.get_text()
         return ingest_text_to_kb(url, clean_text)
     except Exception as e:
         return f"Error: {e}"
@@ -163,7 +182,7 @@ def retrieve_relevant_knowledge(query, top_k=3):
         overlap = len(query_words.intersection(item_words))
         if overlap > 0:
             scored.append((overlap, item))
-    scored.sort(key=lambda x: x[0], reverse=True)
+    scored.sort(key=lambda x: x, reverse=True)
     top_items = [f"[{item['source']}]: {item['content']}" for _, item in scored[:top_k]]
     return "\n\n".join(top_items)
 
@@ -237,13 +256,18 @@ def execute_tool_call(tool_call):
         return self_update_memory(args.get("fact", ""))
     return "Unknown tool."
 
-# ── 3. ADVANCED EMOTIONAL MODELING ──────────────────────────────────
+# ── 3. ADVANCED EMOTIONAL MODELING (BUILT-IN LEXICON) ──────────────
 def analyze_emotional_context(text):
-    scores = sentiment_analyzer.polarity_scores(text)
-    compound = scores["compound"]
-    if compound <= -0.4:
-        return "User sentiment is distressed, frustrated, or negative. Respond with heightened empathy, patience, and supportive clarity while maintaining logical rigor."
-    elif compound >= 0.5:
+    words = set(re.findall(r'\w+', text.lower()))
+    negative_cues = {"sad", "angry", "frustrated", "upset", "stressed", "worried", "hate", "broken", "failed", "hurt", "anxious", "help", "tired", "overwhelmed"}
+    positive_cues = {"happy", "excited", "great", "awesome", "love", "amazing", "win", "thanks", "thank", "good", "brilliant", "stoked"}
+    
+    neg_score = len(words.intersection(negative_cues))
+    pos_score = len(words.intersection(positive_cues))
+    
+    if neg_score > pos_score:
+        return "User sentiment appears distressed, frustrated, or negative. Respond with heightened empathy, patience, and supportive clarity while maintaining logical rigor."
+    elif pos_score > neg_score:
         return "User sentiment is enthusiastic or positive. Match their constructive energy with sharp, encouraging precision."
     return "User sentiment is neutral or analytical. Maintain calm, high-precision executive clarity."
 
@@ -265,26 +289,3 @@ with st.sidebar:
     if uploaded_doc and st.button("Index Document"):
         text_data = uploaded_doc.read().decode("utf-8", errors="ignore")
         chunks_added = ingest_text_to_kb(uploaded_doc.name, text_data)
-        st.success(f"Indexed {chunks_added} chunks from {uploaded_doc.name}.")
-
-    kb_count = len(load_kb())
-    st.caption(f"Active Memory Nodes: **{kb_count}**")
-
-    st.divider()
-    st.markdown("**Multimodal Vision Input**")
-    uploaded_image = st.file_uploader("Attach Image for Analysis", type=["png", "jpg", "jpeg", "webp"])
-
-# ── Header ──────────────────────────────────────────────────────────
-st.markdown("<h1>AtlasTG</h1>", unsafe_allow_html=True)
-st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
-
-# ── Session state ───────────────────────────────────────────────────
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "Hey. Welcome back to AtlasTG. My knowledge base, reasoning engine, and sandboxed plug-ins are online. Ask me anything."
-        }
-    ]
-
-# ── Helper: Parse Explainable Reasoning Tags ────────────────────────
