@@ -4,7 +4,6 @@ import os
 import re
 import json
 import urllib.request
-import urllib.parse
 import xml.etree.ElementTree as ET
 import streamlit.components.v1 as components
 
@@ -134,34 +133,35 @@ def search_domain_library(query, top_k=3):
         score = len(q_words.intersection(c_words))
         if score > 0:
             matches.append((score, f"[{item['topic']}]: {item['content']}"))
-    matches.sort(key=lambda x: x, reverse=True)
+    matches.sort(key=lambda x: x[0], reverse=True)
     results = []
     for m in matches[:top_k]:
-        results.append(m)
+        results.append(m[1])
     return "\n\n".join(results)
 
-def fetch_live_news_stream(query, max_results=5):
-    try:
-        q = urllib.parse.quote(query)
-        url = f"https://google.com{q}&hl=en-US&gl=US&ceid=US:en"
-
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=6) as resp:
-            xml_data = resp.read()
-        root = ET.fromstring(xml_data)
-        items = root.findall(".//item")[:max_results]
-        if not items:
-            return ""
-        lines = []
-        for item in items:
-            t_el = item.find("title")
-            d_el = item.find("pubDate")
-            title = t_el.text if t_el is not None else ""
-            pdate = d_el.text if d_el is not None else ""
-            lines.append(f"- {title} ({pdate})")
-        return "\n".join(lines)
-    except Exception:
-        return ""
+def fetch_live_news_stream(query, max_results=6):
+    feeds = [
+        "https://bbci.co.uk",
+        "https://abc.net.au"
+    ]
+    lines = []
+    for url in feeds:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                xml_data = resp.read()
+            root = ET.fromstring(xml_data)
+            items = root.findall(".//item")[:3]
+            for item in items:
+                t_el = item.find("title")
+                d_el = item.find("pubDate")
+                title = t_el.text.strip() if t_el is not None and t_el.text else ""
+                pdate = d_el.text.strip() if d_el is not None and d_el.text else ""
+                if title:
+                    lines.append(f"- {title} ({pdate})")
+        except Exception:
+            continue
+    return "\n".join(lines[:max_results])
 
 def build_system_prompt(extra_context):
     lines = [
@@ -174,8 +174,9 @@ def build_system_prompt(extra_context):
         "2. DEVELOPMENT HISTORY: You were built and coded by Carter Forester",
         "Robinson in an intensive 2-day sprint ending September 18, 2026.",
         "3. Emulate the highest logical depth and technical sophistication.",
-        "4. KNOWLEDGE HORIZON: Use any provided Domain Library Data and",
-        "Real-Time Live Data Stream headlines to ground your answer.",
+        "4. LIVE DATA STREAM: You ARE connected to a real-time news feed.",
+        "Never claim you lack live internet access. Summarize the live",
+        "headlines provided below clearly and directly.",
         "FORMATTING LAWS:",
         "- NEVER use Markdown or HTML tables under any circumstances.",
         "- Use Markdown headers (###), bold tags, and bullet points.",
