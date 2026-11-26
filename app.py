@@ -129,7 +129,6 @@ def save_kb(entries):
 
 def ingest_text_to_kb(source_name, raw_text):
     kb = load_kb()
-    # Split text into ~500-character overlapping chunks for fast retrieval
     chunks = [raw_text[i:i+500].strip() for i in range(0, len(raw_text), 400) if raw_text[i:i+500].strip()]
     for chunk in chunks:
         kb.append({
@@ -170,7 +169,6 @@ def retrieve_relevant_knowledge(query, top_k=3):
 
 # ── 2. SECURE SANDBOXED PLUG-IN ARCHITECTURE ────────────────────────
 def safe_calculator(expression: str) -> str:
-    """Safely evaluates mathematical expressions without eval() vulnerabilities."""
     allowed_names = {k: v for k, v in math.__dict__.items() if not k.startswith("__")}
     allowed_names.update({"abs": abs, "round": round})
     try:
@@ -253,7 +251,6 @@ def analyze_emotional_context(text):
 with st.sidebar:
     st.markdown("### ✦ AtlasTG Core Modules")
     
-    # Knowledge Base Ingestion
     st.markdown("**Knowledge Base Ingestion**")
     url_input = st.text_input("Ingest Live Website URL", placeholder="https://...")
     if st.button("Learn URL") and url_input:
@@ -274,7 +271,6 @@ with st.sidebar:
     st.caption(f"Active Memory Nodes: **{kb_count}**")
 
     st.divider()
-    # Multimodal Vision Input
     st.markdown("**Multimodal Vision Input**")
     uploaded_image = st.file_uploader("Attach Image for Analysis", type=["png", "jpg", "jpeg", "webp"])
 
@@ -285,3 +281,10 @@ st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
 # ── Session state ───────────────────────────────────────────────────
 if "messages" not in st.session_state:
     st.session_state.messages = [
+        {
+            "role": "assistant",
+            "content": "Hey. Welcome back to AtlasTG. My knowledge base, reasoning engine, and sandboxed plug-ins are online. Ask me anything."
+        }
+    ]
+
+# ── Helper: Parse Explainable Reasoning Tags ────────────────────────
