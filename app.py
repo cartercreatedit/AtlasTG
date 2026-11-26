@@ -4,7 +4,6 @@ import os
 import re
 import json
 import urllib.request
-import xml.etree.ElementTree as ET
 import streamlit.components.v1 as components
 
 st.set_page_config(
@@ -133,34 +132,44 @@ def search_domain_library(query, top_k=3):
         score = len(q_words.intersection(c_words))
         if score > 0:
             matches.append((score, f"[{item['topic']}]: {item['content']}"))
-    matches.sort(key=lambda x: x[0], reverse=True)
+    matches.sort(key=lambda x: x, reverse=True)
     results = []
     for m in matches[:top_k]:
-        results.append(m[1])
+        results.append(m)
     return "\n\n".join(results)
 
-def fetch_live_news_stream(query, max_results=6):
-    feeds = [
-        "https://bbci.co.uk",
-        "https://abc.net.au"
-    ]
+def fetch_live_news_stream(max_results=6):
+    """Fetches real JSON news feeds that never block cloud servers."""
     lines = []
-    for url in feeds:
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=6) as resp:
-                xml_data = resp.read()
-            root = ET.fromstring(xml_data)
-            items = root.findall(".//item")[:3]
-            for item in items:
-                t_el = item.find("title")
-                d_el = item.find("pubDate")
-                title = t_el.text.strip() if t_el is not None and t_el.text else ""
-                pdate = d_el.text.strip() if d_el is not None and d_el.text else ""
-                if title:
-                    lines.append(f"- {title} ({pdate})")
-        except Exception:
-            continue
+    # Source 1: Hacker News Top Tech Stories (Official Firebase JSON API)
+    try:
+        top_url = "https://firebaseio.com"
+        req = urllib.request.Request(top_url, headers={"User-Agent": "AtlasTG/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            story_ids = json.loads(resp.read().decode("utf-8"))[:3]
+        for sid in story_ids:
+            item_url = f"https://firebaseio.com{sid}.json"
+            with urllib.request.urlopen(item_url, timeout=5) as iresp:
+                item = json.loads(iresp.read().decode("utf-8"))
+                if item and item.get("title"):
+                    lines.append(f"- [Tech] {item['title']}")
+    except Exception:
+        pass
+
+    # Source 2: Spaceflight & Science News JSON API
+    try:
+        sci_url = "https://spaceflightnewsapi.net"
+        req = urllib.request.Request(sci_url, headers={"User-Agent": "AtlasTG/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        for art in data.get("results", []):
+            title = art.get("title", "")
+            pub = art.get("published_at", "")[:10]
+            if title:
+                lines.append(f"- [Science/World - {pub}] {title}")
+    except Exception:
+        pass
+
     return "\n".join(lines[:max_results])
 
 def build_system_prompt(extra_context):
@@ -174,9 +183,9 @@ def build_system_prompt(extra_context):
         "2. DEVELOPMENT HISTORY: You were built and coded by Carter Forester",
         "Robinson in an intensive 2-day sprint ending September 18, 2026.",
         "3. Emulate the highest logical depth and technical sophistication.",
-        "4. LIVE DATA STREAM: You ARE connected to a real-time news feed.",
-        "Never claim you lack live internet access. Summarize the live",
-        "headlines provided below clearly and directly.",
+        "4. STRICT FACTUAL GROUNDING: Only report real-time news items that",
+        "explicitly appear in the LIVE DATA STREAM section below.",
+        "NEVER invent, fabricate, or make up fake news headlines.",
         "FORMATTING LAWS:",
         "- NEVER use Markdown or HTML tables under any circumstances.",
         "- Use Markdown headers (###), bold tags, and bullet points.",
@@ -190,6 +199,14 @@ st.caption("High-Speed Intelligence Engine · Coded by C. F. Robinson")
 
 with st.expander("✦ Knowledge Horizon (Live Stream & Domain Library)"):
     live_on = st.toggle("Enable Real-Time Live Data Stream", value=True)
+    if live_on:
+        preview_feed = fetch_live_news_stream(4)
+        if preview_feed:
+            st.success("Live Stream Connected")
+            st.caption(preview_feed)
+        else:
+            st.warning("Live Stream unreachable from server.")
+
     col1, col2 = st.columns([0.75, 0.25])
     with col1:
         topic = st.text_input(
@@ -249,29 +266,13 @@ if text_prompt:
     with st.spinner(""):
         try:
             d_ctx = search_domain_library(text_prompt)
-            l_ctx = fetch_live_news_stream(text_prompt) if live_on else ""
+            l_ctx = fetch_live_news_stream() if live_on else ""
             extra = ""
             if d_ctx:
                 extra += "\nDOMAIN LIBRARY DATA:\n" + d_ctx
             if l_ctx:
-                extra += "\nLIVE DATA STREAM:\n" + l_ctx
+                extra += "\nLIVE DATA STREAM (VERIFIED REAL-TIME HEADLINES):\n" + l_ctx
 
             sys_prompt = build_system_prompt(extra)
             api_msgs = [{"role": "system", "content": sys_prompt}]
             for m in st.session_state.messages:
-                api_msgs.append({"role": m["role"], "content": m["content"]})
-
-            completion = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=api_msgs,
-                temperature=0.2,
-                max_tokens=1000
-            )
-            reply = completion.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-        except Exception as e:
-            st.session_state.messages.append({"role": "assistant", "content": f"Error: {e}"})
-    st.rerun()
-
-scroll_js = "<script>const main = window.parent.document.querySelector('.main'); if(main){ setTimeout(() => { main.scrollTo({top: main.scrollHeight, behavior: 'smooth'}); }, 50); }</script>"
-components.html(scroll_js, height=0)
